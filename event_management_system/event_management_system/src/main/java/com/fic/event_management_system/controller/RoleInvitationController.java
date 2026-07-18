@@ -4,6 +4,7 @@ import com.fic.event_management_system.dto.AcceptRoleInvitationRequest;
 import com.fic.event_management_system.dto.InviteRoleRequest;
 import com.fic.event_management_system.entity.RoleInvitation;
 import com.fic.event_management_system.entity.User;
+import com.fic.event_management_system.enums.RoleName;
 import com.fic.event_management_system.service.RoleInvitationService;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,5 +58,12 @@ public class RoleInvitationController {
             @PathVariable Long organizerId) {
 
         return roleInvitationService.getInvitationsByOrganizer(organizerId);
+    }
+
+    @GetMapping("/event/{eventId}/role/{roleName}")
+    public List<RoleInvitation> getEventRoleInvitations(
+            @PathVariable Long eventId,
+            @PathVariable RoleName roleName) {
+        return roleInvitationService.getInvitationsByEventAndRole(eventId, roleName);
     }
 }

@@ -36,10 +36,11 @@ function Speakers() {
 
   const loadData = async () => {
     try {
-      const [eventRes, speakerRes, eventAssignmentRes] = await Promise.allSettled([
+      const [eventRes, speakerRes, eventAssignmentRes, invitationRes] = await Promise.allSettled([
         api.get(`/events/${id}`),
         api.get(`/speaker-assignments/event/${id}`),
-        api.get(`/event-assignments/event/${id}`)
+        api.get(`/event-assignments/event/${id}`),
+        api.get(`/role-invitations/event/${id}/role/SPEAKER`)
       ]);
 
       if (eventRes.status === "fulfilled") setEvent(eventRes.value.data);
@@ -54,6 +55,9 @@ function Speakers() {
 
       setSpeakerAssignments(
         mergeSpeakerAssignments(oldSpeakerAssignments, eventSpeakerAssignments)
+      );
+      setSentInvites(
+        invitationRes.status === "fulfilled" ? invitationRes.value.data || [] : []
       );
     } catch (error) {
       setMessage("Unable to load speaker details.");
@@ -76,7 +80,7 @@ function Speakers() {
     setMessage("");
 
     try {
-      await api.post("/role-invitations/invite", {
+      const response = await api.post("/role-invitations/invite", {
         email: form.email,
         roleName: "SPEAKER",
         portalId: Number(localStorage.getItem("portalId") || event?.portal?.id),
@@ -95,14 +99,7 @@ function Speakers() {
         sessionTime: form.sessionTime
       });
 
-      setSentInvites((current) => [
-        {
-          ...form,
-          id: Date.now(),
-          status: "PENDING"
-        },
-        ...current
-      ]);
+      setSentInvites((current) => [response.data, ...current]);
       setForm(emptyInvite);
       setShowForm(false);
       setMessage("Speaker invitation sent successfully.");

@@ -28,6 +28,8 @@ public interface RoleInvitationRepository extends JpaRepository<RoleInvitation, 
 
     List<RoleInvitation> findByInvitedByIdOrderByIdDesc(Long invitedById);
 
+    List<RoleInvitation> findByEventIdAndRoleNameOrderByIdDesc(Long eventId, RoleName roleName);
+
     Optional<RoleInvitation> findFirstByEmailAndPortalIdAndRoleNameAndStatusOrderByIdDesc(
             String email,
             Long portalId,

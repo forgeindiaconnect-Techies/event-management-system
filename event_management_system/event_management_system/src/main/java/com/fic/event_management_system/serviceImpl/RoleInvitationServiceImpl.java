@@ -505,4 +505,9 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
     public List<RoleInvitation> getInvitationsByOrganizer(Long organizerId) {
         return invitationRepository.findByInvitedByIdOrderByIdDesc(organizerId);
     }
+
+    @Override
+    public List<RoleInvitation> getInvitationsByEventAndRole(Long eventId, RoleName roleName) {
+        return invitationRepository.findByEventIdAndRoleNameOrderByIdDesc(eventId, roleName);
+    }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BsChatDots, BsCompass, BsHeadset, BsQuestionCircle, BsXLg } from "react-icons/bs";
 import HelpAssistant from "./HelpAssistant";
+import SupportRequestForm from "./SupportRequestForm";
 
 const options = [
   ["assistant", BsChatDots, "Ask FIC Assistant", "Get immediate answers about using the platform."],
@@ -42,6 +43,10 @@ function HelpMenu({ onSelect }) {
       navigate("/help/tour");
       return;
     }
+    if (key === "support") {
+      setView("support");
+      return;
+    }
     onSelect?.(key);
   };
 
@@ -55,6 +60,8 @@ function HelpMenu({ onSelect }) {
         <div className="fic-help-popup" role="dialog" aria-label="Help and Support">
           {view === "assistant" ? (
             <HelpAssistant onBack={() => setView("menu")} />
+          ) : view === "support" ? (
+            <SupportRequestForm onBack={() => setView("menu")} />
           ) : (
             <>
               <div className="fic-help-popup-header">
@@ -94,6 +101,7 @@ const styles = `
   .fic-assistant-messages{display:grid;gap:8px;max-height:230px;overflow-y:auto;padding:14px}.fic-assistant-message{max-width:88%;padding:9px 11px;border-radius:11px;font-size:12px;line-height:1.45}.fic-assistant-message.bot{justify-self:start;background:#f1f3ff;color:#25205f}.fic-assistant-message.user{justify-self:end;background:#5548d9;color:#fff}
   .fic-assistant-topics{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}.fic-assistant-topics button{padding:6px 9px;border:1px solid #d9ddf7;border-radius:20px;background:#fff;color:#4841a6;font-size:11px}.fic-assistant-topics button:hover{background:#f3f5ff}
   .fic-assistant-input{display:grid;grid-template-columns:1fr 38px;gap:7px;padding:11px 14px 14px;border-top:1px solid #edf0f4}.fic-assistant-input input{min-width:0;padding:9px 10px;border:1px solid #d9dde5;border-radius:9px;font-size:12px;outline:none}.fic-assistant-input input:focus{border-color:#6960dc}.fic-assistant-input button{display:grid;place-items:center;border:0;border-radius:9px;background:#5548d9;color:#fff}
+  .fic-support-view{max-height:min(680px,calc(100vh - 90px));overflow-y:auto}.fic-support-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:10px;padding:4px;border-radius:10px;background:#f2f4f7}.fic-support-tabs button{padding:8px;border:0;border-radius:7px;background:transparent;color:#667085;font-size:12px}.fic-support-tabs button.active{background:#fff;color:#5548d9;font-weight:750;box-shadow:0 2px 7px rgba(16,24,40,.08)}.fic-support-error{margin:0 12px 10px;padding:9px 10px;border:1px solid #f5b9bd;border-radius:8px;background:#fff1f2;color:#b4232c;font-size:11px}.fic-support-form{display:grid;gap:10px;padding:2px 14px 15px}.fic-support-form label{display:grid;gap:5px;color:#344054;font-size:11px;font-weight:700}.fic-support-form label small{color:#98a2b3;font-weight:400}.fic-support-form input,.fic-support-form select,.fic-support-form textarea{width:100%;padding:9px 10px;border:1px solid #d9dde5;border-radius:8px;background:#fff;color:#172033;font-size:12px;outline:none}.fic-support-form textarea{min-height:88px;resize:vertical}.fic-support-form input:focus,.fic-support-form select:focus,.fic-support-form textarea:focus{border-color:#6960dc;box-shadow:0 0 0 3px rgba(105,96,220,.1)}.fic-support-form-row{display:grid;grid-template-columns:.75fr 1.25fr;gap:8px}.fic-support-page-note{padding:7px 9px;border-radius:7px;background:#f7f7fc;color:#667085;font-size:10px}.fic-support-submit{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;border:0;border-radius:9px;background:#5548d9;color:#fff;font-size:12px;font-weight:750}.fic-support-submit:disabled{opacity:.65}.fic-support-success{display:flex;flex-direction:column;align-items:center;padding:22px 18px;text-align:center}.fic-support-success>svg{color:#15935f;font-size:36px}.fic-support-success h3{margin:9px 0 2px;font-size:16px}.fic-support-success>p{margin:0 0 13px;color:#667085;font-size:12px}.fic-support-success>div{display:flex;justify-content:space-between;width:100%;padding:9px;border-top:1px solid #edf0f4;font-size:11px}.fic-support-success>button{width:100%;margin-top:10px;padding:9px;border:0;border-radius:8px;background:#5548d9;color:#fff;font-size:11px}.fic-support-success>button.secondary{margin-top:6px;background:#eeecff;color:#5548d9}.fic-support-requests{display:grid;gap:8px;padding:2px 12px 14px}.fic-support-requests>article{padding:11px;border:1px solid #e4e7ec;border-radius:9px;background:#fff}.fic-support-requests article>div{display:flex;align-items:center;justify-content:space-between}.fic-support-requests .status{padding:3px 7px;border-radius:20px;background:#fff1d6;color:#a15c00;font-size:9px;font-weight:800}.fic-support-requests .status.resolved,.fic-support-requests .status.closed{background:#e6f7ee;color:#15784e}.fic-support-requests article>div small,.fic-support-requests footer{color:#98a2b3;font-size:9px}.fic-support-requests article>b{display:block;margin-top:7px;font-size:12px}.fic-support-requests article>p{display:-webkit-box;overflow:hidden;margin:4px 0 8px;color:#667085;font-size:10px;line-height:1.4;-webkit-line-clamp:2;-webkit-box-orient:vertical}.fic-support-requests footer{display:flex;justify-content:space-between}.fic-support-requests aside{margin-top:9px;padding:8px;border-radius:7px;background:#f1f3ff;color:#302a79}.fic-support-requests aside strong{font-size:10px}.fic-support-requests aside p{margin:3px 0 0;font-size:10px}.fic-support-empty{display:flex;flex-direction:column;align-items:center;gap:5px;padding:30px 12px;color:#98a2b3;text-align:center;font-size:11px}.fic-support-empty svg{font-size:27px}.fic-support-empty b{color:#475467}
   @media(max-width:576px){.fic-help-popup{position:fixed;top:58px;right:12px;left:12px;width:auto}}
 `;
 

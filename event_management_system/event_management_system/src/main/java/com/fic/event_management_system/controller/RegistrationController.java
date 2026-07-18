@@ -4,6 +4,8 @@ import com.fic.event_management_system.dto.PaymentRequest;
 import com.fic.event_management_system.dto.PublicRegistrationRequest;
 import com.fic.event_management_system.entity.Registration;
 import com.fic.event_management_system.service.RegistrationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +14,7 @@ import java.util.List;
 @RequestMapping("/api/registrations")
 public class RegistrationController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(RegistrationController.class);
     private final RegistrationService registrationService;
 
     public RegistrationController(RegistrationService registrationService) {
@@ -109,7 +112,11 @@ public class RegistrationController {
     public Registration publicRegister(
             @PathVariable Long eventId,
             @RequestBody PublicRegistrationRequest request) {
-
-        return registrationService.publicRegister(eventId, request);
+        try {
+            return registrationService.publicRegister(eventId, request);
+        } catch (RuntimeException exception) {
+            LOGGER.error("Public registration failed for event {}", eventId, exception);
+            throw exception;
+        }
     }
 }

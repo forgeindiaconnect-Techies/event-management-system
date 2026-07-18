@@ -197,8 +197,9 @@
         }
       } catch (error) {
         console.log(error);
+        const responseData = error.response?.data;
         setMessage(
-          error.response?.data?.message ||
+          (typeof responseData === "string" ? responseData : responseData?.message || responseData?.error) ||
             "Unable to submit registration. Please try again."
         );
       } finally {

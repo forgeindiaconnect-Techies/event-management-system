@@ -495,6 +495,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     @Override
+    @Transactional
     public Registration publicRegister(
             Long eventId,
             PublicRegistrationRequest request) {

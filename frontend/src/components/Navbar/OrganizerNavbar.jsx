@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
+import HelpMenu from "../Help/HelpMenu";
 import { NotificationBell } from "./AdminNavbar";
 import {
   BsBox,
@@ -11,7 +12,6 @@ import {
   BsPerson,
   BsPersonCircle,
   BsPhone,
-  BsQuestionCircle,
   BsShieldCheck,
   BsXLg,
   BsArrowLeftRight,
@@ -178,25 +178,7 @@ function OrganizerNavbar() {
         <div className="organizer-navbar-actions d-flex align-items-center gap-4">
           <NotificationBell />
 
-          <button
-            type="button"
-            className="organizer-navbar-help border-0 bg-transparent text-white d-flex align-items-center"
-            aria-label="Open Help and Support"
-            title="Help and Support"
-            style={{
-              transition: "0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = "0.8";
-              e.currentTarget.style.transform = "scale(1.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "1";
-              e.currentTarget.style.transform = "scale(1)";
-            }}
-          >
-            <BsQuestionCircle size={23} />
-          </button>
+          <HelpMenu />
 
           <button
             className="organizer-navbar-profile border-0 bg-transparent text-white d-flex align-items-center gap-2"

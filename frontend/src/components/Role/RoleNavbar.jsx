@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
+import HelpMenu from "../Help/HelpMenu";
 import { NotificationBell } from "../Navbar/AdminNavbar";
 import {
   BsBox,
@@ -11,7 +12,6 @@ import {
   BsPerson,
   BsPersonCircle,
   BsPhone,
-  BsQuestionCircle,
   BsShieldCheck,
   BsXLg,
   BsArrowLeftRight,
@@ -173,14 +173,7 @@ function RoleNavbar() {
         <div className="role-navbar-actions d-flex align-items-center gap-4">
           <NotificationBell />
 
-          <button
-            type="button"
-            className="role-navbar-help border-0 bg-transparent text-white"
-            aria-label="Open Help and Support"
-            title="Help and Support"
-          >
-            <BsQuestionCircle size={23} />
-          </button>
+          <HelpMenu />
 
           <button
             className="role-navbar-profile border-0 bg-transparent text-white d-flex align-items-center gap-2"

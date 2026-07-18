@@ -12,7 +12,6 @@ import {
   BsGrid,
   BsPeople,
   BsPerson,
-  BsQuestionCircle,
   BsReceipt,
   BsSearch,
   BsShieldCheck,
@@ -28,6 +27,7 @@ import {
   BsXLg,
 } from "react-icons/bs";
 import api from "../../api/axiosConfig";
+import HelpMenu from "../../components/Help/HelpMenu";
 
 const navigation = [
   ["Overview", "/super-admin", BsGrid],
@@ -179,14 +179,7 @@ function SuperAdminDashboard({ section = "overview" }) {
           <BsBox /><strong>BackRooms</strong><i /> <span>Platform Admin</span>
         </button>
         <div className="sa-topbar-profile" ref={profileRef}>
-          <button
-            type="button"
-            className="sa-help-button"
-            aria-label="Open Help and Support"
-            title="Help and Support"
-          >
-            <BsQuestionCircle className="sa-help" />
-          </button>
+          <HelpMenu />
           <button
             onClick={() => setShowProfile(true)}
             title="Open profile"

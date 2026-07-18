@@ -13,10 +13,10 @@ import {
   BsShieldCheck,
   BsXLg,
   BsList,
-  BsQuestionCircle,
 } from "react-icons/bs";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/axiosConfig";
+import HelpMenu from "../components/Help/HelpMenu";
 import "../styles/Admin.css";
 import {
   FaTachometerAlt,
@@ -349,14 +349,7 @@ function EventDetailLayout({ children, event }) {
               </button>
             )}
 
-            <button
-              type="button"
-              className="event-navbar-help border-0 bg-transparent text-white d-flex align-items-center p-0"
-              aria-label="Open Help and Support"
-              title="Help and Support"
-            >
-              <BsQuestionCircle size={23} />
-            </button>
+            <HelpMenu />
 
             <button
               className="border-0 bg-transparent text-white d-flex align-items-center gap-2"

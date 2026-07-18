@@ -41,6 +41,7 @@ function AdminSidebar({ onNavigate }) {
         {menuItems.map((item) => (
           <Link
   key={item.path}
+  data-tour={`admin-${item.label.toLowerCase().replaceAll(" ", "-")}`}
   to={item.path}
   className={`admin-sidebar-item text-decoration-none d-flex align-items-center mb-2 ${
     isActive(item.path) ? "active" : ""

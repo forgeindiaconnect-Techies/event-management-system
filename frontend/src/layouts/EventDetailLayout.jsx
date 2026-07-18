@@ -265,6 +265,7 @@ function EventDetailLayout({ children, event }) {
           {menuItems.map((item) => (
             <Link
               key={item.path}
+              data-tour={`event-${item.label.toLowerCase().replaceAll(" ", "-")}`}
               to={item.path}
               onClick={() => setShowEventMenu(false)}
               className="event-main-sidebar-link d-block text-center py-3 text-decoration-none"
@@ -281,6 +282,7 @@ function EventDetailLayout({ children, event }) {
         </div>
 
         <button
+          data-tour="event-search"
           onClick={() => setShowSearch(true)}
           className="event-main-sidebar-link text-center text-decoration-none py-3 border-top border-0"
           style={{
@@ -313,7 +315,7 @@ function EventDetailLayout({ children, event }) {
             <BsList />
           </button>
 
-          <div className="d-flex flex-column">
+          <div className="d-flex flex-column" data-tour="event-title">
             <div
               className="fw-semibold"
               style={{
@@ -352,6 +354,7 @@ function EventDetailLayout({ children, event }) {
             <HelpMenu />
 
             <button
+              data-tour="event-profile"
               className="border-0 bg-transparent text-white d-flex align-items-center gap-2"
               onClick={() => setShowProfile(true)}
               style={{ transition: "0.2s ease" }}

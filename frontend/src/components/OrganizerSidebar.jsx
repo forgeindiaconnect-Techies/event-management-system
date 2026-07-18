@@ -80,6 +80,7 @@ function OrganizerSidebar({ onNavigate }) {
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
+            data-tour={`organizer-${item.label.toLowerCase().replaceAll(" ", "-")}`}
             to={item.path}
             end={item.path === "/organizer"}
             onClick={onNavigate}

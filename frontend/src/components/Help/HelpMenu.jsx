@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BsChatDots, BsCompass, BsHeadset, BsQuestionCircle, BsXLg } from "react-icons/bs";
 import HelpAssistant from "./HelpAssistant";
+import GuidedTour from "./GuidedTour";
 
 const options = [
   ["assistant", BsChatDots, "Ask FIC Assistant", "Get immediate answers about using the platform."],
@@ -11,6 +12,7 @@ const options = [
 function HelpMenu({ onSelect }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("menu");
+  const [tourOpen, setTourOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -32,6 +34,12 @@ function HelpMenu({ onSelect }) {
   const select = (key) => {
     if (key === "assistant") {
       setView("assistant");
+      return;
+    }
+    if (key === "tour") {
+      setOpen(false);
+      setView("menu");
+      setTourOpen(true);
       return;
     }
     onSelect?.(key);
@@ -65,6 +73,7 @@ function HelpMenu({ onSelect }) {
           )}
         </div>
       )}
+      {tourOpen && <GuidedTour onClose={() => setTourOpen(false)} />}
       <style>{styles}</style>
     </div>
   );

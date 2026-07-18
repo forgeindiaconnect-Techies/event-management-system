@@ -176,11 +176,12 @@ function OrganizerNavbar() {
         </button>
 
         <div className="organizer-navbar-actions d-flex align-items-center gap-4">
-          <NotificationBell />
+          <span data-tour="organizer-notifications"><NotificationBell /></span>
 
           <HelpMenu />
 
           <button
+            data-tour="organizer-profile"
             className="organizer-navbar-profile border-0 bg-transparent text-white d-flex align-items-center gap-2"
             onClick={() => setShowProfile(true)}
             style={{

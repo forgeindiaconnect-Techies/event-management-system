@@ -181,6 +181,7 @@ function AdminNavbar() {
 
         <div className="admin-navbar-actions d-flex align-items-center gap-4">
           <button
+            data-tour="admin-plan"
             className={"admin-navbar-plan-button " + planAction.tone}
             onClick={() => navigate("/subscription")}
             title={planAction.title}
@@ -190,6 +191,7 @@ function AdminNavbar() {
           </button>
 
           <button
+            data-tour="admin-create"
             className="btn btn-light fw-semibold"
             style={{
               borderRadius: "12px",
@@ -201,11 +203,12 @@ function AdminNavbar() {
             Create Event
           </button>
 
-          <NotificationBell />
+          <span data-tour="admin-notifications"><NotificationBell /></span>
 
           <HelpMenu />
 
           <button
+            data-tour="admin-profile"
             className="btn border-0 text-white d-flex align-items-center p-0"
             onClick={() => setShowProfile(true)}
           >

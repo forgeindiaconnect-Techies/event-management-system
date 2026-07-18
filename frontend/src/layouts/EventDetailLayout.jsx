@@ -13,6 +13,7 @@ import {
   BsShieldCheck,
   BsXLg,
   BsList,
+  BsQuestionCircle,
 } from "react-icons/bs";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/axiosConfig";
@@ -347,6 +348,15 @@ function EventDetailLayout({ children, event }) {
                 {publishingEvent ? "Publishing..." : "Publish Event"}
               </button>
             )}
+
+            <button
+              type="button"
+              className="event-navbar-help border-0 bg-transparent text-white d-flex align-items-center p-0"
+              aria-label="Open Help and Support"
+              title="Help and Support"
+            >
+              <BsQuestionCircle size={23} />
+            </button>
 
             <button
               className="border-0 bg-transparent text-white d-flex align-items-center gap-2"

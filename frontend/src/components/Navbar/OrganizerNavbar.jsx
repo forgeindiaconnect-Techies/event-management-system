@@ -179,8 +179,10 @@ function OrganizerNavbar() {
           <NotificationBell />
 
           <button
+            type="button"
             className="organizer-navbar-help border-0 bg-transparent text-white d-flex align-items-center"
-            title="Help"
+            aria-label="Open Help and Support"
+            title="Help and Support"
             style={{
               transition: "0.2s ease",
             }}

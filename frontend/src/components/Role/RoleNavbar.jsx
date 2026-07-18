@@ -173,7 +173,12 @@ function RoleNavbar() {
         <div className="role-navbar-actions d-flex align-items-center gap-4">
           <NotificationBell />
 
-          <button className="border-0 bg-transparent text-white">
+          <button
+            type="button"
+            className="role-navbar-help border-0 bg-transparent text-white"
+            aria-label="Open Help and Support"
+            title="Help and Support"
+          >
             <BsQuestionCircle size={23} />
           </button>
 

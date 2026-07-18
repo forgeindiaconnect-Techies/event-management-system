@@ -17,6 +17,7 @@ import {
   BsCheck2All,
   BsTrash,
   BsArrowLeftRight,
+  BsQuestionCircle,
 } from "react-icons/bs";
 
 function AdminNavbar() {
@@ -201,6 +202,15 @@ function AdminNavbar() {
           </button>
 
           <NotificationBell />
+
+          <button
+            type="button"
+            className="admin-navbar-help border-0 bg-transparent text-white d-flex align-items-center p-0"
+            aria-label="Open Help and Support"
+            title="Help and Support"
+          >
+            <BsQuestionCircle size={23} />
+          </button>
 
           <button
             className="btn border-0 text-white d-flex align-items-center p-0"

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { BsArrowLeft, BsCheck2Circle, BsClockHistory, BsInbox, BsSend } from "react-icons/bs";
+import { BsArrowLeft, BsCheck2Circle, BsClockHistory, BsEnvelope, BsInbox, BsSend, BsTelephone, BsWhatsapp } from "react-icons/bs";
 import api from "../../api/axiosConfig";
 
 const types = [["FEEDBACK","Share feedback"],["PROBLEM","Report a problem"],["FEATURE_REQUEST","Suggest a feature"],["PAYMENT_SUBSCRIPTION","Payment or subscription"],["ACCOUNT_ACCESS","Account or access"],["GENERAL","General support"]];
 const emptyForm = { type:"FEEDBACK", subject:"", description:"", priority:"MEDIUM", contactEmail:"", screenshotUrl:"" };
+const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || "support@ficbackrooms.com";
+const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || "+919363063276";
+const whatsappNumber = (import.meta.env.VITE_SUPPORT_WHATSAPP || supportPhone).replace(/\D/g, "");
 const readable = (value="") => value.toLowerCase().replaceAll("_"," ").replace(/\b\w/g,(letter)=>letter.toUpperCase());
 const getError = (error) => error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === "string" ? error.response.data : "Unable to send your request. Please try again.");
 
@@ -37,6 +40,11 @@ export default function SupportRequestForm({ onBack }) {
 
   return <div className="fic-support-view">
     <div className="fic-help-view-header"><button type="button" onClick={onBack}><BsArrowLeft/></button><span><b>Feedback & Support</b></span></div>
+    <div className="fic-direct-support">
+      <a href={`mailto:${supportEmail}?subject=FIC BackRooms Support`}><BsEnvelope/><span><b>Email Support</b><small>{supportEmail}</small></span></a>
+      <a href={`tel:${supportPhone}`}><BsTelephone/><span><b>Call Support</b><small>{supportPhone}</small></span></a>
+      <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hello FIC BackRooms Support, I need assistance with the platform.")}`} target="_blank" rel="noreferrer"><BsWhatsapp/><span><b>WhatsApp Support</b><small>Start a conversation</small></span></a>
+    </div>
     <div className="fic-support-tabs"><button type="button" className={tab==="new"?"active":""} onClick={()=>{setTab("new");setError("");}}>New Request</button><button type="button" className={tab==="mine"?"active":""} onClick={()=>{setTab("mine");setError("");}}>My Requests</button></div>
     {error&&<div className="fic-support-error">{error}</div>}
     {tab==="new"&&(created?<div className="fic-support-success"><BsCheck2Circle/><h3>Request sent successfully</h3><p>Our support team can now review your request.</p><div><span>Reference</span><strong>{created.referenceCode||`SUP-${created.id}`}</strong></div><div><span>Status</span><strong>{readable(created.status||"OPEN")}</strong></div><button type="button" onClick={()=>setCreated(null)}>Create another request</button><button type="button" className="secondary" onClick={()=>setTab("mine")}>View my requests</button></div>:<form className="fic-support-form" onSubmit={submit}>

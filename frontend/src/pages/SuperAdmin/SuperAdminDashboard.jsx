@@ -25,6 +25,8 @@ import {
   BsList,
   BsCreditCard,
   BsXLg,
+  BsHeadset,
+  BsChatLeftText,
 } from "react-icons/bs";
 import api from "../../api/axiosConfig";
 import HelpMenu from "../../components/Help/HelpMenu";
@@ -35,6 +37,7 @@ const navigation = [
   ["Revenue", "/super-admin/revenue", BsCashCoin],
   ["Subscriptions", "/super-admin/subscriptions", BsReceipt],
   ["Email Delivery", "/super-admin/email-delivery", BsEnvelope],
+  ["Support Requests", "/super-admin/support", BsHeadset],
   ["Users", "/super-admin/users", BsPeople],
   ["Reports", "/super-admin/reports", BsBarChart],
   ["Settings", "/super-admin/settings", BsGear],
@@ -46,6 +49,7 @@ const pageDetails = {
   revenue: ["Revenue", "Track platform earnings and portal revenue performance."],
   subscriptions: ["Subscriptions", "Review portal plans and subscription distribution."],
   emailDelivery: ["Email Delivery", "Monitor queued emails, delivery failures and retry attempts."],
+  support: ["Support Requests", "Review feedback, reported problems and support conversations."],
   users: ["Platform Users", "See user activity across all company portals."],
   reports: ["Reports", "A consolidated view of platform performance and activity."],
   settings: ["Settings", "Manage your super admin workspace preferences."],
@@ -245,6 +249,8 @@ function PageContent({ section, dashboard, portals, allPortals, money, search, s
   }
 
   if (section === "emailDelivery") return <EmailDeliveryMonitor />;
+
+  if (section === "support") return <SupportRequestManagement />;
 
   if (section === "users") return <>
     <div className="sa-page-cards three"><Metric icon={<BsPeople />} label="Total Users" value={dashboard.totalUsers} /><Metric icon={<BsBuilding />} label="Portals" value={dashboard.totalPortals} /><Metric icon={<BsCalendarEvent />} label="Registrations" value={dashboard.totalRegistrations} /></div>
@@ -994,6 +1000,97 @@ function AuditModal({ audit, onClose }) {
     </div>
   );
 }
+
+function SupportRequestManagement() {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selected, setSelected] = useState(null);
+  const [edit, setEdit] = useState({ status: "OPEN", priority: "MEDIUM", adminResponse: "" });
+
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try { const { data } = await api.get("/support-requests"); setRequests(Array.isArray(data) ? data : []); }
+    catch (requestError) { setError(responseMessage(requestError, "Unable to load support requests.")); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = useMemo(() => requests.filter((request) => {
+    const text = search.trim().toLowerCase();
+    const matchesSearch = !text || [request.referenceCode, request.subject, request.description, request.requesterName, request.contactEmail].some((value) => String(value || "").toLowerCase().includes(text));
+    return matchesSearch && (typeFilter === "ALL" || request.type === typeFilter) && (statusFilter === "ALL" || request.status === statusFilter);
+  }), [requests, search, typeFilter, statusFilter]);
+
+  const counts = useMemo(() => ({
+    total: requests.length,
+    open: requests.filter((request) => request.status === "OPEN").length,
+    progress: requests.filter((request) => request.status === "IN_PROGRESS").length,
+    resolved: requests.filter((request) => ["RESOLVED", "CLOSED"].includes(request.status)).length,
+  }), [requests]);
+
+  const openRequest = (request) => {
+    setSelected(request);
+    setEdit({ status: request.status || "OPEN", priority: request.priority || "MEDIUM", adminResponse: request.adminResponse || "" });
+    setMessage(""); setError("");
+  };
+
+  const save = async () => {
+    if (!selected) return;
+    setWorking(true); setError(""); setMessage("");
+    try {
+      const { data } = await api.patch(`/support-requests/${selected.id}`, edit);
+      setRequests((current) => current.map((item) => item.id === data.id ? data : item));
+      setSelected(data);
+      setEdit({ status: data.status, priority: data.priority, adminResponse: data.adminResponse || "" });
+      setMessage("Support request updated successfully.");
+    } catch (requestError) { setError(responseMessage(requestError, "Unable to update this support request.")); }
+    finally { setWorking(false); }
+  };
+
+  const label = (value) => String(value || "Not available").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return <div className="sa-support-page">
+    <div className="sa-support-metrics">
+      <Metric icon={<BsHeadset />} label="Total Requests" value={counts.total} />
+      <Metric icon={<BsEnvelope />} label="Open" value={counts.open} />
+      <Metric icon={<BsClockHistory />} label="In Progress" value={counts.progress} />
+      <Metric icon={<BsCheckCircle />} label="Resolved / Closed" value={counts.resolved} />
+    </div>
+    {error && <div className="alert alert-danger">{error}</div>}
+    {message && <div className="alert alert-success">{message}</div>}
+    <section className="admin-bento-card sa-support-card">
+      <div className="sa-support-tools">
+        <label><BsSearch /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reference, user or subject..." /></label>
+        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="ALL">All request types</option><option value="FEEDBACK">Feedback</option><option value="PROBLEM">Problems</option><option value="FEATURE_REQUEST">Feature requests</option><option value="PAYMENT_SUBSCRIPTION">Payment / subscription</option><option value="ACCOUNT_ACCESS">Account / access</option><option value="GENERAL">General support</option></select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option><option value="OPEN">Open</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select>
+        <button type="button" onClick={load}><BsArrowClockwise /> Refresh</button>
+      </div>
+      <div className="table-responsive"><table className="sa-native-table sa-support-table"><thead><tr><th>Reference</th><th>Requester</th><th>Type</th><th>Subject</th><th>Priority</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
+        {filtered.map((request) => <tr key={request.id}><td><strong>{request.referenceCode || `SUP-${request.id}`}</strong></td><td><strong>{request.requesterName || "Unknown user"}</strong><small>{request.contactEmail}</small></td><td>{label(request.type)}</td><td><strong>{request.subject}</strong><small>{String(request.description || "").slice(0, 70)}</small></td><td><span className={`sa-support-priority ${String(request.priority).toLowerCase()}`}>{label(request.priority)}</span></td><td><span className={`status ${String(request.status).toLowerCase()}`}>{label(request.status)}</span></td><td>{shortDateTime(request.createdAt)}</td><td><button className="sa-support-view" type="button" onClick={() => openRequest(request)}><BsEye /> View</button></td></tr>)}
+        {!loading && !filtered.length && <tr><td colSpan="8"><Empty text="No support requests match these filters." /></td></tr>}
+        {loading && <tr><td colSpan="8"><Empty text="Loading support requests..." /></td></tr>}
+      </tbody></table></div>
+    </section>
+    {selected && <div className="sa-sub-modal-backdrop" onMouseDown={() => setSelected(null)}><div className="sa-support-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <header><div><span>{selected.referenceCode || `SUP-${selected.id}`}</span><h2>{selected.subject}</h2></div><button onClick={() => setSelected(null)}><BsXLg /></button></header>
+      <div className="sa-support-modal-body">
+        <section><div className="sa-support-requester"><BsChatLeftText /><div><b>{selected.requesterName}</b><span>{selected.contactEmail}</span></div></div><dl><div><dt>Type</dt><dd>{label(selected.type)}</dd></div><div><dt>Portal ID</dt><dd>{selected.portalId || "Not linked"}</dd></div><div><dt>Submitted</dt><dd>{shortDateTime(selected.createdAt)}</dd></div><div><dt>Current page</dt><dd>{selected.currentPage ? <a href={selected.currentPage} target="_blank" rel="noreferrer">Open page</a> : "Not provided"}</dd></div><div><dt>Screenshot</dt><dd>{selected.screenshotUrl ? <a href={selected.screenshotUrl} target="_blank" rel="noreferrer">View screenshot</a> : "Not provided"}</dd></div></dl><article><b>Description</b><p>{selected.description}</p></article></section>
+        <aside><label>Status<select value={edit.status} onChange={(event) => setEdit((current) => ({ ...current, status: event.target.value }))}><option value="OPEN">Open</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select></label><label>Priority<select value={edit.priority} onChange={(event) => setEdit((current) => ({ ...current, priority: event.target.value }))}><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="URGENT">Urgent</option></select></label><label>Response to user<textarea value={edit.adminResponse} onChange={(event) => setEdit((current) => ({ ...current, adminResponse: event.target.value }))} placeholder="Write an update or resolution for the user..." /></label><button onClick={save} disabled={working}>{working ? "Saving..." : "Save Response & Status"}</button>{selected.resolvedAt && <small>Resolved {shortDateTime(selected.resolvedAt)}</small>}</aside>
+      </div>
+    </div></div>}
+    <style>{supportStyles}</style>
+  </div>;
+}
+
+const supportStyles = `
+.sa-support-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:22px}.sa-support-card{overflow:hidden;padding:0}.sa-support-tools{display:grid;grid-template-columns:minmax(260px,1fr) 210px 170px auto;gap:10px;padding:18px}.sa-support-tools label{display:flex;align-items:center;gap:9px;padding:0 12px;border:1px solid #d8dde6;border-radius:9px}.sa-support-tools input{width:100%;padding:10px 0;border:0;outline:0}.sa-support-tools select{padding:10px;border:1px solid #d8dde6;border-radius:9px;background:#fff}.sa-support-tools>button{display:flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #5548d9;border-radius:9px;background:#fff;color:#5548d9}.sa-support-table td{vertical-align:middle}.sa-support-table td small{display:block;max-width:260px;margin-top:3px;color:#8a94a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sa-support-priority{padding:5px 8px;border-radius:20px;background:#eef0f4;font-size:11px;font-weight:750}.sa-support-priority.high,.sa-support-priority.urgent{background:#fee8e9;color:#bd2631}.sa-support-priority.low{background:#e7f7ef;color:#147a4e}.sa-support-view{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid #d8d5ff;border-radius:7px;background:#f7f6ff;color:#5548d9}.sa-support-modal{width:min(940px,94vw);max-height:90vh;overflow:auto;border-radius:18px;background:#fff;box-shadow:0 30px 80px rgba(16,24,40,.3)}.sa-support-modal>header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 23px;border-bottom:1px solid #e9ecf1}.sa-support-modal header span{color:#6557ed;font-size:11px;font-weight:800;letter-spacing:.08em}.sa-support-modal header h2{margin:4px 0 0;font-size:22px}.sa-support-modal header button{padding:7px;border:0;background:transparent}.sa-support-modal-body{display:grid;grid-template-columns:1.25fr .75fr}.sa-support-modal-body>section{padding:22px}.sa-support-requester{display:flex;align-items:center;gap:11px;padding:13px;border-radius:10px;background:#f5f4ff;color:#302a79}.sa-support-requester>svg{font-size:25px}.sa-support-requester div{display:grid}.sa-support-requester span{font-size:12px}.sa-support-modal dl{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:16px 0;border:1px solid #e4e7ec;border-radius:10px}.sa-support-modal dl>div{padding:11px;border-bottom:1px solid #e4e7ec}.sa-support-modal dt{color:#8a94a6;font-size:11px}.sa-support-modal dd{margin:3px 0 0;font-weight:700}.sa-support-modal article{padding:15px;border-radius:10px;background:#f8f9fb}.sa-support-modal article p{margin:7px 0 0;white-space:pre-wrap}.sa-support-modal-body>aside{display:flex;flex-direction:column;gap:13px;padding:22px;background:#f8f9fb}.sa-support-modal aside label{display:grid;gap:6px;font-size:12px;font-weight:750}.sa-support-modal aside select,.sa-support-modal aside textarea{padding:10px;border:1px solid #d8dde6;border-radius:8px;background:#fff}.sa-support-modal aside textarea{min-height:170px;resize:vertical}.sa-support-modal aside>button{padding:11px;border:0;border-radius:9px;background:#5548d9;color:#fff;font-weight:750}.sa-support-modal aside>button:disabled{opacity:.6}.sa-support-modal aside>small{text-align:center;color:#667085}@media(max-width:1050px){.sa-support-metrics{grid-template-columns:repeat(2,1fr)}.sa-support-tools{grid-template-columns:1fr 1fr}.sa-support-modal-body{grid-template-columns:1fr}}@media(max-width:650px){.sa-support-metrics,.sa-support-tools{grid-template-columns:1fr}.sa-support-modal-body>section,.sa-support-modal-body>aside{padding:15px}.sa-support-modal dl{grid-template-columns:1fr}}
+`;
 
 function buildPlanPayload(form) {
   const numberFields = [

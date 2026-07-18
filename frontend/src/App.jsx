@@ -274,6 +274,7 @@ function App() {
 <Route path="/super-admin/revenue" element={<SuperAdminDashboard section="revenue" />} />
 <Route path="/super-admin/subscriptions" element={<SuperAdminDashboard section="subscriptions" />} />
 <Route path="/super-admin/email-delivery" element={<SuperAdminDashboard section="emailDelivery" />} />
+<Route path="/super-admin/support" element={<SuperAdminDashboard section="support" />} />
 <Route path="/super-admin/users" element={<SuperAdminDashboard section="users" />} />
 <Route path="/super-admin/reports" element={<SuperAdminDashboard section="reports" />} />
 <Route path="/super-admin/settings" element={<SuperAdminDashboard section="settings" />} />

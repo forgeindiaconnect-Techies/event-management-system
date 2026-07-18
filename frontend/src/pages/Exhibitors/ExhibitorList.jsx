@@ -13,9 +13,21 @@ import {
 } from "react-icons/bs";
 import api from "../../api/axiosConfig";
 
+const EXHIBITOR_CATEGORIES = [
+  "Startup & Product",
+  "Food & Beverage",
+  "Merchandise",
+  "Technology",
+  "Service Provider",
+  "College / Student Project",
+  "Art & Handcraft",
+  "Other"
+];
+
 const emptyExhibitor = {
   company: "",
   category: "Technology",
+  customCategory: "",
   contact: "",
   email: "",
   phone: "",
@@ -32,6 +44,7 @@ function ExhibitorList() {
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -63,10 +76,17 @@ function ExhibitorList() {
         (exhibitor.email || "").toLowerCase().includes(query) ||
         (exhibitor.booth || "").toLowerCase().includes(query);
       const matchesStatus = statusFilter === "All" || exhibitor.status === statusFilter;
+      const matchesCategory =
+        categoryFilter === "All" ||
+        exhibitor.category === categoryFilter ||
+        (categoryFilter === "Other" &&
+          !EXHIBITOR_CATEGORIES.filter((category) => category !== "Other").includes(
+            exhibitor.category
+          ));
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [exhibitors, search, statusFilter]);
+  }, [exhibitors, search, statusFilter, categoryFilter]);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -80,10 +100,14 @@ function ExhibitorList() {
   };
 
   const editExhibitor = (exhibitor) => {
+    const savedCategory = exhibitor.category || "Technology";
+    const isListedCategory = EXHIBITOR_CATEGORIES.includes(savedCategory);
+
     setEditingId(exhibitor.id);
     setForm({
       company: exhibitor.company || "",
-      category: exhibitor.category || "Technology",
+      category: isListedCategory ? savedCategory : "Other",
+      customCategory: isListedCategory ? "" : savedCategory,
       contact: exhibitor.contact || "",
       email: exhibitor.email || "",
       phone: exhibitor.phone || "",
@@ -103,9 +127,16 @@ function ExhibitorList() {
       return;
     }
 
+    if (form.category === "Other" && !form.customCategory.trim()) {
+      setMessage("Enter the exhibitor category.");
+      return;
+    }
+
     try {
+      const { customCategory, ...exhibitorForm } = form;
       const payload = {
-        ...form,
+        ...exhibitorForm,
+        category: form.category === "Other" ? customCategory.trim() : form.category,
         event: { id: Number(id) }
       };
       const res = editingId
@@ -209,7 +240,10 @@ function ExhibitorList() {
               <Input label="Email *" value={form.email} onChange={(value) => updateField("email", value)} />
               <Input label="Phone" value={form.phone} onChange={(value) => updateField("phone", value)} />
 
-              <Select label="Category" value={form.category} onChange={(value) => updateField("category", value)} options={["Technology", "IT Services", "Healthcare", "Education", "Finance", "Startup"]} width="col-md-3" />
+              <Select label="Category" value={form.category} onChange={(value) => updateField("category", value)} options={EXHIBITOR_CATEGORIES} width="col-md-3" />
+              {form.category === "Other" && (
+                <Input label="Enter Category *" value={form.customCategory} onChange={(value) => updateField("customCategory", value)} width="col-md-3" />
+              )}
               <Input label="Booth" value={form.booth} onChange={(value) => updateField("booth", value)} width="col-md-3" />
               <Select label="Package" value={form.packageType} onChange={(value) => updateField("packageType", value)} options={["Standard", "Silver", "Gold", "Platinum"]} width="col-md-3" />
               <Select label="Status" value={form.status} onChange={(value) => updateField("status", value)} options={["Pending", "Confirmed", "Rejected", "Inactive"]} width="col-md-3" />
@@ -226,15 +260,18 @@ function ExhibitorList() {
       <div className="card border-0 shadow-sm">
         <div className="card-header bg-white py-3">
           <div className="row g-3 align-items-end">
-            <div className="col-lg-7">
+            <div className="col-lg-6">
               <label className="form-label fw-semibold">Search Exhibitors</label>
               <div className="input-group">
                 <span className="input-group-text bg-white"><BsSearch /></span>
                 <input className="form-control" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Company, contact, email or booth" />
               </div>
             </div>
-            <div className="col-lg-5">
+            <div className="col-lg-3">
               <Select label="Status" value={statusFilter} onChange={setStatusFilter} options={["All", "Pending", "Confirmed", "Rejected", "Inactive"]} width="col-12" />
+            </div>
+            <div className="col-lg-3">
+              <Select label="Category" value={categoryFilter} onChange={setCategoryFilter} options={["All", ...EXHIBITOR_CATEGORIES]} width="col-12" />
             </div>
           </div>
         </div>
@@ -270,7 +307,7 @@ function ExhibitorList() {
                       <div className="text-muted small d-flex align-items-center gap-2"><BsEnvelope /> {exhibitor.email}</div>
                       <div className="text-muted small d-flex align-items-center gap-2"><BsTelephone /> {exhibitor.phone || "N/A"}</div>
                     </td>
-                    <td>{exhibitor.category}</td>
+                    <td><span className="badge bg-info-subtle text-info-emphasis">{exhibitor.category}</span></td>
                     <td>{exhibitor.booth || "Not assigned"}</td>
                     <td><span className="badge bg-primary-subtle text-primary">{exhibitor.packageType}</span></td>
                     <td><span className={`badge ${statusBadge(exhibitor.status)}`}>{exhibitor.status}</span></td>

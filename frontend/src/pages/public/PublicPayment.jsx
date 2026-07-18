@@ -208,6 +208,15 @@ function PublicPayment() {
                 <BsShieldCheck /> <strong>Secure demo payment</strong>
               </div>
 
+              <div className="public-payment-recipient mb-3">
+                <BsBank />
+                <div>
+                  <small>Payment recipient</small>
+                  <strong>{event.portal?.portalName || "Event portal"}</strong>
+                  <span>Revenue is assigned automatically to this event's verified portal account.</span>
+                </div>
+              </div>
+
               {paymentState === "PENDING" && (
                 <div className="alert alert-warning py-2">Payment is processing...</div>
               )}
@@ -280,6 +289,7 @@ function PublicPayment() {
           </div>
         </div>
       </main>
+      <style>{`.public-payment-recipient{display:flex;align-items:flex-start;gap:11px;padding:12px;border:1px solid #dcd9ff;border-radius:12px;background:#f7f6ff;color:#40379d}.public-payment-recipient>svg{margin-top:3px;font-size:20px}.public-payment-recipient>div{display:grid}.public-payment-recipient small{color:#7770ad}.public-payment-recipient strong{color:#211b64}.public-payment-recipient span{margin-top:2px;color:#7770ad;font-size:11px;line-height:1.35}`}</style>
     </div>
   );
 }

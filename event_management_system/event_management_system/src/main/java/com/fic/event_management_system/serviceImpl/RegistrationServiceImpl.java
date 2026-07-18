@@ -26,6 +26,7 @@ import com.fic.event_management_system.security.TenantSecurityService;
 import com.fic.event_management_system.service.EmailService;
 import com.fic.event_management_system.service.RegistrationService;
 import com.fic.event_management_system.service.SubscriptionLimitService;
+import com.fic.event_management_system.service.PortalRevenueService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,6 +47,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final TicketClassRepository ticketClassRepository;
     private final TenantSecurityService tenantSecurityService;
     private final SubscriptionLimitService subscriptionLimitService;
+    private final PortalRevenueService portalRevenueService;
 
     public RegistrationServiceImpl(
             RegistrationRepository registrationRepository,
@@ -57,7 +59,8 @@ public class RegistrationServiceImpl implements RegistrationService {
             TicketClassRepository ticketClassRepository,
             EmailService emailService,
             TenantSecurityService tenantSecurityService,
-            SubscriptionLimitService subscriptionLimitService) {
+            SubscriptionLimitService subscriptionLimitService,
+            PortalRevenueService portalRevenueService) {
 
         this.registrationRepository = registrationRepository;
         this.eventRepository = eventRepository;
@@ -69,6 +72,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         this.emailService = emailService;
         this.tenantSecurityService = tenantSecurityService;
         this.subscriptionLimitService = subscriptionLimitService;
+        this.portalRevenueService = portalRevenueService;
     }
 
     @Override
@@ -297,6 +301,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     @Override
+    @Transactional
     public Registration startPayment(Long registrationId, String paymentMethod) {
         Registration registration = getRegistrationById(registrationId);
 
@@ -308,6 +313,8 @@ public class RegistrationServiceImpl implements RegistrationService {
             throw new RuntimeException("This registration does not require payment");
         }
 
+        portalRevenueService.assertPortalCanReceivePayment(registration);
+
         registration.setPaymentStatus(PaymentStatus.PENDING);
         registration.setPaymentMethod(paymentMethod);
         registration.setTransactionReference(null);
@@ -316,6 +323,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     @Override
+    @Transactional
     public Registration markAsPaid(Long registrationId, String paymentMethod) {
         Registration registration = getRegistrationById(registrationId);
 
@@ -343,6 +351,8 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         Registration savedRegistration = registrationRepository.save(registration);
 
+        portalRevenueService.recordPaidRegistration(savedRegistration);
+
         if (!ticketRepository.existsByRegistrationId(registrationId)) {
             List<Ticket> tickets = generateTickets(savedRegistration);
 
@@ -368,6 +378,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     @Override
+    @Transactional
     public Registration markAsPaymentFailed(Long registrationId) {
         Registration registration = getRegistrationById(registrationId);
         if (registration.getPaymentStatus() == PaymentStatus.PAID) {
@@ -377,6 +388,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         registration.setPaymentStatus(PaymentStatus.FAILED);
 
         Registration savedRegistration = registrationRepository.save(registration);
+        portalRevenueService.reverseRegistrationPayment(savedRegistration);
 
         queueParticipantEmail(
                 savedRegistration,
@@ -443,7 +455,14 @@ public class RegistrationServiceImpl implements RegistrationService {
             }
         }
 
-        return registrationRepository.save(registration);
+        Registration savedRegistration = registrationRepository.save(registration);
+        if (nextStatus == PaymentStatus.PAID) {
+            portalRevenueService.assertPortalCanReceivePayment(savedRegistration);
+            portalRevenueService.recordPaidRegistration(savedRegistration);
+        } else {
+            portalRevenueService.reverseRegistrationPayment(savedRegistration);
+        }
+        return savedRegistration;
     }
 
     @Override

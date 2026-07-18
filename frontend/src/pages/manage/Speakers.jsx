@@ -53,12 +53,15 @@ function Speakers() {
               .map(mapEventAssignmentToSpeaker)
           : [];
 
-      setSpeakerAssignments(
-        mergeSpeakerAssignments(oldSpeakerAssignments, eventSpeakerAssignments)
+      const mergedAssignments = mergeSpeakerAssignments(
+        oldSpeakerAssignments,
+        eventSpeakerAssignments
       );
-      setSentInvites(
-        invitationRes.status === "fulfilled" ? invitationRes.value.data || [] : []
-      );
+      const savedInvitations =
+        invitationRes.status === "fulfilled" ? invitationRes.value.data || [] : [];
+
+      setSpeakerAssignments(mergedAssignments);
+      setSentInvites(mergeSpeakerInvitations(savedInvitations, mergedAssignments));
     } catch (error) {
       setMessage("Unable to load speaker details.");
     }
@@ -387,6 +390,25 @@ function mergeSpeakerAssignments(oldAssignments, eventAssignments) {
     seen.add(key);
     return true;
   });
+}
+
+function mergeSpeakerInvitations(invitations, assignments) {
+  const invitationEmails = new Set(
+    invitations.map((invitation) => String(invitation.email || "").toLowerCase())
+  );
+  const acceptedAssignments = assignments
+    .filter((assignment) => {
+      const email = getSpeakerEmail(assignment).toLowerCase();
+      return email && email !== "n/a" && !invitationEmails.has(email);
+    })
+    .map((assignment) => ({
+      id: `accepted-${assignment.id}`,
+      email: getSpeakerEmail(assignment),
+      sessionTitle: assignment.sessionTitle || assignment.topic || "Assigned speaker",
+      status: "ACCEPTED"
+    }));
+
+  return [...invitations, ...acceptedAssignments];
 }
 
 function getSpeakerName(assignment) {

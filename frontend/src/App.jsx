@@ -105,6 +105,7 @@ import AdminSubscription from "./pages/AdminSubscription";
 import SubscriptionPayment from "./pages/SubscriptionPayment";
 import MobileSelectEnhancer from "./components/MobileSelectEnhancer";
 import HorizontalMenuArrows from "./components/HorizontalMenuArrows";
+import TourCenter from "./pages/Help/TourCenter";
 
 
 function App() {
@@ -121,6 +122,8 @@ function App() {
 {/* Auth */}
 <Route path="/login" element={<Login />} />
 <Route path="/choose-access" element={<ChooseAccess />} />
+<Route path="/help/tour" element={<TourCenter />} />
+<Route path="/help/tour/:tourType" element={<TourCenter />} />
 
 {/* Create Portal */}
 <Route path="/create-portal" element={<CreatePortal />} />

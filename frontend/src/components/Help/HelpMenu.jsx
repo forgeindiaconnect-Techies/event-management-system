@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BsChatDots, BsCompass, BsHeadset, BsQuestionCircle, BsXLg } from "react-icons/bs";
 import HelpAssistant from "./HelpAssistant";
-import GuidedTour from "./GuidedTour";
 
 const options = [
   ["assistant", BsChatDots, "Ask FIC Assistant", "Get immediate answers about using the platform."],
@@ -12,8 +12,8 @@ const options = [
 function HelpMenu({ onSelect }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("menu");
-  const [tourOpen, setTourOpen] = useState(false);
   const menuRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -39,7 +39,7 @@ function HelpMenu({ onSelect }) {
     if (key === "tour") {
       setOpen(false);
       setView("menu");
-      setTourOpen(true);
+      navigate("/help/tour");
       return;
     }
     onSelect?.(key);
@@ -73,7 +73,6 @@ function HelpMenu({ onSelect }) {
           )}
         </div>
       )}
-      {tourOpen && <GuidedTour onClose={() => setTourOpen(false)} />}
       <style>{styles}</style>
     </div>
   );

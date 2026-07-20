@@ -9,10 +9,10 @@ const configs = {
     description: "Plan operational work, assign ownership and track completion.",
     singular: "Task",
     endpoint: "tasks",
-    empty: { title: "", description: "", taskType: "TASK", category: "", priority: "MEDIUM", status: "NOT_STARTED", assignedUserName: "", dueDateTime: "", completionNotes: "" },
+    empty: { title: "", description: "", taskType: "TASK", category: "REGISTRATION", priority: "MEDIUM", status: "NOT_STARTED", assignedUserName: "", dueDateTime: "", completionNotes: "" },
     fields: [
       ["title", "Title", "text", true], ["taskType", "Type", "select", true, ["TASK", "CHECKLIST_ITEM"]],
-      ["category", "Category"], ["priority", "Priority", "select", true, ["LOW", "MEDIUM", "HIGH", "URGENT"]],
+      ["category", "Category", "select", true, ["REGISTRATION", "STAGE_AND_PROGRAM", "VENUE", "TECHNICAL", "FOOD_AND_CATERING", "SECURITY", "GUEST_MANAGEMENT", "TRANSPORTATION", "MARKETING", "EXHIBITORS", "MEDICAL", "LOGISTICS", "OTHER"]], ["priority", "Priority", "select", true, ["LOW", "MEDIUM", "HIGH", "URGENT"]],
       ["status", "Status", "select", true, ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "CANCELLED"]],
       ["assignedUserName", "Assigned person"], ["dueDateTime", "Due date", "datetime-local"],
       ["description", "Description", "textarea"], ["completionNotes", "Completion notes", "textarea"],
@@ -24,9 +24,9 @@ const configs = {
     description: "Record issues, assign responders and document resolutions.",
     singular: "Incident",
     endpoint: "incidents",
-    empty: { title: "", description: "", category: "", severity: "MEDIUM", status: "OPEN", location: "", evidenceUrl: "", assignedUserName: "", resolutionNotes: "" },
+    empty: { title: "", description: "", category: "SAFETY", severity: "MEDIUM", status: "OPEN", location: "", evidenceUrl: "", assignedUserName: "", resolutionNotes: "" },
     fields: [
-      ["title", "Title", "text", true], ["category", "Category"],
+      ["title", "Title", "text", true], ["category", "Category", "select", true, ["SAFETY", "MEDICAL", "SECURITY", "TECHNICAL", "CROWD", "VENUE", "EQUIPMENT", "OTHER"]],
       ["severity", "Severity", "select", true, ["LOW", "MEDIUM", "HIGH", "CRITICAL"]],
       ["status", "Status", "select", true, ["OPEN", "INVESTIGATING", "RESOLVED", "CLOSED"]],
       ["location", "Location"], ["evidenceUrl", "Evidence URL", "url"], ["assignedUserName", "Assigned responder"],
@@ -39,9 +39,9 @@ const configs = {
     description: "Track equipment, stock, allocations, locations and shortages.",
     singular: "Resource",
     endpoint: "resources",
-    empty: { name: "", category: "", ownershipType: "OWNED", totalQuantity: 0, requiredQuantity: 0, availableQuantity: 0, allocatedQuantity: 0, condition: "GOOD", status: "REQUESTED", location: "", responsibleUserName: "", notes: "" },
+    empty: { name: "", category: "AUDIO_VISUAL", ownershipType: "OWNED", totalQuantity: 0, requiredQuantity: 0, availableQuantity: 0, allocatedQuantity: 0, condition: "GOOD", status: "REQUESTED", location: "", responsibleUserName: "", notes: "" },
     fields: [
-      ["name", "Resource name", "text", true], ["category", "Category"],
+      ["name", "Resource name", "text", true], ["category", "Category", "select", true, ["AUDIO_VISUAL", "FURNITURE", "IT_EQUIPMENT", "ELECTRICAL", "REGISTRATION", "SAFETY", "SIGNAGE", "TRANSPORT", "CATERING_EQUIPMENT", "OTHER"]],
       ["ownershipType", "Ownership", "select", true, ["OWNED", "RENTED", "VENUE_PROVIDED", "SPONSORED", "BORROWED"]],
       ["status", "Status", "select", true, ["REQUESTED", "CONFIRMED", "DELIVERED", "READY", "CHECKED_OUT", "RETURNED"]],
       ["condition", "Condition", "select", true, ["EXCELLENT", "GOOD", "FAIR", "DAMAGED", "UNDER_MAINTENANCE"]],
@@ -56,9 +56,9 @@ const configs = {
     description: "Manage suppliers, contracts, deliveries and vendor payments.",
     singular: "Vendor",
     endpoint: "vendors",
-    empty: { companyName: "", contactPerson: "", email: "", phone: "", serviceCategory: "", status: "PENDING", contractAmount: 0, advancePaid: 0, deliveryDeadline: "", deliveryStatus: "NOT_SCHEDULED", paymentStatus: "NOT_STARTED", notes: "" },
+    empty: { companyName: "", contactPerson: "", email: "", phone: "", serviceCategory: "VENUE", status: "PENDING", contractAmount: 0, advancePaid: 0, deliveryDeadline: "", deliveryStatus: "NOT_SCHEDULED", paymentStatus: "NOT_STARTED", notes: "" },
     fields: [
-      ["companyName", "Company name", "text", true], ["serviceCategory", "Service category"],
+      ["companyName", "Company name", "text", true], ["serviceCategory", "Service category", "select", true, ["VENUE", "CATERING", "AUDIO_VISUAL", "DECORATION", "SECURITY", "TRANSPORT", "PRINTING", "PHOTOGRAPHY", "ENTERTAINMENT", "STAFFING", "EQUIPMENT_RENTAL", "OTHER"]],
       ["contactPerson", "Contact person"], ["email", "Email", "email"], ["phone", "Phone"],
       ["status", "Vendor status", "select", true, ["PROSPECT", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]],
       ["contractAmount", "Contract amount", "number"], ["advancePaid", "Advance paid", "number"],
@@ -71,7 +71,7 @@ const configs = {
   },
 };
 
-const expenseEmpty = { title: "", category: "", description: "", vendorId: "", subtotal: 0, taxAmount: 0, amountPaid: 0, currency: "INR", paymentStatus: "", approvalStatus: "PENDING", paymentMethod: "", paymentDate: "", invoiceNumber: "", receiptUrl: "", notes: "" };
+const expenseEmpty = { title: "", category: "VENUE", description: "", vendorId: "", subtotal: 0, taxAmount: 0, amountPaid: 0, currency: "INR", paymentStatus: "", approvalStatus: "PENDING", paymentMethod: "", paymentDate: "", invoiceNumber: "", receiptUrl: "", notes: "" };
 
 function OperationsWorkspace({ section }) {
   if (section === "overview") return <Overview />;
@@ -202,7 +202,7 @@ function BudgetExpenses() {
       <form className="card border-0 shadow-sm mb-4" onSubmit={saveBudget}><div className="card-body">
         <h2 className="h5 fw-semibold mb-3">Event budget</h2><div className="row g-3">
           <div className="col-md-4"><label className="form-label fw-semibold">Approved amount</label><input type="number" min="0" step="0.01" className="form-control" value={budget.approvedBudget ?? 0} onChange={(e) => setBudget({ ...budget, approvedBudget: e.target.value })} /></div>
-          <div className="col-md-2"><label className="form-label fw-semibold">Currency</label><input className="form-control" maxLength="10" value={budget.currency || "INR"} onChange={(e) => setBudget({ ...budget, currency: e.target.value })} /></div>
+          <div className="col-md-2"><label className="form-label fw-semibold">Currency</label><select className="form-select" value={budget.currency || "INR"} onChange={(e) => setBudget({ ...budget, currency: e.target.value })}><option value="INR">INR</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="AED">AED</option><option value="SGD">SGD</option></select></div>
           <div className="col-md-6"><label className="form-label fw-semibold">Notes</label><input className="form-control" value={budget.notes || ""} onChange={(e) => setBudget({ ...budget, notes: e.target.value })} /></div>
         </div><button className="btn btn-outline-primary mt-3">Save Budget</button>
       </div></form>
@@ -217,7 +217,7 @@ function Editor({ title, fields, form, setForm, save, close }) {
 }
 
 function ExpenseEditor({ form, setForm, vendors, save, close, editing }) {
-  const fields = [["title", "Expense title", "text", true], ["category", "Category", "text", true], ["subtotal", "Subtotal", "number"], ["taxAmount", "Tax amount", "number"], ["amountPaid", "Amount paid", "number"], ["currency", "Currency"], ["approvalStatus", "Approval", "select", true, ["DRAFT", "PENDING", "APPROVED", "REJECTED", "CHANGES_REQUESTED"]], ["paymentStatus", "Payment status", "select", false, ["", "NOT_STARTED", "PARTIALLY_PAID", "PAID", "OVERDUE", "CANCELLED"]], ["paymentMethod", "Payment method"], ["paymentDate", "Payment date", "date"], ["invoiceNumber", "Invoice number"], ["receiptUrl", "Receipt URL"], ["description", "Description", "textarea"], ["notes", "Notes", "textarea"]];
+  const fields = [["title", "Expense title", "text", true], ["category", "Category", "select", true, ["VENUE", "CATERING", "AUDIO_VISUAL_AND_TECHNICAL", "MARKETING", "STAFFING", "TRAVEL", "ACCOMMODATION", "SECURITY", "PRINTING", "EQUIPMENT_RENTAL", "VENDOR", "MISCELLANEOUS"]], ["subtotal", "Subtotal", "number"], ["taxAmount", "Tax amount", "number"], ["amountPaid", "Amount paid", "number"], ["currency", "Currency", "select", true, ["INR", "USD", "EUR", "GBP", "AED", "SGD"]], ["approvalStatus", "Approval", "select", true, ["DRAFT", "PENDING", "APPROVED", "REJECTED", "CHANGES_REQUESTED"]], ["paymentStatus", "Payment status", "select", false, ["", "NOT_STARTED", "PARTIALLY_PAID", "PAID", "OVERDUE", "CANCELLED"]], ["paymentMethod", "Payment method", "select", false, ["", "CASH", "UPI", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]], ["paymentDate", "Payment date", "date"], ["invoiceNumber", "Invoice number"], ["receiptUrl", "Receipt URL"], ["description", "Description", "textarea"], ["notes", "Notes", "textarea"]];
   return <form className="card border-0 shadow-sm mb-4" onSubmit={save}><div className="card-header bg-white d-flex justify-content-between py-3"><h2 className="h5 mb-0">{editing ? "Edit" : "Add"} Expense</h2><button type="button" className="btn btn-sm btn-light" onClick={close}><BsX size={22} /></button></div><div className="card-body"><div className="row g-3"><div className="col-md-6"><label className="form-label fw-semibold">Vendor</label><select className="form-select" value={form.vendorId || ""} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">No vendor</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.companyName}</option>)}</select></div>{fields.map((field) => <Field key={field[0]} field={field} value={form[field[0]] ?? ""} change={(value) => setForm({ ...form, [field[0]]: value })} />)}</div><div className="d-flex justify-content-end gap-2 mt-4"><button type="button" className="btn btn-light" onClick={close}>Cancel</button><button className="btn btn-primary">Save Expense</button></div></div></form>;
 }
 

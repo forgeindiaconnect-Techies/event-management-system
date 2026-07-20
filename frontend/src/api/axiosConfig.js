@@ -29,7 +29,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    // Only an unauthenticated/expired token should end the session.
+    // A 403 means the user is logged in but lacks permission for one action.
+    if (error.response?.status === 401) {
       localStorage.clear();
       window.location.href = "/login";
     }

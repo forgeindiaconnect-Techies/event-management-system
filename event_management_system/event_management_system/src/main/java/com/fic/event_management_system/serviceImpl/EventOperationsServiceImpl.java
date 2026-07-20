@@ -335,8 +335,9 @@ public class EventOperationsServiceImpl implements EventOperationsService {
                 getIncidentForEvent(eventId, incidentId);
 
         applyIncident(incident, request);
-
-        return incidentRepository.save(incident);
+        IncidentReport savedIncident = incidentRepository.save(incident);
+        notifyIncidentReporter(savedIncident);
+        return savedIncident;
     }
 
     @Override
@@ -373,6 +374,13 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
         boolean resolved = newStatus == IncidentStatus.RESOLVED
                 || newStatus == IncidentStatus.CLOSED;
+
+        if (resolved && (request.resolutionNotes() == null
+                || request.resolutionNotes().isBlank())) {
+            throw new IllegalArgumentException(
+                    "Response or action taken is required before resolving an incident"
+            );
+        }
 
         boolean wasResolved = previousStatus == IncidentStatus.RESOLVED
                 || previousStatus == IncidentStatus.CLOSED;
@@ -885,6 +893,50 @@ public class EventOperationsServiceImpl implements EventOperationsService {
                 // An unavailable notification must not discard the incident report.
             }
         });
+    }
+
+    private void notifyIncidentReporter(IncidentReport incident) {
+        if (incident.getReportedByUserId() == null) {
+            return;
+        }
+
+        try {
+            User reporter = tenantSecurityService
+                    .getUserFromLoggedInPortal(
+                            incident.getReportedByUserId()
+                    );
+
+            String roleName = reporter.getRole() == null
+                    || reporter.getRole().getRoleName() == null
+                            ? ""
+                            : reporter.getRole().getRoleName().name();
+
+            String actionUrl = "VOLUNTEER".equalsIgnoreCase(roleName)
+                    ? "/volunteer"
+                    : "Staff".equalsIgnoreCase(roleName)
+                            ? "/staff"
+                            : "/events/" + incident.getEvent().getId()
+                                    + "/operations/incidents";
+
+            String response = incident.getResolutionNotes() == null
+                    || incident.getResolutionNotes().isBlank()
+                            ? "The incident is now " + incident.getStatus() + "."
+                            : incident.getResolutionNotes();
+
+            notificationService.createNotification(
+                    reporter,
+                    incident.getEvent().getPortal(),
+                    incident.getEvent(),
+                    NotificationType.SYSTEM_ALERT,
+                    "Incident update: " + incident.getTitle(),
+                    response,
+                    actionUrl,
+                    "INCIDENT_UPDATE_" + incident.getId() + "_"
+                            + System.currentTimeMillis()
+            );
+        } catch (RuntimeException ignored) {
+            // The incident update must remain saved if notification delivery fails.
+        }
     }
 
     private void requireIncidentReporterAccess(Long eventId) {

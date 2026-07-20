@@ -30,9 +30,9 @@ const configs = {
       ["severity", "Severity", "select", true, ["LOW", "MEDIUM", "HIGH", "CRITICAL"]],
       ["status", "Status", "select", true, ["OPEN", "INVESTIGATING", "RESOLVED", "CLOSED"]],
       ["location", "Location"], ["evidenceUrl", "Evidence URL", "url"], ["assignedUserName", "Assigned responder"],
-      ["description", "Description", "textarea"], ["resolutionNotes", "Resolution notes", "textarea"],
+      ["description", "Description", "textarea"], ["resolutionNotes", "Response / action taken", "textarea"],
     ],
-    columns: [["title", "Incident"], ["category", "Category"], ["severity", "Severity"], ["status", "Status"], ["location", "Location"], ["reportedAt", "Reported"]],
+    columns: [["title", "Incident"], ["category", "Category"], ["severity", "Severity"], ["status", "Status"], ["assignedUserName", "Responder"], ["resolutionNotes", "Response"], ["reportedAt", "Reported"]],
   },
   resources: {
     title: "Resources",

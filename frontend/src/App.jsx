@@ -36,7 +36,6 @@ import Sponsors from "./pages/manage/Sponsors";
 import Promote from "./pages/manage/Promote";
 import Engagement from "./pages/manage/Engagement";
 import EventLibrary from "./pages/manage/EventLibrary";
-import CustomForms from "./pages/manage/CustomForms";
 
 import RegistrationLayout from "./layouts/RegistrationLayout";
 import Payments from "./pages/Registration/Payments";
@@ -177,7 +176,6 @@ function App() {
           <Route path="promote" element={<Promote />} />
           <Route path="engagement" element={<Engagement />} />
           <Route path="library" element={<EventLibrary />} />
-          <Route path="forms" element={<CustomForms />} />
         </Route>
 
         {/* Registrations */}

@@ -9,7 +9,6 @@ import {
   BsMegaphone,
   BsChatDots,
   BsFolder,
-  BsFileText,
 } from "react-icons/bs";
 
 function ManageSidebar({ onScrollEndChange }) {
@@ -68,11 +67,6 @@ function ManageSidebar({ onScrollEndChange }) {
       label: "Event Library",
       icon: <BsFolder size={16} />,
       path: `/events/${id}/manage/library`
-    },
-    {
-      label: "Custom Forms",
-      icon: <BsFileText size={16} />,
-      path: `/events/${id}/manage/forms`
     },
   ];
 

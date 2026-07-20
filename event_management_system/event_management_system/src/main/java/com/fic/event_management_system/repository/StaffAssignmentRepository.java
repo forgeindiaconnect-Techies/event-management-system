@@ -15,4 +15,6 @@ public interface StaffAssignmentRepository extends JpaRepository<StaffAssignment
     Optional<StaffAssignment> findByEventIdAndStaffId(Long eventId, Long staffId);
 
     boolean existsByEventIdAndStaffId(Long eventId, Long staffId);
+
+    boolean existsByEventIdAndStaffIdAndActiveTrue(Long eventId, Long staffId);
 }

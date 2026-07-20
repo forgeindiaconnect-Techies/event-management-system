@@ -19,6 +19,11 @@ public interface IncidentReportRepository
             IncidentStatus status
     );
 
+    List<IncidentReport> findByEventIdAndReportedByUserIdOrderByReportedAtDesc(
+            Long eventId,
+            Long reportedByUserId
+    );
+
     long countByEventId(Long eventId);
 
     long countByEventIdAndStatus(Long eventId, IncidentStatus status);

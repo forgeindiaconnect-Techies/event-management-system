@@ -3,6 +3,8 @@ package com.fic.event_management_system.serviceImpl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,14 +30,21 @@ import com.fic.event_management_system.enums.OperationsEnums.PaymentStatus;
 import com.fic.event_management_system.enums.OperationsEnums.ResourceStatus;
 import com.fic.event_management_system.enums.OperationsEnums.TaskStatus;
 import com.fic.event_management_system.enums.OperationsEnums.VendorStatus;
+import com.fic.event_management_system.enums.NotificationType;
+import com.fic.event_management_system.enums.RoleName;
+import com.fic.event_management_system.repository.EventAssignmentRepository;
+import com.fic.event_management_system.repository.CoordinatorAssignmentRepository;
 import com.fic.event_management_system.repository.EventBudgetRepository;
 import com.fic.event_management_system.repository.EventExpenseRepository;
 import com.fic.event_management_system.repository.EventResourceRepository;
 import com.fic.event_management_system.repository.EventVendorRepository;
 import com.fic.event_management_system.repository.IncidentReportRepository;
 import com.fic.event_management_system.repository.OperationalTaskRepository;
+import com.fic.event_management_system.repository.StaffAssignmentRepository;
+import com.fic.event_management_system.repository.VolunteerAssignmentRepository;
 import com.fic.event_management_system.security.TenantSecurityService;
 import com.fic.event_management_system.service.EventOperationsService;
+import com.fic.event_management_system.service.NotificationService;
 
 @Service
 @Transactional
@@ -48,6 +57,11 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     private final EventBudgetRepository budgetRepository;
     private final EventExpenseRepository expenseRepository;
     private final TenantSecurityService tenantSecurityService;
+    private final StaffAssignmentRepository staffAssignmentRepository;
+    private final VolunteerAssignmentRepository volunteerAssignmentRepository;
+    private final EventAssignmentRepository eventAssignmentRepository;
+    private final NotificationService notificationService;
+    private final CoordinatorAssignmentRepository coordinatorAssignmentRepository;
 
     public EventOperationsServiceImpl(
             OperationalTaskRepository taskRepository,
@@ -56,7 +70,12 @@ public class EventOperationsServiceImpl implements EventOperationsService {
             EventVendorRepository vendorRepository,
             EventBudgetRepository budgetRepository,
             EventExpenseRepository expenseRepository,
-            TenantSecurityService tenantSecurityService) {
+            TenantSecurityService tenantSecurityService,
+            StaffAssignmentRepository staffAssignmentRepository,
+            VolunteerAssignmentRepository volunteerAssignmentRepository,
+            EventAssignmentRepository eventAssignmentRepository,
+            NotificationService notificationService,
+            CoordinatorAssignmentRepository coordinatorAssignmentRepository) {
 
         this.taskRepository = taskRepository;
         this.incidentRepository = incidentRepository;
@@ -65,6 +84,11 @@ public class EventOperationsServiceImpl implements EventOperationsService {
         this.budgetRepository = budgetRepository;
         this.expenseRepository = expenseRepository;
         this.tenantSecurityService = tenantSecurityService;
+        this.staffAssignmentRepository = staffAssignmentRepository;
+        this.volunteerAssignmentRepository = volunteerAssignmentRepository;
+        this.eventAssignmentRepository = eventAssignmentRepository;
+        this.notificationService = notificationService;
+        this.coordinatorAssignmentRepository = coordinatorAssignmentRepository;
     }
 
     @Override
@@ -251,7 +275,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     @Override
     @Transactional(readOnly = true)
     public List<IncidentReport> getIncidents(Long eventId) {
-        requireOperationsAccess();
+        requireIncidentManagerAccess(eventId);
         tenantSecurityService.getEventFromLoggedInPortal(eventId);
 
         return incidentRepository
@@ -259,11 +283,25 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<IncidentReport> getMyIncidents(Long eventId) {
+        requireIncidentReporterAccess(eventId);
+
+        User user = tenantSecurityService.getLoggedInUser();
+
+        return incidentRepository
+                .findByEventIdAndReportedByUserIdOrderByReportedAtDesc(
+                        eventId,
+                        user.getId()
+                );
+    }
+
+    @Override
     public IncidentReport createIncident(
             Long eventId,
             IncidentRequest request) {
 
-        requireOperationsAccess();
+        requireIncidentReporterAccess(eventId);
 
         Event event = tenantSecurityService
                 .getEventFromLoggedInPortal(eventId);
@@ -279,7 +317,9 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
         applyIncident(incident, request);
 
-        return incidentRepository.save(incident);
+        IncidentReport savedIncident = incidentRepository.save(incident);
+        notifyIncidentManagers(savedIncident);
+        return savedIncident;
     }
 
     @Override
@@ -288,7 +328,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
             Long incidentId,
             IncidentRequest request) {
 
-        requireOperationsAccess();
+        requireIncidentManagerAccess(eventId);
 
         IncidentReport incident =
                 getIncidentForEvent(eventId, incidentId);
@@ -318,6 +358,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
         incident.setCategory(clean(request.category()));
         incident.setSeverity(request.severity());
         incident.setLocation(clean(request.location()));
+        incident.setEvidenceUrl(clean(request.evidenceUrl()));
         incident.setAssignedUserId(request.assignedUserId());
         incident.setAssignedUserName(clean(request.assignedUserName()));
         incident.setResolutionNotes(clean(request.resolutionNotes()));
@@ -802,6 +843,112 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
     private void requireOperationsAccess() {
         tenantSecurityService.requirePortalAdminOrOrganizer();
+    }
+
+    private void notifyIncidentManagers(IncidentReport incident) {
+        Event event = incident.getEvent();
+        Map<Long, User> recipients = new LinkedHashMap<>();
+
+        if (event.getPortal() != null && event.getPortal().getAdmin() != null) {
+            recipients.put(event.getPortal().getAdmin().getId(), event.getPortal().getAdmin());
+        }
+
+        if (event.getOrganizer() != null) {
+            recipients.put(event.getOrganizer().getId(), event.getOrganizer());
+        }
+
+        eventAssignmentRepository
+                .findByEventIdAndActiveTrueOrderByCreatedAtDesc(event.getId())
+                .stream()
+                .filter(assignment -> assignment.getRoleName() == RoleName.COORDINATOR)
+                .map(assignment -> assignment.getUser())
+                .filter(user -> user != null && user.getId() != null)
+                .forEach(user -> recipients.put(user.getId(), user));
+
+        recipients.values().forEach(recipient -> {
+            try {
+                notificationService.createNotification(
+                        recipient,
+                        event.getPortal(),
+                        event,
+                        NotificationType.SYSTEM_ALERT,
+                        "New incident reported",
+                        incident.getTitle() + " (" + incident.getSeverity() + ") at "
+                                + (incident.getLocation() == null || incident.getLocation().isBlank()
+                                        ? "the event venue"
+                                        : incident.getLocation()),
+                        "/events/" + event.getId() + "/operations/incidents",
+                        "INCIDENT_" + incident.getId() + "_USER_" + recipient.getId()
+                );
+            } catch (RuntimeException ignored) {
+                // An unavailable notification must not discard the incident report.
+            }
+        });
+    }
+
+    private void requireIncidentReporterAccess(Long eventId) {
+        Event event = tenantSecurityService
+                .getEventFromLoggedInPortal(eventId);
+
+        if (tenantSecurityService.isSuperAdmin()
+                || tenantSecurityService.isPortalAdmin()
+                || tenantSecurityService.isOrganizer()) {
+            return;
+        }
+
+        User user = tenantSecurityService.getLoggedInUser();
+        boolean assigned = false;
+
+        if (tenantSecurityService.hasRole("STAFF")) {
+            assigned = staffAssignmentRepository
+                    .existsByEventIdAndStaffIdAndActiveTrue(
+                            event.getId(),
+                            user.getId()
+                    );
+        } else if (tenantSecurityService.hasRole("VOLUNTEER")) {
+            assigned = volunteerAssignmentRepository
+                    .existsByVolunteerIdAndEventIdAndActiveTrue(
+                            user.getId(),
+                            event.getId()
+                    );
+        } else if (tenantSecurityService.hasRole("COORDINATOR")) {
+            assigned = coordinatorAssignmentRepository
+                    .existsByCoordinatorIdAndEventIdAndActiveTrue(
+                            user.getId(),
+                            event.getId()
+                    );
+        }
+
+        if (!assigned) {
+            throw new RuntimeException(
+                    "You are not assigned to this event"
+            );
+        }
+    }
+
+    private void requireIncidentManagerAccess(Long eventId) {
+        Event event = tenantSecurityService
+                .getEventFromLoggedInPortal(eventId);
+
+        if (tenantSecurityService.isSuperAdmin()
+                || tenantSecurityService.isPortalAdmin()
+                || tenantSecurityService.isOrganizer()) {
+            return;
+        }
+
+        User user = tenantSecurityService.getLoggedInUser();
+        boolean assignedCoordinator = tenantSecurityService.hasRole("COORDINATOR")
+                && coordinatorAssignmentRepository
+                        .existsByCoordinatorIdAndEventIdAndActiveTrue(
+                                user.getId(),
+                                event.getId()
+                        );
+
+        if (!assignedCoordinator) {
+            throw new RuntimeException(
+                    "You are not assigned to manage this event"
+            );
+        }
     }
 
     private void requireSameEvent(Long eventId, Event event) {

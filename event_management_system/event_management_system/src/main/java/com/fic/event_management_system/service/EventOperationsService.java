@@ -30,6 +30,8 @@ public interface EventOperationsService {
 
     List<IncidentReport> getIncidents(Long eventId);
 
+    List<IncidentReport> getMyIncidents(Long eventId);
+
     IncidentReport createIncident(Long eventId, IncidentRequest request);
 
     IncidentReport updateIncident(

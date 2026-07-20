@@ -13,4 +13,6 @@ public interface CoordinatorAssignmentRepository
     List<CoordinatorAssignment> findByEventId(Long eventId);
 
     boolean existsByCoordinatorIdAndEventId(Long coordinatorId, Long eventId);
+
+    boolean existsByCoordinatorIdAndEventIdAndActiveTrue(Long coordinatorId, Long eventId);
 }

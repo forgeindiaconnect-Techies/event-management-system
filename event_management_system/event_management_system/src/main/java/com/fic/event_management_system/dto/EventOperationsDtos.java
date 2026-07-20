@@ -43,6 +43,7 @@ public final class EventOperationsDtos {
             IncidentSeverity severity,
             IncidentStatus status,
             String location,
+            String evidenceUrl,
             Long assignedUserId,
             String assignedUserName,
             String resolutionNotes

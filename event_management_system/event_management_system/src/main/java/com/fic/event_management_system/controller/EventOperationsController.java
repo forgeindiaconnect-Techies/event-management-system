@@ -101,6 +101,15 @@ public class EventOperationsController {
         );
     }
 
+    @GetMapping("/incidents/mine")
+    public ResponseEntity<List<IncidentReport>> getMyIncidents(
+            @PathVariable Long eventId) {
+
+        return ResponseEntity.ok(
+                operationsService.getMyIncidents(eventId)
+        );
+    }
+
     @PostMapping("/incidents")
     public ResponseEntity<IncidentReport> createIncident(
             @PathVariable Long eventId,

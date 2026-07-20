@@ -13,4 +13,6 @@ public interface VolunteerAssignmentRepository
     List<VolunteerAssignment> findByEventId(Long eventId);
 
     boolean existsByVolunteerIdAndEventId(Long volunteerId, Long eventId);
+
+    boolean existsByVolunteerIdAndEventIdAndActiveTrue(Long volunteerId, Long eventId);
 }

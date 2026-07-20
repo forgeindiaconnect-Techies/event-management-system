@@ -13,6 +13,7 @@ public class IncidentReport {
     private String category; @Enumerated(EnumType.STRING) private IncidentSeverity severity=IncidentSeverity.MEDIUM;
     @Enumerated(EnumType.STRING) private IncidentStatus status=IncidentStatus.OPEN; private String location;
     private Long reportedByUserId; private String reportedByName; private Long assignedUserId; private String assignedUserName;
+    @Column(length=1000) private String evidenceUrl;
     private LocalDateTime reportedAt; private LocalDateTime resolvedAt; @Column(length=4000) private String resolutionNotes;
     @PrePersist void create(){reportedAt=LocalDateTime.now();}
     public Long getId(){return id;} public void setId(Long v){id=v;} public Event getEvent(){return event;} public void setEvent(Event v){event=v;}
@@ -21,5 +22,6 @@ public class IncidentReport {
     public IncidentStatus getStatus(){return status;} public void setStatus(IncidentStatus v){status=v;} public String getLocation(){return location;} public void setLocation(String v){location=v;}
     public Long getReportedByUserId(){return reportedByUserId;} public void setReportedByUserId(Long v){reportedByUserId=v;} public String getReportedByName(){return reportedByName;} public void setReportedByName(String v){reportedByName=v;}
     public Long getAssignedUserId(){return assignedUserId;} public void setAssignedUserId(Long v){assignedUserId=v;} public String getAssignedUserName(){return assignedUserName;} public void setAssignedUserName(String v){assignedUserName=v;}
+    public String getEvidenceUrl(){return evidenceUrl;} public void setEvidenceUrl(String v){evidenceUrl=v;}
     public LocalDateTime getReportedAt(){return reportedAt;} public LocalDateTime getResolvedAt(){return resolvedAt;} public void setResolvedAt(LocalDateTime v){resolvedAt=v;} public String getResolutionNotes(){return resolutionNotes;} public void setResolutionNotes(String v){resolutionNotes=v;}
 }

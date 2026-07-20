@@ -2,6 +2,7 @@
 import RoleLayout from "../../layouts/RoleLayout";
 import api from "../../api/axiosConfig";
 import { loadRoleAssignments } from "../../utils/roleAssignments";
+import RoleIncidentReporter from "../../components/Role/RoleIncidentReporter";
 import "../../styles/Admin.css";
 import {
   BsCalendarEvent,
@@ -125,6 +126,7 @@ function VolunteerDashboard() {
           </div>
         )}
       </div>
+      <RoleIncidentReporter assignments={activeAssignments} />
     </RoleLayout>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import RoleLayout from "../../layouts/RoleLayout";
 import api from "../../api/axiosConfig";
 import { loadRoleAssignments } from "../../utils/roleAssignments";
+import RoleIncidentReporter from "../../components/Role/RoleIncidentReporter";
 import "../../styles/Admin.css";
 import {
   BsCalendarEvent,
@@ -224,6 +225,7 @@ function StaffDashboard() {
           </div>
         )}
       </div>
+      <RoleIncidentReporter assignments={assignments} />
       </div>
     </RoleLayout>
   );

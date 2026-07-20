@@ -198,7 +198,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
                 tenantSecurityService.getLoggedInUser().getId()
         );
 
-        applyTask(task, request);
+        applyTask(eventId, task, request);
 
         return taskRepository.save(task);
     }
@@ -212,7 +212,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
         requireOperationsAccess();
 
         OperationalTask task = getTaskForEvent(eventId, taskId);
-        applyTask(task, request);
+        applyTask(eventId, task, request);
 
         return taskRepository.save(task);
     }
@@ -224,6 +224,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     }
 
     private void applyTask(
+            Long eventId,
             OperationalTask task,
             TaskRequest request) {
 
@@ -234,8 +235,36 @@ public class EventOperationsServiceImpl implements EventOperationsService {
         task.setTaskType(request.taskType());
         task.setCategory(clean(request.category()));
         task.setPriority(request.priority());
-        task.setAssignedUserId(request.assignedUserId());
-        task.setAssignedUserName(clean(request.assignedUserName()));
+        if (request.assignedUserId() == null) {
+            throw new IllegalArgumentException("Assigned person is required");
+        }
+
+        User assignedUser = tenantSecurityService
+                .getUserFromLoggedInPortal(request.assignedUserId());
+
+        if (!eventAssignmentRepository
+                .existsByUserIdAndEventIdAndActiveTrue(
+                        assignedUser.getId(),
+                        eventId
+                )) {
+            throw new IllegalArgumentException(
+                    "Selected user is not actively assigned to this event"
+            );
+        }
+
+        String assignedName = ((assignedUser.getFirstName() == null
+                ? ""
+                : assignedUser.getFirstName().trim()) + " "
+                + (assignedUser.getLastName() == null
+                        ? ""
+                        : assignedUser.getLastName().trim())).trim();
+
+        task.setAssignedUserId(assignedUser.getId());
+        task.setAssignedUserName(
+                assignedName.isBlank()
+                        ? assignedUser.getEmail()
+                        : assignedName
+        );
         task.setDueDateTime(request.dueDateTime());
         task.setCompletionNotes(clean(request.completionNotes()));
 

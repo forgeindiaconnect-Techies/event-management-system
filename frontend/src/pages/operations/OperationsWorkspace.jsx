@@ -9,12 +9,12 @@ const configs = {
     description: "Plan operational work, assign ownership and track completion.",
     singular: "Task",
     endpoint: "tasks",
-    empty: { title: "", description: "", taskType: "TASK", category: "REGISTRATION", priority: "MEDIUM", status: "NOT_STARTED", assignedUserName: "", dueDateTime: "", completionNotes: "" },
+    empty: { title: "", description: "", taskType: "TASK", category: "REGISTRATION", priority: "MEDIUM", status: "NOT_STARTED", assignedUserId: "", assignedUserName: "", dueDateTime: "", completionNotes: "" },
     fields: [
       ["title", "Title", "text", true], ["taskType", "Type", "select", true, ["TASK", "CHECKLIST_ITEM"]],
       ["category", "Category", "select", true, ["REGISTRATION", "STAGE_AND_PROGRAM", "VENUE", "TECHNICAL", "FOOD_AND_CATERING", "SECURITY", "GUEST_MANAGEMENT", "TRANSPORTATION", "MARKETING", "EXHIBITORS", "MEDICAL", "LOGISTICS", "OTHER"]], ["priority", "Priority", "select", true, ["LOW", "MEDIUM", "HIGH", "URGENT"]],
       ["status", "Status", "select", true, ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "CANCELLED"]],
-      ["assignedUserName", "Assigned person"], ["dueDateTime", "Due date", "datetime-local"],
+      ["assignedUserId", "Assigned person", "assignee", true], ["dueDateTime", "Due date", "datetime-local"],
       ["description", "Description", "textarea"], ["completionNotes", "Completion notes", "textarea"],
     ],
     columns: [["title", "Task"], ["taskType", "Type"], ["assignedUserName", "Owner"], ["priority", "Priority"], ["status", "Status"], ["dueDateTime", "Due"]],
@@ -120,13 +120,21 @@ function CrudSection({ config }) {
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [assignees, setAssignees] = useState([]);
   const base = `/events/${id}/operations/${config.endpoint}`;
 
   const load = async () => {
     try { setItems((await api.get(base)).data || []); setError(""); }
     catch (err) { setError(apiError(err)); }
   };
-  useEffect(() => { load(); }, [id, config.endpoint]);
+  useEffect(() => {
+    load();
+    if (config.endpoint === "tasks") {
+      api.get(`/event-assignments/event/${id}`)
+        .then((response) => setAssignees(response.data || []))
+        .catch((err) => setError(apiError(err)));
+    }
+  }, [id, config.endpoint]);
 
   const openNew = () => { setForm(config.empty); setEditingId(null); setShowForm(true); setError(""); };
   const edit = (item) => { setForm(toForm(item, config.fields)); setEditingId(item.id); setShowForm(true); setError(""); };
@@ -134,6 +142,7 @@ function CrudSection({ config }) {
     event.preventDefault();
     try {
       const payload = normalizePayload(form, config.fields);
+      if (payload.assignedUserId) payload.assignedUserId = Number(payload.assignedUserId);
       if (editingId) await api.put(`${base}/${editingId}`, payload); else await api.post(base, payload);
       setMessage(`${config.singular} ${editingId ? "updated" : "created"} successfully.`);
       setShowForm(false); setEditingId(null); await load();
@@ -148,7 +157,7 @@ function CrudSection({ config }) {
   return (
     <PageShell title={config.title} description={config.description} error={error} message={message}
       action={<button className="btn btn-primary d-flex align-items-center gap-2" onClick={openNew}><BsPlusLg /> Add {config.singular}</button>}>
-      {showForm && <Editor title={`${editingId ? "Edit" : "Add"} ${config.singular}`} fields={config.fields} form={form} setForm={setForm} save={save} close={() => setShowForm(false)} />}
+      {showForm && <Editor title={`${editingId ? "Edit" : "Add"} ${config.singular}`} fields={config.fields} form={form} setForm={setForm} save={save} close={() => setShowForm(false)} assignees={assignees} saveLabel={config.endpoint === "tasks" ? (editingId ? "Update Task" : "Assign Task") : "Save"} />}
       <DataTable items={items} columns={config.columns} edit={edit} remove={remove} empty={`No ${config.title.toLowerCase()} added yet.`} />
     </PageShell>
   );
@@ -212,8 +221,8 @@ function BudgetExpenses() {
   );
 }
 
-function Editor({ title, fields, form, setForm, save, close }) {
-  return <form className="card border-0 shadow-sm mb-4" onSubmit={save}><div className="card-header bg-white d-flex justify-content-between align-items-center py-3"><h2 className="h5 mb-0">{title}</h2><button type="button" className="btn btn-sm btn-light" onClick={close}><BsX size={22} /></button></div><div className="card-body"><div className="row g-3">{fields.map((field) => <Field key={field[0]} field={field} value={form[field[0]] ?? ""} change={(value) => setForm({ ...form, [field[0]]: value })} />)}</div><div className="d-flex justify-content-end gap-2 mt-4"><button type="button" className="btn btn-light" onClick={close}>Cancel</button><button className="btn btn-primary">Save</button></div></div></form>;
+function Editor({ title, fields, form, setForm, save, close, assignees = [], saveLabel = "Save" }) {
+  return <form className="card border-0 shadow-sm mb-4" onSubmit={save}><div className="card-header bg-white d-flex justify-content-between align-items-center py-3"><h2 className="h5 mb-0">{title}</h2><div className="d-flex align-items-center gap-2"><button type="submit" className="btn btn-primary btn-sm">{saveLabel}</button><button type="button" className="btn btn-sm btn-light" onClick={close}><BsX size={22} /></button></div></div><div className="card-body"><div className="row g-3">{fields.map((field) => <Field key={field[0]} field={field} value={form[field[0]] ?? ""} change={(value) => setForm({ ...form, [field[0]]: value })} form={form} setForm={setForm} assignees={assignees} />)}</div><div className="d-flex justify-content-end gap-2 mt-4"><button type="button" className="btn btn-light" onClick={close}>Cancel</button><button className="btn btn-primary">{saveLabel}</button></div></div></form>;
 }
 
 function ExpenseEditor({ form, setForm, vendors, save, close, editing }) {
@@ -221,10 +230,10 @@ function ExpenseEditor({ form, setForm, vendors, save, close, editing }) {
   return <form className="card border-0 shadow-sm mb-4" onSubmit={save}><div className="card-header bg-white d-flex justify-content-between py-3"><h2 className="h5 mb-0">{editing ? "Edit" : "Add"} Expense</h2><button type="button" className="btn btn-sm btn-light" onClick={close}><BsX size={22} /></button></div><div className="card-body"><div className="row g-3"><div className="col-md-6"><label className="form-label fw-semibold">Vendor</label><select className="form-select" value={form.vendorId || ""} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">No vendor</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.companyName}</option>)}</select></div>{fields.map((field) => <Field key={field[0]} field={field} value={form[field[0]] ?? ""} change={(value) => setForm({ ...form, [field[0]]: value })} />)}</div><div className="d-flex justify-content-end gap-2 mt-4"><button type="button" className="btn btn-light" onClick={close}>Cancel</button><button className="btn btn-primary">Save Expense</button></div></div></form>;
 }
 
-function Field({ field, value, change }) {
+function Field({ field, value, change, form, setForm, assignees = [] }) {
   const [name, label, type = "text", required = false, options = []] = field;
   const cls = type === "textarea" ? "col-12" : "col-md-6";
-  return <div className={cls}><label className="form-label fw-semibold">{label}{required && " *"}</label>{type === "select" ? <select className="form-select" required={required} value={value} onChange={(e) => change(e.target.value)}>{options.map((option) => <option key={option || "empty"} value={option}>{option ? pretty(option) : "Automatic"}</option>)}</select> : type === "textarea" ? <textarea className="form-control" rows="3" required={required} value={value} onChange={(e) => change(e.target.value)} /> : <input className="form-control" type={type} min={type === "number" ? 0 : undefined} step={type === "number" ? "0.01" : undefined} required={required} value={value} onChange={(e) => change(e.target.value)} />}</div>;
+  return <div className={cls}><label className="form-label fw-semibold">{label}{required && " *"}</label>{type === "assignee" ? <select className="form-select" required value={value} onChange={(e) => { const selected = assignees.find((item) => String(item.userId) === e.target.value); setForm({ ...form, assignedUserId: e.target.value, assignedUserName: selected?.userName || selected?.email || "" }); }}><option value="">Select assigned event member</option>{assignees.map((item) => <option key={`${item.id}-${item.userId}`} value={item.userId}>{item.userName || item.email} — {pretty(item.roleName)}</option>)}</select> : type === "select" ? <select className="form-select" required={required} value={value} onChange={(e) => change(e.target.value)}>{options.map((option) => <option key={option || "empty"} value={option}>{option ? pretty(option) : "Automatic"}</option>)}</select> : type === "textarea" ? <textarea className="form-control" rows="3" required={required} value={value} onChange={(e) => change(e.target.value)} /> : <input className="form-control" type={type} min={type === "number" ? 0 : undefined} step={type === "number" ? "0.01" : undefined} required={required} value={value} onChange={(e) => change(e.target.value)} />}</div>;
 }
 
 function DataTable({ items, columns, edit, remove, empty }) {
@@ -239,7 +248,7 @@ function Money({ label, value, currency }) { return <div className="col-sm-6 col
 function Loading() { return <div className="text-center text-muted py-5">Loading operations data...</div>; }
 function pretty(value) { return String(value).replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function display(value, key) { if (value === null || value === undefined || value === "") return "—"; if (key.toLowerCase().includes("amount")) return `₹${Number(value).toLocaleString("en-IN")}`; if (key.toLowerCase().includes("date") || key.endsWith("At")) return new Date(value).toLocaleString(); return pretty(value); }
-function toForm(item, fields) { const next = {}; fields.forEach(([name, , type]) => { let value = item[name] ?? ""; if (type === "datetime-local" && value) value = String(value).slice(0, 16); next[name] = value; }); return next; }
+function toForm(item, fields) { const next = {}; fields.forEach(([name, , type]) => { let value = item[name] ?? ""; if (type === "datetime-local" && value) value = String(value).slice(0, 16); next[name] = value; }); if (item.assignedUserName) next.assignedUserName = item.assignedUserName; return next; }
 function normalizePayload(form, fields) { const payload = { ...form }; fields.forEach(([name, , type]) => { if (type === "number") payload[name] = Number(payload[name] || 0); if ((type === "datetime-local" || type === "date") && !payload[name]) payload[name] = null; }); return payload; }
 function apiError(error) { return error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === "string" ? error.response.data : "Unable to complete the request."); }
 

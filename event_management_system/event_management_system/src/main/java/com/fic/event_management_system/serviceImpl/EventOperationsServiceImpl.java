@@ -903,6 +903,11 @@ public class EventOperationsServiceImpl implements EventOperationsService {
                         event.getId(),
                         user.getId()
                 )
+                || eventAssignmentRepository
+                        .existsByUserIdAndEventIdAndActiveTrue(
+                                user.getId(),
+                                event.getId()
+                        )
                 || volunteerAssignmentRepository
                         .existsByVolunteerIdAndEventIdAndActiveTrue(
                                 user.getId(),
@@ -933,11 +938,17 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
         User user = tenantSecurityService.getLoggedInUser();
         boolean assignedCoordinator = tenantSecurityService.hasRole("COORDINATOR")
-                && coordinatorAssignmentRepository
-                        .existsByCoordinatorIdAndEventIdAndActiveTrue(
-                                user.getId(),
-                                event.getId()
-                        );
+                && (coordinatorAssignmentRepository
+                            .existsByCoordinatorIdAndEventIdAndActiveTrue(
+                                    user.getId(),
+                                    event.getId()
+                            )
+                        || eventAssignmentRepository
+                            .existsByUserIdAndEventIdAndRoleNameAndActiveTrue(
+                                    user.getId(),
+                                    event.getId(),
+                                    RoleName.COORDINATOR
+                            ));
 
         if (!assignedCoordinator) {
             throw new AccessDeniedException(

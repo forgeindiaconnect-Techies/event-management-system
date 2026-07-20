@@ -86,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/support-requests/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/invitations/manual").hasAuthority("PORTAL_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/role-invitations/manual").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
+                        .requestMatchers("/api/events/*/operations/**").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
                         .requestMatchers(HttpMethod.POST, "/api/events").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
                         .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
                         .requestMatchers("/api/users/**").authenticated()

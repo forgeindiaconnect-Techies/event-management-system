@@ -64,6 +64,8 @@ import EventDayLayout from "./layouts/EventDayLayout";
 import CheckIn from "./pages/EventDay/CheckIn";
 import EventAttendance from "./pages/EventDay/EventAttendance";
 import Announcements from "./pages/EventDay/Announcements";
+import OperationsLayout from "./layouts/OperationsLayout";
+import OperationsWorkspace from "./pages/operations/OperationsWorkspace";
 
 import PublicDashboard from "./pages/public/PublicDashboard";
 import PublicEventDetails from "./pages/public/PublicEventDetails";
@@ -219,6 +221,17 @@ function App() {
           <Route path="check-in" element={<CheckIn />} />
           <Route path="attendance" element={<EventAttendance />} />
           <Route path="announcements" element={<Announcements />} />
+        </Route>
+
+        {/* Event Operations */}
+        <Route path="/events/:id/operations" element={<OperationsLayout />}>
+          <Route index element={<OperationsWorkspace section="overview" />} />
+          <Route path="overview" element={<OperationsWorkspace section="overview" />} />
+          <Route path="tasks" element={<OperationsWorkspace section="tasks" />} />
+          <Route path="incidents" element={<OperationsWorkspace section="incidents" />} />
+          <Route path="resources" element={<OperationsWorkspace section="resources" />} />
+          <Route path="vendors" element={<OperationsWorkspace section="vendors" />} />
+          <Route path="budget" element={<OperationsWorkspace section="budget" />} />
         </Route>
 
         {/* Role-based Dashboards */}

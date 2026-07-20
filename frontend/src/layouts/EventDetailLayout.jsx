@@ -26,6 +26,7 @@ import {
   FaFileAlt,
   FaChartBar,
   FaCalendarCheck,
+  FaTasks,
   FaSearch,
   FaTimes
 } from "react-icons/fa";
@@ -211,6 +212,7 @@ function EventDetailLayout({ children, event }) {
     { label: "Exhibitors", icon: <FaStore size={15} />, path: `/events/${id}/exhibitors` },
     { label: "Abstracts", icon: <FaFileAlt size={15} />, path: `/events/${id}/abstracts` },
     { label: "Reports", icon: <FaChartBar size={15} />, path: `/events/${id}/reports` },
+    { label: "Operations", icon: <FaTasks size={15} />, path: `/events/${id}/operations` },
     { label: "Event Day", icon: <FaCalendarCheck size={15} />, path: `/events/${id}/event-day` }
   ];
 

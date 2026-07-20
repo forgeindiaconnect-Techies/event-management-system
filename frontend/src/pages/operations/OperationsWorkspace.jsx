@@ -157,7 +157,7 @@ function CrudSection({ config }) {
   return (
     <PageShell title={config.title} description={config.description} error={error} message={message}
       action={<button className="btn btn-primary d-flex align-items-center gap-2" onClick={openNew}><BsPlusLg /> Add {config.singular}</button>}>
-      {showForm && <Editor title={`${editingId ? "Edit" : "Add"} ${config.singular}`} fields={config.fields} form={form} setForm={setForm} save={save} close={() => setShowForm(false)} assignees={assignees} saveLabel={config.endpoint === "tasks" ? (editingId ? "Update Task" : "Assign Task") : "Save"} />}
+      {showForm && <Editor title={`${editingId ? "Edit" : "Add"} ${config.singular}`} fields={config.fields} form={form} setForm={setForm} save={save} close={() => setShowForm(false)} assignees={assignees} saveLabel={config.endpoint === "tasks" ? (editingId ? "Save Changes" : "Save & Assign") : "Save"} />}
       <DataTable items={items} columns={config.columns} edit={edit} remove={remove} empty={`No ${config.title.toLowerCase()} added yet.`} />
     </PageShell>
   );

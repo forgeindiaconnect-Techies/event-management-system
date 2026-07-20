@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.fic.event_management_system.dto.EventOperationsDtos.BudgetRequest;
 import com.fic.event_management_system.dto.EventOperationsDtos.ExpenseRequest;
@@ -897,30 +898,24 @@ public class EventOperationsServiceImpl implements EventOperationsService {
         }
 
         User user = tenantSecurityService.getLoggedInUser();
-        boolean assigned = false;
-
-        if (tenantSecurityService.hasRole("STAFF")) {
-            assigned = staffAssignmentRepository
-                    .existsByEventIdAndStaffIdAndActiveTrue(
-                            event.getId(),
-                            user.getId()
-                    );
-        } else if (tenantSecurityService.hasRole("VOLUNTEER")) {
-            assigned = volunteerAssignmentRepository
-                    .existsByVolunteerIdAndEventIdAndActiveTrue(
-                            user.getId(),
-                            event.getId()
-                    );
-        } else if (tenantSecurityService.hasRole("COORDINATOR")) {
-            assigned = coordinatorAssignmentRepository
-                    .existsByCoordinatorIdAndEventIdAndActiveTrue(
-                            user.getId(),
-                            event.getId()
-                    );
-        }
+        boolean assigned = staffAssignmentRepository
+                .existsByEventIdAndStaffIdAndActiveTrue(
+                        event.getId(),
+                        user.getId()
+                )
+                || volunteerAssignmentRepository
+                        .existsByVolunteerIdAndEventIdAndActiveTrue(
+                                user.getId(),
+                                event.getId()
+                        )
+                || coordinatorAssignmentRepository
+                        .existsByCoordinatorIdAndEventIdAndActiveTrue(
+                                user.getId(),
+                                event.getId()
+                        );
 
         if (!assigned) {
-            throw new RuntimeException(
+            throw new AccessDeniedException(
                     "You are not assigned to this event"
             );
         }
@@ -945,7 +940,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
                         );
 
         if (!assignedCoordinator) {
-            throw new RuntimeException(
+            throw new AccessDeniedException(
                     "You are not assigned to manage this event"
             );
         }

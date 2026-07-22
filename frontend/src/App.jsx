@@ -85,8 +85,6 @@ import StaffAttendance from "./pages/Staff/StaffAttendance";
 
 import CoordinatorDashboard from "./pages/Coordinator/CoordinatorDashboard";
 import CoordinatorEvents from "./pages/Coordinator/CoordinatorEvents";
-import CoordinatorStaff from "./pages/Coordinator/CoordinatorStaff";
-import CoordinatorVolunteers from "./pages/Coordinator/CoordinatorVolunteers";
 import CoordinatorAttendance from "./pages/Coordinator/CoordinatorAttendance";
 import CoordinatorReports from "./pages/Coordinator/CoordinatorReports";
 import VolunteerDashboard from "./pages/Volunteer/VolunteerDashboard";

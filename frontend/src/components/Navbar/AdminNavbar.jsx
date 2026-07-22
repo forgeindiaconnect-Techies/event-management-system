@@ -452,11 +452,20 @@ function saveProfileToStorage(profile) {
 }
 
 function getPlanAction(subscription) {
-  if (!subscription || ["EXPIRED", "CANCELLED"].includes(subscription.status)) {
+  const status = String(subscription?.status || "").toUpperCase();
+  if (!subscription || ["EXPIRED", "CANCELLED"].includes(status)) {
     return {
-      label: "Purchase Plan",
-      tone: "purchase",
-      title: "Purchase a subscription plan",
+      label: subscription?.trial
+        ? "Trial Expired"
+        : subscription?.planName
+          ? `${subscription.planName} Expired`
+          : "Purchase Plan",
+      tone: "purchase expired",
+      title: subscription?.trial
+        ? "Your free trial has expired. Choose a plan to restore access."
+        : subscription?.planName
+          ? `Your ${subscription.planName} plan has expired. Renew to restore access.`
+          : "Purchase a subscription plan",
     };
   }
 
@@ -652,7 +661,21 @@ export function NotificationBell() {
                       <strong style={{ fontSize: 13 }}>{notification.title}</strong>
                     </div>
                     <div className="text-muted mt-1" style={{ fontSize: 12, lineHeight: 1.45 }}>{notification.message}</div>
-                    <small className="text-muted">{formatNotificationDate(notification.createdAt)}</small>
+                    <div className="d-flex align-items-center flex-wrap gap-2 mt-2">
+                      <span style={{
+                        borderRadius: 999, padding: "2px 7px", fontSize: 9, fontWeight: 800,
+                        color: getNotificationTone(notification.type).color,
+                        background: getNotificationTone(notification.type).background,
+                      }}>
+                        {formatNotificationType(notification.type)}
+                      </span>
+                      {notification.eventName && (
+                        <span className="text-truncate" style={{ maxWidth: 170, fontSize: 10, color: "#64748b" }}>
+                          {notification.eventName}
+                        </span>
+                      )}
+                      <small className="text-muted ms-auto">{formatNotificationDate(notification.createdAt)}</small>
+                    </div>
                   </div>
                   <span role="button" tabIndex={0} title="Delete notification"
                     onClick={(event) => deleteNotification(event, notification)}
@@ -675,6 +698,33 @@ function formatNotificationDate(value) {
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString([], {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   });
+}
+
+function formatNotificationType(value) {
+  const labels = {
+    USER_INVITED: "TEAM",
+    INVITATION_ACCEPTED: "TEAM",
+    INVITATION_REJECTED: "TEAM",
+    EVENT_ASSIGNED: "ASSIGNMENT",
+    EVENT_UPDATED: "EVENT",
+    EVENT_PUBLISHED: "EVENT",
+    EVENT_CANCELLED: "EVENT",
+    SYSTEM_ALERT: "ALERT",
+  };
+  return labels[value] || String(value || "UPDATE").replaceAll("_", " ");
+}
+
+function getNotificationTone(type) {
+  if (type === "SYSTEM_ALERT" || type === "EVENT_CANCELLED") {
+    return { color: "#b91c1c", background: "#fee2e2" };
+  }
+  if (["USER_INVITED", "INVITATION_ACCEPTED", "INVITATION_REJECTED"].includes(type)) {
+    return { color: "#047857", background: "#d1fae5" };
+  }
+  if (type === "EVENT_ASSIGNED") {
+    return { color: "#5b21b6", background: "#ede9fe" };
+  }
+  return { color: "#1d4ed8", background: "#dbeafe" };
 }
 
 export default AdminNavbar;

@@ -177,7 +177,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     @Override
     @Transactional(readOnly = true)
     public List<OperationalTask> getTasks(Long eventId) {
-        requireOperationsAccess();
+        requireCoordinationAccess(eventId);
         tenantSecurityService.getEventFromLoggedInPortal(eventId);
 
         return taskRepository.findByEventIdOrderByCreatedAtDesc(eventId);
@@ -185,7 +185,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
     @Override
     public OperationalTask createTask(Long eventId, TaskRequest request) {
-        requireOperationsAccess();
+        requireCoordinationAccess(eventId);
 
         Event event = tenantSecurityService
                 .getEventFromLoggedInPortal(eventId);
@@ -200,7 +200,9 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
         applyTask(eventId, task, request);
 
-        return taskRepository.save(task);
+        OperationalTask savedTask = taskRepository.save(task);
+        notifyTaskAssignee(savedTask);
+        return savedTask;
     }
 
     @Override
@@ -209,7 +211,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
             Long taskId,
             TaskRequest request) {
 
-        requireOperationsAccess();
+        requireCoordinationAccess(eventId);
 
         OperationalTask task = getTaskForEvent(eventId, taskId);
         applyTask(eventId, task, request);
@@ -242,11 +244,14 @@ public class EventOperationsServiceImpl implements EventOperationsService {
         User assignedUser = tenantSecurityService
                 .getUserFromLoggedInPortal(request.assignedUserId());
 
-        if (!eventAssignmentRepository
-                .existsByUserIdAndEventIdAndActiveTrue(
-                        assignedUser.getId(),
-                        eventId
-                )) {
+        boolean activelyAssigned = eventAssignmentRepository
+                .existsByUserIdAndEventIdAndActiveTrue(assignedUser.getId(), eventId)
+                || staffAssignmentRepository
+                        .existsByEventIdAndStaffIdAndActiveTrue(eventId, assignedUser.getId())
+                || volunteerAssignmentRepository
+                        .existsByVolunteerIdAndEventIdAndActiveTrue(assignedUser.getId(), eventId);
+
+        if (!activelyAssigned) {
             throw new IllegalArgumentException(
                     "Selected user is not actively assigned to this event"
             );
@@ -446,7 +451,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     @Override
     @Transactional(readOnly = true)
     public List<EventResource> getResources(Long eventId) {
-        requireOperationsAccess();
+        requireCoordinationAccess(eventId);
         tenantSecurityService.getEventFromLoggedInPortal(eventId);
 
         return resourceRepository
@@ -555,7 +560,7 @@ public class EventOperationsServiceImpl implements EventOperationsService {
     @Override
     @Transactional(readOnly = true)
     public List<EventVendor> getVendors(Long eventId) {
-        requireOperationsAccess();
+        requireCoordinationAccess(eventId);
         tenantSecurityService.getEventFromLoggedInPortal(eventId);
 
         return vendorRepository
@@ -881,6 +886,47 @@ public class EventOperationsServiceImpl implements EventOperationsService {
 
     private void requireOperationsAccess() {
         tenantSecurityService.requirePortalAdminOrOrganizer();
+    }
+
+    private void notifyTaskAssignee(OperationalTask task) {
+        if (task.getAssignedUserId() == null) {
+            return;
+        }
+        try {
+            User recipient = tenantSecurityService.getUserFromLoggedInPortal(task.getAssignedUserId());
+            String role = recipient.getRole() == null || recipient.getRole().getRoleName() == null
+                    ? "" : recipient.getRole().getRoleName().name();
+            String actionUrl = "VOLUNTEER".equals(role) ? "/volunteer/tasks" : "/staff";
+            notificationService.createNotification(
+                    recipient,
+                    task.getEvent().getPortal(),
+                    task.getEvent(),
+                    NotificationType.EVENT_ASSIGNED,
+                    "New operational task",
+                    task.getTitle() + (task.getDueDateTime() == null ? "" : " — due " + task.getDueDateTime()),
+                    actionUrl,
+                    "OPERATIONAL_TASK_" + task.getId() + "_USER_" + recipient.getId()
+            );
+        } catch (RuntimeException ignored) {
+            // Task assignment must remain saved even when notifications are unavailable.
+        }
+    }
+
+    private void requireCoordinationAccess(Long eventId) {
+        if (tenantSecurityService.isPortalAdmin() || tenantSecurityService.isOrganizer()) {
+            tenantSecurityService.requireEventInLoggedInPortal(eventId);
+            return;
+        }
+
+        User user = tenantSecurityService.getLoggedInUser();
+        if (tenantSecurityService.hasRole("COORDINATOR")
+                && coordinatorAssignmentRepository
+                        .existsByCoordinatorIdAndEventIdAndActiveTrue(user.getId(), eventId)) {
+            tenantSecurityService.requireEventInLoggedInPortal(eventId);
+            return;
+        }
+
+        throw new AccessDeniedException("Coordinator is not assigned to this event");
     }
 
     private void notifyIncidentManagers(IncidentReport incident) {

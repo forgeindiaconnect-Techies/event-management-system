@@ -1,9 +1,11 @@
 package com.fic.event_management_system.controller;
 
 import com.fic.event_management_system.enums.RoleName;
+import com.fic.event_management_system.enums.EventStatus;
 import com.fic.event_management_system.repository.EventRepository;
 import com.fic.event_management_system.repository.RegistrationRepository;
 import com.fic.event_management_system.repository.UserRepository;
+import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +31,8 @@ public class PublicStatsController {
     @GetMapping
     public Map<String, Object> getPublicStats() {
         return Map.of(
-                "events", eventRepository.count(),
+                "events", eventRepository.countByStatusIn(
+                        List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED)),
                 "registrations", registrationRepository.count(),
                 "organizers", userRepository.countByRole_RoleName(RoleName.ORGANIZER),
                 "reliability", "Live"

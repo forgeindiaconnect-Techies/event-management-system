@@ -39,7 +39,7 @@ const dashboardRoutes = {
   COORDINATOR: "/coordinator",
   SPEAKER: "/speaker",
   JUDGE: "/judge",
-  MENTOR: "/mentor",
+  TRAINER: "/mentor",
   CHIEF_GUEST: "/chief-guest",
   PARTICIPANT: "/participant",
   SUPER_ADMIN: "/super-admin",

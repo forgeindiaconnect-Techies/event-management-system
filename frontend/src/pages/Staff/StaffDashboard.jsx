@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import RoleLayout from "../../layouts/RoleLayout";
 import api from "../../api/axiosConfig";
-import { loadRoleAssignments } from "../../utils/roleAssignments";
+import { filterToActiveEvent, loadRoleAssignments, resolveActiveAssignment } from "../../utils/roleAssignments";
 import RoleIncidentReporter from "../../components/Role/RoleIncidentReporter";
 import "../../styles/Admin.css";
 import {
@@ -33,8 +33,9 @@ function StaffDashboard() {
 
     try {
       const assigned = await loadRoleAssignments("STAFF", `/staff-assignments/staff/${staffId}`);
+      resolveActiveAssignment(assigned);
 
-      const activeAssignments = assigned.filter(
+      const activeAssignments = filterToActiveEvent(assigned).filter(
         (assignment) => assignment.active === true
       );
 

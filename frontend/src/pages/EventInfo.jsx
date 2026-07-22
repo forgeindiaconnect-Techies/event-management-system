@@ -137,9 +137,6 @@ function EventInfo() {
           </div>
 
           <div className="event-info-actions">
-            <button type="button" className="event-secondary-btn" onClick={saveEvent} disabled={saving}>
-              <FaSave /> {saving ? "Saving..." : "Save"}
-            </button>
             <button type="button" className="event-primary-btn" onClick={publishEvent} disabled={saving}>
               <FaCheck /> Publish
             </button>
@@ -338,6 +335,12 @@ function EventInfo() {
             />
           </FormGroup>
         </section>
+
+        <div className="event-info-bottom-actions">
+          <button type="button" className="event-secondary-btn" onClick={saveEvent} disabled={saving}>
+            <FaSave /> {saving ? "Saving..." : "Save Event Details"}
+          </button>
+        </div>
       </div>
 
       <aside className="event-info-nav">
@@ -636,6 +639,19 @@ const eventInfoStyles = `
     display: flex;
     gap: 10px;
     margin-bottom: 18px;
+  }
+
+  .event-info-bottom-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 0 18px;
+  }
+
+  .event-info-bottom-actions .event-secondary-btn {
+    background: #4f46e5;
+    color: #fff;
+    min-width: 190px;
+    justify-content: center;
   }
 
   .event-toggle-row input {

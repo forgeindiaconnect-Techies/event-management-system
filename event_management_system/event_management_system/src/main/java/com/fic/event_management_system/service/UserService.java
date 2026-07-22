@@ -13,8 +13,12 @@ public interface UserService {
 
     User updateUser(Long id, User user);
 
+    void changeOwnPassword(String currentPassword, String newPassword);
+
     List<User> getOrganizersByPortal(Long portalId);
 
     // NEW
     List<User> getUsersByPortal(Long portalId);
+
+    void deletePortalUser(Long userId);
 }

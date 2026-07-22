@@ -33,7 +33,7 @@ public class EventAssignment {
     private Portal portal;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role_name", nullable = false)
+    @Column(name = "role_name", nullable = false, length = 30)
     private RoleName roleName;
 
     private Boolean active = true;

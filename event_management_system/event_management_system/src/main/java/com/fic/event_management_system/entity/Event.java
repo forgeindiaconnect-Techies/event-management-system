@@ -58,6 +58,10 @@ public class Event {
 
     private String certificateTitle;
 
+    private Boolean allowParticipantRegistration = true;
+
+    private Boolean allowAudienceRegistration = true;
+
     @ManyToOne
     @JoinColumn(name = "portal_id", nullable = false)
     private Portal portal;
@@ -254,6 +258,22 @@ public class Event {
 
 	public void setCertificateTitle(String certificateTitle) {
 		this.certificateTitle = certificateTitle;
+	}
+
+	public Boolean getAllowParticipantRegistration() {
+		return allowParticipantRegistration;
+	}
+
+	public void setAllowParticipantRegistration(Boolean allowParticipantRegistration) {
+		this.allowParticipantRegistration = allowParticipantRegistration;
+	}
+
+	public Boolean getAllowAudienceRegistration() {
+		return allowAudienceRegistration;
+	}
+
+	public void setAllowAudienceRegistration(Boolean allowAudienceRegistration) {
+		this.allowAudienceRegistration = allowAudienceRegistration;
 	}
 
     

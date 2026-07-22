@@ -4,10 +4,12 @@ import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.StaffAssignment;
 import com.fic.event_management_system.entity.User;
 import com.fic.event_management_system.enums.RoleName;
+import com.fic.event_management_system.enums.NotificationType;
 import com.fic.event_management_system.repository.EventRepository;
 import com.fic.event_management_system.repository.StaffAssignmentRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.service.StaffAssignmentService;
+import com.fic.event_management_system.service.NotificationService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,15 +20,18 @@ public class StaffAssignmentServiceImpl implements StaffAssignmentService {
     private final StaffAssignmentRepository staffAssignmentRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public StaffAssignmentServiceImpl(
             StaffAssignmentRepository staffAssignmentRepository,
             EventRepository eventRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationService notificationService) {
 
         this.staffAssignmentRepository = staffAssignmentRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -58,7 +63,22 @@ public class StaffAssignmentServiceImpl implements StaffAssignmentService {
         staffAssignment.setAssignedBy(assignedBy);
         staffAssignment.setActive(true);
 
-        return staffAssignmentRepository.save(staffAssignment);
+        StaffAssignment saved = staffAssignmentRepository.save(staffAssignment);
+        notificationService.createNotification(
+                staff, event.getPortal(), event, NotificationType.EVENT_ASSIGNED,
+                "Assigned to " + event.getEventName(),
+                "You were added to the staff team for " + event.getEventName() + ".",
+                "/staff/events",
+                "STAFF_ASSIGNMENT_" + saved.getId() + "_USER_" + staff.getId()
+        );
+        notificationService.createNotification(
+                assignedBy, event.getPortal(), event, NotificationType.EVENT_ASSIGNED,
+                "Staff member assigned",
+                staff.getFirstName() + " " + staff.getLastName() + " was assigned to " + event.getEventName() + ".",
+                "/events/" + event.getId() + "/team",
+                "STAFF_ASSIGNMENT_" + saved.getId() + "_ACTOR_" + assignedBy.getId()
+        );
+        return saved;
     }
 
     @Override

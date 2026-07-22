@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import ChooseAccess from "./pages/ChooseAccess";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -92,6 +92,9 @@ import CoordinatorReports from "./pages/Coordinator/CoordinatorReports";
 import VolunteerDashboard from "./pages/Volunteer/VolunteerDashboard";
 import VolunteerEvents from "./pages/Volunteer/VolunteerEvents";
 import CoordinatorTasks from "./pages/Coordinator/CoordinatorTasks";
+import CoordinatorTeam from "./pages/Coordinator/CoordinatorTeam";
+import CoordinatorIncidents from "./pages/Coordinator/CoordinatorIncidents";
+import CoordinatorEventDay from "./pages/Coordinator/CoordinatorEventDay";
 import VolunteerTasks from "./pages/Volunteer/VolunteerTasks";
 import SpeakerDashboard from "./pages/Speaker/SpeakerDashboard";
 import SpeakerSessions from "./pages/Speaker/SpeakerSessions";
@@ -99,6 +102,12 @@ import SpeakerSchedule from "./pages/Speaker/SpeakerSchedule";
 import ChiefGuestDashboard from "./pages/ChiefGuest/ChiefGuestDashboard";
 import ChiefGuestSchedule from "./pages/ChiefGuest/ChiefGuestSchedule";
 import ChiefGuestDetails from "./pages/ChiefGuest/ChiefGuestDetails";
+import JudgeDashboard from "./pages/Judge/JudgeDashboard";
+import JudgeCompetitions from "./pages/Judge/JudgeCompetitions";
+import JudgeWork from "./pages/Judge/JudgeWork";
+import MentorDashboard from "./pages/Mentor/MentorDashboard";
+import MentorTeams from "./pages/Mentor/MentorTeams";
+import MentorSchedule from "./pages/Mentor/MentorSchedule";
 import PublicTicket from "./pages/public/PublicTicket";
 import PublicPayment from "./pages/public/PublicPayment";
 import SuperAdminDashboard from "./pages/SuperAdmin/SuperAdminDashboard";
@@ -131,28 +140,28 @@ function App() {
         
 
         {/* Admin */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/events" element={<AdminEvents />} />
-        <Route path="/admin/organizers" element={<Organizers />} />
-        <Route path="/admin/attendees" element={<Attendees />} />
-        <Route path="/admin/reports" element={<Reports />} />
-        <Route path="/admin/teams" element={<OrganizerTeams />} />
-        <Route path="/admin/analytics" element={<Analytics />} />
-        <Route path="/admin/settings" element={<Settings />} />
-        <Route path="/subscription" element={<AdminSubscription />} />
-        <Route path="/subscription/payment" element={<SubscriptionPayment />} />
+        <Route path="/admin" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/events" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><AdminEvents /></ProtectedRoute>} />
+        <Route path="/admin/organizers" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><Organizers /></ProtectedRoute>} />
+        <Route path="/admin/attendees" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><Attendees /></ProtectedRoute>} />
+        <Route path="/admin/reports" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><Reports /></ProtectedRoute>} />
+        <Route path="/admin/teams" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><OrganizerTeams /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><Analytics /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><Settings /></ProtectedRoute>} />
+        <Route path="/subscription" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><AdminSubscription /></ProtectedRoute>} />
+        <Route path="/subscription/payment" element={<ProtectedRoute roles={["PORTAL_ADMIN"]}><SubscriptionPayment /></ProtectedRoute>} />
 
         {/* Organizer */}
-        <Route path="/organizer" element={<OrganizerDashboard />} />
-        <Route path="/organizer/events" element={<OrganizerEvents />} />
-        <Route path="/organizer/registrations" element={<OrganizerRegistrations />} />
-        <Route path="/organizer/staff" element={<OrganizerStaff />} />
-        <Route path="/organizer/attendance" element={<OrganizerAttendance />} />
-        <Route path="/organizer/certificates" element={<OrganizerCertificates />} />
-        <Route path="/organizer/reports" element={<OrganizerReports />} />
-        <Route path="/organizer/tickets" element={<OrganizerTickets />} />
-        <Route path="/organizer/invite-staff" element={<OrganizerInviteStaff />} />
-        <Route path="/organizer/team-assignment" element={<OrganizerTeamAssignment />} />
+        <Route path="/organizer" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerDashboard /></ProtectedRoute>} />
+        <Route path="/organizer/events" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerEvents /></ProtectedRoute>} />
+        <Route path="/organizer/registrations" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerRegistrations /></ProtectedRoute>} />
+        <Route path="/organizer/staff" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerStaff /></ProtectedRoute>} />
+        <Route path="/organizer/attendance" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerAttendance /></ProtectedRoute>} />
+        <Route path="/organizer/certificates" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerCertificates /></ProtectedRoute>} />
+        <Route path="/organizer/reports" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerReports /></ProtectedRoute>} />
+        <Route path="/organizer/tickets" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerTickets /></ProtectedRoute>} />
+        <Route path="/organizer/invite-staff" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerInviteStaff /></ProtectedRoute>} />
+        <Route path="/organizer/team-assignment" element={<ProtectedRoute roles={["ORGANIZER"]}><OrganizerTeamAssignment /></ProtectedRoute>} />
         <Route
   path="/role-invitation/accept/:token"
   element={<AcceptRoleInvitation />}
@@ -160,7 +169,7 @@ function App() {
         
 
         {/* Events */}
-        <Route path="/create-event" element={<CreateEvent />} />
+        <Route path="/create-event" element={<ProtectedRoute roles={["PORTAL_ADMIN", "ORGANIZER"]}><CreateEvent /></ProtectedRoute>} />
         <Route path="/events/:id" element={<EventDashboard />} />
 
         {/* Event Manage */}
@@ -235,22 +244,25 @@ function App() {
         </Route>
 
         {/* Role-based Dashboards */}
-        <Route path="/staff" element={<StaffDashboard />} />
-        <Route path="/staff/events" element={<StaffEvents />} />
-        <Route path="/staff/check-in" element={<StaffTicketVerification />} />
-        <Route path="/staff/attendance" element={<StaffAttendance />} />
+        <Route path="/staff" element={<ProtectedRoute roles={["STAFF"]}><StaffDashboard /></ProtectedRoute>} />
+        <Route path="/staff/events" element={<ProtectedRoute roles={["STAFF"]}><StaffEvents /></ProtectedRoute>} />
+        <Route path="/staff/check-in" element={<ProtectedRoute roles={["STAFF"]}><StaffTicketVerification /></ProtectedRoute>} />
+        <Route path="/staff/attendance" element={<ProtectedRoute roles={["STAFF"]}><StaffAttendance /></ProtectedRoute>} />
 
-        <Route path="/coordinator" element={<CoordinatorDashboard />} />
-        <Route path="/coordinator/events" element={<CoordinatorEvents />} />
-        <Route path="/coordinator/staff" element={<CoordinatorStaff />} />
-        <Route path="/coordinator/volunteers" element={<CoordinatorVolunteers />} />  
-        <Route path="/coordinator/attendance" element={<CoordinatorAttendance />} />  
-        <Route path="/coordinator/reports" element={<CoordinatorReports />} />
-        <Route path="/coordinator/tasks" element={<CoordinatorTasks />} />
+        <Route path="/coordinator" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorDashboard /></ProtectedRoute>} />
+        <Route path="/coordinator/events" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorEvents /></ProtectedRoute>} />
+        <Route path="/coordinator/team" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorTeam /></ProtectedRoute>} />
+        <Route path="/coordinator/tasks" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorTasks /></ProtectedRoute>} />
+        <Route path="/coordinator/incidents" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorIncidents /></ProtectedRoute>} />
+        <Route path="/coordinator/attendance" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorAttendance /></ProtectedRoute>} />
+        <Route path="/coordinator/event-day" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorEventDay /></ProtectedRoute>} />
+        <Route path="/coordinator/reports" element={<ProtectedRoute roles={["COORDINATOR"]}><CoordinatorReports /></ProtectedRoute>} />
+        <Route path="/coordinator/staff" element={<Navigate to="/coordinator/team" replace />} />
+        <Route path="/coordinator/volunteers" element={<Navigate to="/coordinator/team" replace />} />
 
-        <Route path="/volunteer" element={<VolunteerDashboard />} />
-        <Route path="/volunteer/events" element={<VolunteerEvents />} />
-        <Route path="/volunteer/tasks" element={<VolunteerTasks />} />  
+        <Route path="/volunteer" element={<ProtectedRoute roles={["VOLUNTEER"]}><VolunteerDashboard /></ProtectedRoute>} />
+        <Route path="/volunteer/events" element={<ProtectedRoute roles={["VOLUNTEER"]}><VolunteerEvents /></ProtectedRoute>} />
+        <Route path="/volunteer/tasks" element={<ProtectedRoute roles={["VOLUNTEER"]}><VolunteerTasks /></ProtectedRoute>} />
 
         <Route path="/speaker" element={<SpeakerDashboard />} />
         <Route path="/speaker/sessions" element={<SpeakerSessions />} />
@@ -262,6 +274,12 @@ function App() {
     path="/chief-guest/details"
     element={<ChiefGuestDetails />}
 />
+        <Route path="/judge" element={<ProtectedRoute roles={["JUDGE"]}><JudgeDashboard /></ProtectedRoute>} />
+        <Route path="/judge/competitions" element={<ProtectedRoute roles={["JUDGE"]}><JudgeCompetitions /></ProtectedRoute>} />
+        <Route path="/judge/work" element={<ProtectedRoute roles={["JUDGE"]}><JudgeWork /></ProtectedRoute>} />
+        <Route path="/mentor" element={<ProtectedRoute roles={["TRAINER"]}><MentorDashboard /></ProtectedRoute>} />
+        <Route path="/mentor/teams" element={<ProtectedRoute roles={["TRAINER"]}><MentorTeams /></ProtectedRoute>} />
+        <Route path="/mentor/schedule" element={<ProtectedRoute roles={["TRAINER"]}><MentorSchedule /></ProtectedRoute>} />
 
         {/* Public */}
         <Route path="/find-events" element={<PublicDashboard />} /> 
@@ -282,6 +300,7 @@ function App() {
 />
 <Route path="/super-admin" element={<SuperAdminDashboard />} />
 <Route path="/super-admin/portals" element={<SuperAdminDashboard section="portals" />} />
+<Route path="/super-admin/portals/deleted" element={<SuperAdminDashboard section="deletedPortals" />} />
 <Route path="/super-admin/revenue" element={<SuperAdminDashboard section="revenue" />} />
 <Route path="/super-admin/subscriptions" element={<SuperAdminDashboard section="subscriptions" />} />
 <Route path="/super-admin/email-delivery" element={<SuperAdminDashboard section="emailDelivery" />} />
@@ -293,6 +312,22 @@ function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+function ProtectedRoute({ roles, children }) {
+  const location = useLocation();
+  const token = localStorage.getItem("token");
+  const role = String(localStorage.getItem("activeRole") || localStorage.getItem("role") || "").toUpperCase();
+
+  if (!token) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (roles?.length && !roles.includes(role)) {
+    return <Navigate to="/choose-access" replace state={{ from: location.pathname }} />;
+  }
+
+  return children;
 }
 
 export default App;

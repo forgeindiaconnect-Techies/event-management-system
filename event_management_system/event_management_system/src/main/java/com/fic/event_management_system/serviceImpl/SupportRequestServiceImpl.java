@@ -6,8 +6,12 @@ import com.fic.event_management_system.entity.SupportRequest;
 import com.fic.event_management_system.entity.User;
 import com.fic.event_management_system.enums.SupportRequestPriority;
 import com.fic.event_management_system.enums.SupportRequestStatus;
+import com.fic.event_management_system.enums.NotificationType;
+import com.fic.event_management_system.enums.RoleName;
 import com.fic.event_management_system.repository.SupportRequestRepository;
+import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.security.TenantSecurityService;
+import com.fic.event_management_system.service.NotificationService;
 import com.fic.event_management_system.service.SupportRequestService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,13 +27,19 @@ public class SupportRequestServiceImpl
 
     private final SupportRequestRepository supportRequestRepository;
     private final TenantSecurityService tenantSecurityService;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public SupportRequestServiceImpl(
             SupportRequestRepository supportRequestRepository,
-            TenantSecurityService tenantSecurityService) {
+            TenantSecurityService tenantSecurityService,
+            UserRepository userRepository,
+            NotificationService notificationService) {
 
         this.supportRequestRepository = supportRequestRepository;
         this.tenantSecurityService = tenantSecurityService;
+        this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -107,7 +117,23 @@ public class SupportRequestServiceImpl
                 )
         );
 
-        return supportRequestRepository.save(saved);
+        saved = supportRequestRepository.save(saved);
+
+        for (User superAdmin : userRepository.findByRole_RoleName(RoleName.SUPER_ADMIN)) {
+            notificationService.createNotification(
+                    superAdmin,
+                    null,
+                    null,
+                    NotificationType.SYSTEM_ALERT,
+                    "New support complaint",
+                    saved.getReferenceCode() + ": " + saved.getSubject()
+                            + " was submitted by " + saved.getRequesterName() + ".",
+                    "/super-admin/support",
+                    "SUPER_ADMIN_SUPPORT_" + saved.getId() + "_" + superAdmin.getId()
+            );
+        }
+
+        return saved;
     }
 
     @Override

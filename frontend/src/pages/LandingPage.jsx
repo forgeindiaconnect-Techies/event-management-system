@@ -32,7 +32,7 @@ function LandingPage() {
     COORDINATOR: "/coordinator",
     SPEAKER: "/speaker",
     JUDGE: "/judge",
-    MENTOR: "/mentor",
+    TRAINER: "/mentor",
     CHIEF_GUEST: "/chief-guest",
     PARTICIPANT: "/participant",
   };
@@ -242,11 +242,42 @@ function LandingPage() {
           <h1 className="landing-brand mb-0">FIC BackRooms</h1>
         </Link>
 
-        <div className="ms-auto d-flex align-items-center gap-3 me-3 landing-top-actions">
+        <div className="landing-section-nav landing-navbar-links">
+          {navItems.map(([label, href]) => (
+            <a href={href} className="landing-nav-link" key={label}>{label}</a>
+          ))}
+          <div ref={guideButtonRef} className="landing-guide-hover">
+            <button
+              type="button"
+              className="landing-nav-link landing-guide-toggle"
+              onClick={() => setGuideOpen((open) => !open)}
+            >
+              Guides <span>{guideOpen ? "▴" : "▾"}</span>
+            </button>
+            {guideOpen && (
+              <div ref={guideMenuRef} className="landing-guide-menu landing-guide-menu-compact landing-guide-menu-open">
+                <div className="landing-guide-menu-header">
+                  <div>
+                    <p>Guide Library</p>
+                    <h3>Event planning resources</h3>
+                  </div>
+                </div>
+                <div className="landing-guide-menu-list">
+                  {guideLinks.map(([label, path]) => (
+                    <Link key={path} to={path} className="landing-guide-menu-link">
+                      <span>{label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="d-flex align-items-center gap-3 me-3 landing-top-actions">
           <button onClick={handleFindEvents} className="landing-top-link landing-explore-link border-0 bg-transparent">
             Explore Events
           </button>
-          <Link to="/create-portal" className="landing-top-link landing-create-portal-link">Create Portal</Link>
         </div>
 
         {showLandingProfile ? (
@@ -263,47 +294,6 @@ function LandingPage() {
         <div className="landing-hero-glow" />
 
         <div className="container-fluid px-5 position-relative">
-          <div className="landing-section-nav">
-            {navItems.map(([label, href]) => (
-              <div className="d-flex align-items-center gap-4" key={label}>
-                <span className="landing-nav-dot" aria-hidden="true" />
-                <a href={href} className="landing-nav-link">{label}</a>
-              </div>
-            ))}
-            <div
-              ref={guideButtonRef}
-              className="landing-guide-hover d-flex align-items-center gap-4"
-            >
-              <span className="landing-nav-dot" />
-              <button
-                type="button"
-                className="landing-nav-link landing-guide-toggle"
-                onClick={() => setGuideOpen((open) => !open)}
-              >
-                Guides <span>{guideOpen ? "▴" : "▾"}</span>
-              </button>
-            </div>
-          </div>
-
-          {guideOpen && (
-            <div ref={guideMenuRef} className="landing-guide-menu landing-guide-menu-compact landing-guide-menu-open">
-              <div className="landing-guide-menu-header">
-                <div>
-                  <p>Guide Library</p>
-                  <h3>Event planning resources</h3>
-                </div>
-              </div>
-
-              <div className="landing-guide-menu-list">
-                {guideLinks.map(([label, path]) => (
-                  <Link key={path} to={path} className="landing-guide-menu-link">
-                    <span>{label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="row align-items-center landing-hero-content">
             <div className="col-md-6">
               <div className="landing-eyebrow">

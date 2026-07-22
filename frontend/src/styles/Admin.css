@@ -2970,7 +2970,7 @@ textarea:focus {
 
 .subscription-plan-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
 }
 
@@ -3985,4 +3985,118 @@ textarea:focus {
 
 @keyframes compact-profile-open {
   from { transform: translateY(14px) scale(.98); opacity: 0; }
+}
+.admin-dashboard-action-card {
+  cursor: pointer;
+  position: relative;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.admin-subscription-expired-banner {
+  align-items: center;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 14px;
+  color: #7c2d12;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 15px 18px;
+}
+
+.admin-subscription-expired-banner strong,
+.admin-subscription-expired-banner span { display: block; }
+.admin-subscription-expired-banner strong { font-size: 17px; margin-bottom: 3px; }
+.admin-subscription-expired-banner span { font-size: 14px; line-height: 1.45; }
+.admin-subscription-renew-button {
+  background: #ea580c;
+  border-radius: 8px;
+  color: #fff;
+  flex: 0 0 auto;
+  font-weight: 700;
+  padding: 10px 15px;
+  text-decoration: none;
+}
+.admin-subscription-renew-button:hover { background: #c2410c; color: #fff; }
+.admin-action-card.disabled { cursor: not-allowed; opacity: .58; }
+.admin-action-card.disabled small { color: #b45309; font-size: 11px; margin-left: auto; }
+
+@media (max-width: 640px) {
+  .admin-subscription-expired-banner { align-items: stretch; flex-direction: column; }
+  .admin-subscription-renew-button { text-align: center; }
+}
+
+a:hover > .admin-dashboard-action-card {
+  box-shadow: 0 16px 34px rgba(46, 52, 90, .12);
+  transform: translateY(-3px);
+}
+
+.admin-dashboard-card-arrow {
+  color: #7c3aed;
+  opacity: 0;
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  transform: translateX(-5px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+a:hover > .admin-dashboard-action-card .admin-dashboard-card-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+.role-event-switcher { z-index: 10020; }
+.role-event-switcher-button {
+  width: 290px;
+  height: 42px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 10px;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.role-event-switcher-button:hover { background: rgba(255,255,255,.18); }
+.role-event-switcher-copy { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.role-event-switcher-copy small { color: #c7d2fe; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.role-event-switcher-copy strong { max-width: 235px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.role-event-chevron { flex: 0 0 auto; transition: transform .18s ease; }
+.role-event-chevron.open { transform: rotate(180deg); }
+.role-event-menu-backdrop { position: fixed; inset: 0; border: 0; background: transparent; z-index: 10018; }
+.role-event-menu {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  width: 360px;
+  max-height: 390px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  color: #0f172a;
+  z-index: 10019;
+}
+.role-event-menu-heading { padding: 14px 16px 10px; display: flex; flex-direction: column; border-bottom: 1px solid #eef2f7; }
+.role-event-menu-heading strong { font-size: 14px; }
+.role-event-menu-heading small { color: #64748b; font-size: 11px; }
+.role-event-menu-item { width: 100%; padding: 12px 14px; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff; display: flex; align-items: center; gap: 10px; text-align: left; }
+.role-event-menu-item:hover, .role-event-menu-item.selected { background: #eef2ff; }
+.role-event-menu-text { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.role-event-menu-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.role-event-menu-text small { color: #64748b; font-size: 11px; }
+.role-event-status { padding: 3px 7px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 9px; font-weight: 800; }
+.role-event-status.running { background: #dcfce7; color: #15803d; }
+.role-event-status.completed { background: #e2e8f0; color: #475569; }
+.role-event-status.cancelled { background: #fee2e2; color: #b91c1c; }
+.role-event-selected { color: #4f46e5; flex: 0 0 auto; }
+@media (max-width: 768px) {
+  .role-event-switcher-button { width: 150px; }
+  .role-event-switcher-copy small { display: none; }
+  .role-event-switcher-copy strong { max-width: 112px; }
+  .role-event-menu { position: fixed; top: 58px; left: 12px; right: 12px; width: auto; }
 }

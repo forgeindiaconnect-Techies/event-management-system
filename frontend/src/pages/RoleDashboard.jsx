@@ -72,8 +72,8 @@ function RoleDashboard() {
       ],
     },
 
-    MENTOR: {
-      title: "Mentor Dashboard",
+    TRAINER: {
+      title: "Trainer Dashboard",
       description: "Guide assigned teams and participants.",
       cards: [
         { title: "Teams", value: 0, icon: <BsPeople /> },

@@ -45,4 +45,13 @@ public class CoordinatorAssignmentController {
         coordinatorAssignmentService.removeCoordinatorAssignment(assignmentId);
         return "Coordinator assignment removed successfully.";
     }
+
+    @PutMapping("/event/{eventId}/completion-report")
+    public CoordinatorAssignment submitCompletionReport(
+            @PathVariable Long eventId,
+            @RequestBody CompletionReportRequest request) {
+        return coordinatorAssignmentService.submitCompletionReport(eventId, request.report());
+    }
+
+    public record CompletionReportRequest(String report) {}
 }

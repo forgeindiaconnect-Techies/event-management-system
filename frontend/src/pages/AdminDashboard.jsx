@@ -17,6 +17,8 @@
     const [registrations, setRegistrations] = useState([]);
     const [users, setUsers] = useState([]);
     const [organizers, setOrganizers] = useState([]);
+    const [subscription, setSubscription] = useState(null);
+    const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
 
     useEffect(() => {
   async function fetchDashboardData() {
@@ -51,11 +53,33 @@
     } catch (error) {
       console.log("organizers error:", error);
     }
+
+    try {
+      const subscriptionRes = await api.get("/subscriptions/current");
+      setSubscription(subscriptionRes.data || null);
+    } catch (error) {
+      // A missing/expired subscription is represented by the banner below.
+      setSubscription(null);
+    } finally {
+      setSubscriptionLoaded(true);
+    }
   }
 
   fetchDashboardData();
 }, []);
 
+
+    const hasSubscription = Boolean(
+      subscription &&
+      !["EXPIRED", "CANCELLED"].includes(String(subscription.status || "").toUpperCase()) &&
+      Number(subscription.daysRemaining ?? 1) > 0
+    );
+    const subscriptionExpired = subscriptionLoaded && !hasSubscription;
+    const subscriptionLabel = subscription?.trial
+      ? "Free trial expired"
+      : subscription?.planName
+        ? `${subscription.planName} plan expired`
+        : "No active subscription";
 
     const stats = [
       {
@@ -95,6 +119,16 @@
           </p>
         </div>
 
+        {subscriptionExpired && (
+          <div className="admin-subscription-expired-banner" role="alert">
+            <div>
+              <strong>{subscriptionLabel}</strong>
+              <span>Your portal is now view-only. Renew or choose a plan to create events, publish changes, invite members, and accept new registrations.</span>
+            </div>
+            <Link to="/subscription" className="admin-subscription-renew-button">Renew plan</Link>
+          </div>
+        )}
+
         <div className="admin-dashboard-grid row g-4">
           {stats.map((item) => (
             <div className="col-md-3" key={item.title}>
@@ -124,9 +158,37 @@
 
               <div className="row g-3">
                 <div className="col-md-4">
-                  <Link to="/create-event" className="admin-action-card">
+                  {hasSubscription ? <Link to="/create-event" className="admin-action-card">
                     <BsCalendarEvent />
                     <span>Create Event</span>
+                    <BsArrowRight />
+                  </Link> : <div className="admin-action-card disabled" title="Renew your subscription to create an event" aria-disabled="true">
+                    <BsCalendarEvent />
+                    <span>Create Event</span>
+                    <small>Renew plan first</small>
+                  </div>}
+                </div>
+
+                <div className="col-md-4">
+                  <Link to="/admin/attendees" className="admin-action-card">
+                    <BsTicketPerforated />
+                    <span>View Attendees</span>
+                    <BsArrowRight />
+                  </Link>
+                </div>
+
+                <div className="col-md-4">
+                  <Link to="/admin/teams" className="admin-action-card">
+                    <BsPeople />
+                    <span>Manage Teams</span>
+                    <BsArrowRight />
+                  </Link>
+                </div>
+
+                <div className="col-md-4">
+                  <Link to="/admin/analytics" className="admin-action-card">
+                    <BsGraphUp />
+                    <span>View Analytics</span>
                     <BsArrowRight />
                   </Link>
                 </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import OrganizerLayout from "../layouts/OrganizerLayout";
 import api from "../api/axiosConfig";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/Admin.css";
 import {
   BsCalendarEvent,
@@ -9,6 +9,9 @@ import {
   BsPersonWorkspace,
   BsCheckCircle,
   BsArrowRight,
+  BsPersonPlus,
+  BsClipboardCheck,
+  BsGraphUp,
 } from "react-icons/bs";
 
 function OrganizerDashboard() {
@@ -71,21 +74,25 @@ function OrganizerDashboard() {
       title: "My Events",
       value: events.length,
       icon: <BsCalendarEvent />,
+      path: "/organizer/events",
     },
     {
       title: "Registrations",
       value: registrations.length,
       icon: <BsPeople />,
+      path: "/organizer/registrations",
     },
     {
   title: "My Staff",
   value: staffCount,
   icon: <BsPersonWorkspace />,
+  path: "/organizer/staff",
 },
     {
       title: "Completed Events",
       value: completedEvents,
       icon: <BsCheckCircle />,
+      path: "/organizer/events",
     },
   ];
 
@@ -109,11 +116,14 @@ function OrganizerDashboard() {
       <div className="organizer-dashboard-stats row g-4 mb-4">
         {cards.map((card) => (
           <div className="col-md-3" key={card.title}>
-            <div className="admin-bento-card">
+            <Link to={card.path} className="text-decoration-none text-dark" aria-label={`Open ${card.title}`}>
+            <div className="admin-bento-card admin-dashboard-action-card">
               <div className="admin-bento-icon">{card.icon}</div>
               <p className="admin-bento-label">{card.title}</p>
               <h2 className="admin-bento-value">{card.value}</h2>
+              <BsArrowRight className="admin-dashboard-card-arrow" />
             </div>
+            </Link>
           </div>
         ))}
       </div>
@@ -137,6 +147,36 @@ function OrganizerDashboard() {
                   onClick={() => navigate("/create-event")}
                 >
                   Create Event <BsArrowRight />
+                </button>
+              </div>
+
+              <div className="col-md-4">
+                <button
+                  className="btn btn-outline-primary w-100 d-flex justify-content-between align-items-center"
+                  style={{ borderRadius: "12px", fontSize: "15px" }}
+                  onClick={() => navigate("/organizer/invite-staff")}
+                >
+                  Invite Staff <BsPersonPlus />
+                </button>
+              </div>
+
+              <div className="col-md-4">
+                <button
+                  className="btn btn-outline-primary w-100 d-flex justify-content-between align-items-center"
+                  style={{ borderRadius: "12px", fontSize: "15px" }}
+                  onClick={() => navigate("/organizer/team-assignment")}
+                >
+                  Team Assignment <BsClipboardCheck />
+                </button>
+              </div>
+
+              <div className="col-md-4">
+                <button
+                  className="btn btn-outline-primary w-100 d-flex justify-content-between align-items-center"
+                  style={{ borderRadius: "12px", fontSize: "15px" }}
+                  onClick={() => navigate("/organizer/reports")}
+                >
+                  Reports <BsGraphUp />
                 </button>
               </div>
 

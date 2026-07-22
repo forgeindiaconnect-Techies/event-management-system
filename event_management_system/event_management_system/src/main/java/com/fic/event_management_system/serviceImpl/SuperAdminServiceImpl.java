@@ -7,6 +7,7 @@ import com.fic.event_management_system.dto.SubscriptionDetailsResponse;
 import com.fic.event_management_system.dto.SubscriptionPaymentHistoryResponse;
 import com.fic.event_management_system.dto.UpdateSubscriptionPlanRequest;
 import com.fic.event_management_system.entity.Portal;
+import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.Registration;
 import com.fic.event_management_system.entity.User;
 import com.fic.event_management_system.entity.PortalSubscription;
@@ -14,6 +15,7 @@ import com.fic.event_management_system.entity.SubscriptionPayment;
 import com.fic.event_management_system.entity.SubscriptionAuditLog;
 import com.fic.event_management_system.entity.SubscriptionPlan;
 import com.fic.event_management_system.enums.PaymentStatus;
+import com.fic.event_management_system.enums.EventStatus;
 import com.fic.event_management_system.enums.SubscriptionStatus;
 import com.fic.event_management_system.enums.SubscriptionPaymentStatus;
 import com.fic.event_management_system.enums.SubscriptionPlanCode;
@@ -89,7 +91,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     public SuperAdminDashboardResponse getDashboardOverview() {
         tenantSecurityService.requireSuperAdmin();
 
-        List<Portal> portals = portalRepository.findByDeletedFalseOrDeletedIsNull();
+        List<Portal> portals = portalRepository.findAll();
         List<Registration> registrations = registrationRepository.findAll().stream()
                 .filter(registration -> registration.getEvent() != null)
                 .filter(registration -> registration.getEvent().getPortal() != null)
@@ -98,16 +100,20 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         List<SubscriptionPayment> subscriptionPayments =
                 subscriptionPaymentRepository.findAllByOrderByCreatedAtDesc();
-        BigDecimal totalRevenue = calculateRevenue(registrations)
-                .add(calculateSubscriptionRevenue(subscriptionPayments));
-        BigDecimal monthlyRevenue = calculateMonthlyRevenue(registrations)
-                .add(calculateMonthlySubscriptionRevenue(subscriptionPayments));
+        BigDecimal totalRevenue = calculateSubscriptionRevenue(subscriptionPayments);
+        BigDecimal monthlyRevenue = calculateMonthlySubscriptionRevenue(subscriptionPayments);
 
         long activePortals = portals.stream()
-                .filter(portal -> Boolean.TRUE.equals(portal.getActive()))
+                .filter(portal -> !Boolean.TRUE.equals(portal.getDeleted()))
+                .filter(portal -> isSubscriptionCurrentlyActive(
+                        subscriptionRepository
+                                .findTopByPortalIdOrderByCreatedAtDesc(portal.getId())
+                                .orElse(null)
+                ))
                 .count();
 
         long trialPortals = portals.stream()
+                .filter(portal -> !Boolean.TRUE.equals(portal.getDeleted()))
                 .map(portal -> subscriptionRepository
                         .findTopByPortalIdOrderByCreatedAtDesc(portal.getId())
                         .orElse(null))
@@ -133,7 +139,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     public List<SuperAdminPortalResponse> getPortalOverview() {
         tenantSecurityService.requireSuperAdmin();
 
-        return portalRepository.findByDeletedFalseOrDeletedIsNull()
+        return portalRepository.findAll()
                 .stream()
                 .map(this::mapPortal)
                 .toList();
@@ -144,6 +150,46 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     public List<SubscriptionPlan> getSubscriptionPlans() {
         tenantSecurityService.requireSuperAdmin();
         return subscriptionPlanRepository.findAllByOrderByMonthlyPriceAsc();
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionPlan createCustomSubscriptionPlan(
+            UpdateSubscriptionPlanRequest request
+    ) {
+        tenantSecurityService.requireSuperAdmin();
+        if (request == null) {
+            throw new RuntimeException("Plan configuration is required");
+        }
+        if (subscriptionPlanRepository.findByCode(SubscriptionPlanCode.CUSTOM).isPresent()) {
+            throw new RuntimeException(
+                    "An extra plan already exists. Edit or enable the existing extra plan."
+            );
+        }
+
+        SubscriptionPlan plan = new SubscriptionPlan();
+        plan.setCode(SubscriptionPlanCode.CUSTOM);
+        plan.setDisplayName("Extra Plan");
+        plan.setDescription("");
+        plan.setMonthlyPrice(BigDecimal.ZERO);
+        plan.setYearlyPrice(BigDecimal.ZERO);
+        plan.setMaxActiveEvents(0);
+        plan.setMaxPortalUsers(0);
+        plan.setMaxRegistrationsPerEvent(0);
+        plan.setMaxTicketClassesPerEvent(0);
+        plan.setMaxStaffInvitations(0);
+        plan.setMaxSpeakersPerEvent(0);
+        plan.setMaxExhibitorsPerEvent(0);
+        plan.setMaxCustomRegistrationFields(0);
+        plan.setMaxOrganizers(0);
+        plan.setCustomBranding(false);
+        plan.setAdvancedReports(false);
+        plan.setWhiteLabel(false);
+        plan.setPrioritySupport(false);
+        plan.setActive(true);
+        subscriptionPlanRepository.save(plan);
+
+        return updateSubscriptionPlan(SubscriptionPlanCode.CUSTOM, request);
     }
 
     @Override
@@ -381,7 +427,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         tenantSecurityService.requireSuperAdmin();
 
         if (portalId != null) {
-            requirePortal(portalId);
+            portalRepository.findById(portalId)
+                    .orElseThrow(() -> new RuntimeException("Portal not found"));
         }
 
         List<SubscriptionPayment> payments;
@@ -401,9 +448,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         return payments.stream()
                 .filter(payment -> payment.getPortal() != null)
-                .filter(payment -> !Boolean.TRUE.equals(
-                        payment.getPortal().getDeleted()
-                ))
                 .map(SubscriptionPaymentHistoryResponse::from)
                 .toList();
     }
@@ -432,9 +476,12 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         });
         userRepository.saveAll(portalUsers);
 
+        List<Event> portalEvents = eventRepository.findByPortalId(portalId);
+        portalEvents.forEach(event -> event.setStatus(EventStatus.TRASHED));
+        eventRepository.saveAll(portalEvents);
+
         portal.setActive(false);
         portal.setDeleted(true);
-        portal.setPortalName("Deleted Portal " + portal.getId());
         portal.setPortalCode("DELETED-" + portal.getId() + "-" + purgeTime);
         portal.setDescription(null);
         portal.setLogoUrl(null);
@@ -977,6 +1024,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         String planName = subscription != null && subscription.getPlan() != null
                 ? subscription.getPlan().getDisplayName()
                 : "No plan";
+        String portalStatus = resolvePortalStatus(portal, subscription);
 
         return new SuperAdminPortalResponse(
                 portal.getId(),
@@ -986,18 +1034,47 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 admin == null ? null : admin.getEmail(),
                 admin == null ? null : admin.getPhoneNumber(),
                 planName,
-                Boolean.TRUE.equals(portal.getActive()) ? "Active" : "Inactive",
+                portalStatus,
                 portal.getCreatedAt(),
                 eventRepository.findByPortalId(portal.getId()).size(),
                 userRepository.findByPortalId(portal.getId()).size(),
                 registrations.size(),
-                calculateRevenue(registrations).add(
-                        calculateSubscriptionRevenue(
-                                subscriptionPaymentRepository
-                                        .findByPortalIdOrderByCreatedAtDesc(portal.getId())
-                        )
-                )
+                calculateRevenue(registrations)
         );
+    }
+
+    private String resolvePortalStatus(
+            Portal portal,
+            PortalSubscription subscription
+    ) {
+        if (Boolean.TRUE.equals(portal.getDeleted())) {
+            return "Deleted";
+        }
+        if (subscription == null) {
+            return "Deactivated";
+        }
+        if (subscription.getEndDate() != null
+                && !subscription.getEndDate().isAfter(LocalDateTime.now())) {
+            return "Expired";
+        }
+        if (subscription.getStatus() == SubscriptionStatus.EXPIRED) {
+            return "Expired";
+        }
+
+        // A portal keeps access while its current plan period is valid. This also
+        // applies to trials and subscriptions cancelled for the next renewal.
+        return "Active";
+    }
+
+    private boolean isSubscriptionCurrentlyActive(
+            PortalSubscription subscription
+    ) {
+        if (subscription == null) return false;
+        if (subscription.getEndDate() != null
+                && !subscription.getEndDate().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        return subscription.getStatus() != SubscriptionStatus.EXPIRED;
     }
 
     private BigDecimal calculateRevenue(List<Registration> registrations) {

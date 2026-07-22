@@ -12,6 +12,8 @@ import {
   BsStar,
   BsPeople,
   BsInfoCircle,
+  BsExclamationTriangle,
+  BsCalendarCheck,
 } from "react-icons/bs";
 
 function RoleSidebar() {
@@ -36,14 +38,15 @@ function RoleSidebar() {
     ],
 
     COORDINATOR: [
-  { label: "Dashboard", path: "/coordinator", icon: <BsHouse /> },
-  { label: "Assigned Events", path: "/coordinator/events", icon: <BsCalendarEvent /> },
-  { label: "Staff", path: "/coordinator/staff", icon: <BsPeople /> },
-  { label: "Volunteers", path: "/coordinator/volunteers", icon: <BsPeople /> },
-  { label: "Attendance", path: "/coordinator/attendance", icon: <BsCheckCircle /> },
-  { label: "Reports", path: "/coordinator/reports", icon: <BsBarChart /> },
-  { label: "Tasks", path: "/coordinator/tasks", icon: <BsListTask /> },
-],
+      { label: "Dashboard", path: "/coordinator", icon: <BsHouse /> },
+      { label: "Assigned Events", path: "/coordinator/events", icon: <BsCalendarEvent /> },
+      { label: "Team", path: "/coordinator/team", icon: <BsPeople /> },
+      { label: "Tasks", path: "/coordinator/tasks", icon: <BsListTask /> },
+      { label: "Incidents", path: "/coordinator/incidents", icon: <BsExclamationTriangle /> },
+      { label: "Attendance", path: "/coordinator/attendance", icon: <BsCheckCircle /> },
+      { label: "Event Day", path: "/coordinator/event-day", icon: <BsCalendarCheck /> },
+      { label: "Reports", path: "/coordinator/reports", icon: <BsBarChart /> },
+    ],
 
     SPEAKER: [
       { label: "Dashboard", path: "/speaker", icon: <BsHouse /> },
@@ -54,10 +57,10 @@ function RoleSidebar() {
     JUDGE: [
       { label: "Dashboard", path: "/judge", icon: <BsHouse /> },
       { label: "Competitions", path: "/judge/competitions", icon: <BsTrophy /> },
-      { label: "Scores", path: "/judge/scores", icon: <BsStar /> },
+      { label: "Assigned Work", path: "/judge/work", icon: <BsListTask /> },
     ],
 
-    MENTOR: [
+    TRAINER: [
       { label: "Dashboard", path: "/mentor", icon: <BsHouse /> },
       { label: "Assigned Teams", path: "/mentor/teams", icon: <BsPeople /> },
       { label: "Schedule", path: "/mentor/schedule", icon: <BsCalendarEvent /> },

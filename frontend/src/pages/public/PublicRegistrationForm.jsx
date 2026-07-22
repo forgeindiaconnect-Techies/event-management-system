@@ -36,6 +36,7 @@
     const [selectedTicketClassId, setSelectedTicketClassId] = useState("");
     const [ticketQuantity, setTicketQuantity] = useState(1);
     const [qrGenerationMode, setQrGenerationMode] = useState("PER_TICKET");
+    const [validationErrors, setValidationErrors] = useState({});
 
     const [participant, setParticipant] = useState({
       firstName: "",
@@ -56,7 +57,14 @@
         ]);
 
         if (eventRes.status === "fulfilled") {
-          setEvent(eventRes.value.data);
+          const loadedEvent = eventRes.value.data;
+          setEvent(loadedEvent);
+          const participantAllowed = loadedEvent.allowParticipantRegistration !== false;
+          const audienceAllowed = loadedEvent.allowAudienceRegistration !== false;
+          setParticipant((current) => ({
+            ...current,
+            registrationType: participantAllowed ? "PARTICIPANT" : audienceAllowed ? "AUDIENCE" : ""
+          }));
         }
 
         if (classesRes.status === "fulfilled") {
@@ -146,10 +154,55 @@
     }, [selectedTicketClass, ticketQuantity]);
 
     const handleParticipantChange = (e) => {
+      const { name } = e.target;
+      let { value } = e.target;
+
+      if (name === "phoneNumber") {
+        const numbersOnly = value.replace(/\D/g, "").slice(0, 15);
+        setValidationErrors((current) => ({
+          ...current,
+          phoneNumber: value !== numbersOnly
+            ? "Phone number can contain numbers only."
+            : numbersOnly.length > 0 && numbersOnly.length < 10
+            ? "Enter a valid phone number with at least 10 digits."
+            : ""
+        }));
+        value = numbersOnly;
+      }
+
+      if (name === "email") {
+        setValidationErrors((current) => ({ ...current, email: "" }));
+      }
+
       setParticipant({
         ...participant,
-        [e.target.name]: e.target.value,
+        [name]: value,
       });
+    };
+
+    const validateEmail = () => {
+      const email = participant.email.trim();
+      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+      setValidationErrors((current) => ({
+        ...current,
+        email: emailValid ? "" : "Enter a valid email address, for example name@example.com."
+      }));
+      return emailValid;
+    };
+
+    const validatePhoneNumber = () => {
+      const phoneValid = /^\d{10,15}$/.test(participant.phoneNumber);
+      setValidationErrors((current) => ({
+        ...current,
+        phoneNumber: phoneValid ? "" : "Enter a valid phone number containing 10 to 15 digits."
+      }));
+      return phoneValid;
+    };
+
+    const validateContactDetails = () => {
+      const emailValid = validateEmail();
+      const phoneValid = validatePhoneNumber();
+      return emailValid && phoneValid;
     };
 
     const handleAnswerChange = (fieldId, value) => {
@@ -162,6 +215,11 @@
     const handleSubmit = async (e) => {
       e.preventDefault();
       setMessage("");
+
+      if (!validateContactDetails()) {
+        setMessage("Please correct the highlighted contact details before continuing.");
+        return;
+      }
 
       try {
         setLoading(true);
@@ -212,6 +270,12 @@
     }
 
     const banner = event.bannerUrl || getDefaultBanner(event.eventType);
+    const participantAllowed = event.allowParticipantRegistration !== false;
+    const audienceAllowed = event.allowAudienceRegistration !== false;
+    const availableRegistrationTypes = [
+      participantAllowed && { value: "PARTICIPANT", label: "Participant" },
+      audienceAllowed && { value: "AUDIENCE", label: "Audience" }
+    ].filter(Boolean);
     const maxPerBuyer = selectedTicketClass ? getMaxSelectableQuantity(selectedTicketClass) : 1;
   const payableAmount =
     participant.registrationType === "AUDIENCE" && selectedTicketClass
@@ -298,15 +362,22 @@
 
                     <div style={{ width: "240px", maxWidth: "100%" }}>
                       <label className="form-label fw-semibold">Registration Type</label>
-                      <select
-                        className="form-select"
-                        name="registrationType"
-                        value={participant.registrationType}
-                        onChange={handleParticipantChange}
-                      >
-                        <option value="PARTICIPANT">Participant</option>
-                        <option value="AUDIENCE">Audience</option>
-                      </select>
+                      {availableRegistrationTypes.length > 1 ? (
+                        <select
+                          className="form-select"
+                          name="registrationType"
+                          value={participant.registrationType}
+                          onChange={handleParticipantChange}
+                        >
+                          {availableRegistrationTypes.map((type) => (
+                            <option key={type.value} value={type.value}>{type.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="form-control bg-light fw-semibold">
+                          {availableRegistrationTypes[0]?.label || "Registration unavailable"}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -347,14 +418,18 @@
                           <BsEnvelope />
                         </span>
                         <input
-                          className="form-control"
+                          className={`form-control ${validationErrors.email ? "is-invalid" : ""}`}
                           type="email"
                           name="email"
                           placeholder="Enter email address"
                           value={participant.email}
                           onChange={handleParticipantChange}
+                          onBlur={validateEmail}
                           required
                         />
+                        {validationErrors.email && (
+                          <div className="invalid-feedback">{validationErrors.email}</div>
+                        )}
                       </div>
                     </div>
 
@@ -365,13 +440,22 @@
                           <BsPhone />
                         </span>
                         <input
-                          className="form-control"
+                          className={`form-control ${validationErrors.phoneNumber ? "is-invalid" : ""}`}
+                          type="tel"
                           name="phoneNumber"
                           placeholder="Enter phone number"
                           value={participant.phoneNumber}
                           onChange={handleParticipantChange}
+                          onBlur={validatePhoneNumber}
+                          inputMode="numeric"
+                          pattern="[0-9]{10,15}"
+                          minLength={10}
+                          maxLength={15}
                           required
                         />
+                        {validationErrors.phoneNumber && (
+                          <div className="invalid-feedback">{validationErrors.phoneNumber}</div>
+                        )}
                       </div>
                     </div>
 

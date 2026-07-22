@@ -98,8 +98,12 @@ function EventDashboard() {
   }
 
   const totalRegistrations = registrations.length || dashboard?.totalRegistrations || 0;
-  const participants = dashboard?.participants || 0;
-  const audience = dashboard?.audience || 0;
+  const participants = dashboard?.participants ?? registrations.filter(
+    (registration) => registration.registrationType === "PARTICIPANT"
+  ).length;
+  const audience = dashboard?.audience ?? registrations.filter(
+    (registration) => registration.registrationType === "AUDIENCE"
+  ).length;
   const checkedIn = registrations.filter((registration) => registration.attended).length;
   const paidRegistrations = registrations.filter(
     (registration) => registration.paymentStatus === "PAID"
@@ -113,6 +117,10 @@ function EventDashboard() {
     : 0;
   const sessionCount = teamCounts.speakers;
   const teamMembers = Object.values(teamCounts).reduce((total, count) => total + count, 0);
+  const isPublished = event.status === "PUBLISHED";
+  const registrationTrend = buildRegistrationTrend(registrations);
+  const highestRegistrationDay = Math.max(...registrationTrend.map((item) => item.count), 0);
+  const todayRegistrations = registrationTrend[registrationTrend.length - 1]?.count || 0;
   const daysToEvent = Math.max(
     0,
     Math.ceil((new Date(event.startDateTime) - new Date()) / (1000 * 60 * 60 * 24))
@@ -179,18 +187,20 @@ function EventDashboard() {
             title="Registrations"
             value={totalRegistrations}
             icon={<FaClipboardList />}
+            path={`/events/${id}/registrations/attendees`}
           />
-          <DashboardCard title="Ticket Sales" value={ticketSales} icon={<FaTicketAlt />} />
-          <DashboardCard title="Revenue" value={`Rs. ${revenue}`} icon={<FaRupeeSign />} />
-          <DashboardCard title="Available Seats" value={availableSeats} icon={<FaChair />} />
+          <DashboardCard title="Ticket Sales" value={ticketSales} icon={<FaTicketAlt />} path={`/events/${id}/registrations/ticket-classes`} />
+          <DashboardCard title="Revenue" value={`Rs. ${revenue}`} icon={<FaRupeeSign />} path={`/events/${id}/registrations/payments`} />
+          <DashboardCard title="Available Seats" value={availableSeats} icon={<FaChair />} path={`/events/${id}/registrations/ticket-classes`} />
           <DashboardCard
             title="Check-In Progress"
             value={`${checkInRate}%`}
             icon={<FaCheckCircle />}
+            path={`/events/${id}/event-day/check-in`}
           />
-          <DashboardCard title="Sessions" value={sessionCount} icon={<FaMicrophone />} />
-          <DashboardCard title="Team Members" value={teamMembers} icon={<FaUsers />} />
-          <DashboardCard title="Audience" value={audience} icon={<FaStore />} />
+          <DashboardCard title="Sessions" value={sessionCount} icon={<FaMicrophone />} path={`/events/${id}/manage/agenda`} />
+          <DashboardCard title="Team Members" value={teamMembers} icon={<FaUsers />} path={`/events/${id}/manage/team`} />
+          <DashboardCard title="Audience" value={audience} icon={<FaStore />} path={`/events/${id}/registrations/attendees`} />
         </div>
 
         <div className="row g-4 mb-4">
@@ -199,14 +209,37 @@ function EventDashboard() {
               <h2 className="event-panel-title">Registration Trend</h2>
 
               <div className="event-chart-empty">
-                <TrendIllustration />
-                <h3>Invite Attendees</h3>
-                <p>
-                  Publish your event to send invitations to attendees and schedule reminders.
-                </p>
-                <Link to={`/events/${id}/manage/promote`} className="event-primary-button">
-                  Publish
-                </Link>
+                {!isPublished ? (
+                  <>
+                    <TrendIllustration />
+                    <h3>Publish Your Event</h3>
+                    <p>Complete the event information and publish it to open public registration.</p>
+                    <Link to={`/events/${id}/manage/event-info`} className="event-primary-button">
+                      Review & Publish
+                    </Link>
+                  </>
+                ) : totalRegistrations === 0 ? (
+                  <>
+                    <TrendIllustration />
+                    <h3>Registration Is Open</h3>
+                    <p>Your event is published. Promote it now to start receiving registrations.</p>
+                    <Link to={`/events/${id}/manage/promote`} className="event-primary-button">
+                      Promote Event
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <RegistrationTrendChart data={registrationTrend} />
+                    <div className="event-chart-insights">
+                      <div><span>Today</span><strong>{todayRegistrations}</strong></div>
+                      <div><span>Highest day</span><strong>{highestRegistrationDay}</strong></div>
+                      <div><span>Total</span><strong>{totalRegistrations}</strong></div>
+                    </div>
+                    <Link to={`/events/${id}/registrations/attendees`} className="event-primary-button">
+                      View Registrations
+                    </Link>
+                  </>
+                )}
               </div>
             </section>
           </div>
@@ -216,14 +249,27 @@ function EventDashboard() {
               <h2 className="event-panel-title">Registrations</h2>
 
               <div className="event-chart-empty">
-                <DonutIllustration />
-                <h3>No Tickets Configured</h3>
-                <p>
-                  Create and sell tickets to check in attendees here during the event.
-                </p>
-                <Link to={`/events/${id}/registrations/sales`} className="event-primary-button">
-                  Add Ticket Class
-                </Link>
+                {totalRegistrations === 0 ? (
+                  <>
+                    <DonutIllustration />
+                    <h3>No Registrations Yet</h3>
+                    <p>The participant and audience distribution will appear after people register.</p>
+                    <Link to={`/events/${id}/registrations/form`} className="event-primary-button">
+                      Registration Settings
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <RegistrationDonut participants={participants} audience={audience} />
+                    <div className="event-registration-legend">
+                      <span><i className="participant" /> Participants <b>{participants}</b></span>
+                      <span><i className="audience" /> Audience <b>{audience}</b></span>
+                    </div>
+                    <Link to={`/events/${id}/registrations/attendees`} className="event-primary-button">
+                      View Attendees
+                    </Link>
+                  </>
+                )}
               </div>
             </section>
           </div>
@@ -342,16 +388,21 @@ function EventDashboard() {
   );
 }
 
-function DashboardCard({ title, value, icon }) {
+function DashboardCard({ title, value, icon, path }) {
+  const content = (
+    <div className={`event-stat-card ${path ? "is-action" : ""}`}>
+      <div className="event-stat-icon">{icon}</div>
+      <div>
+        <div className="event-stat-label">{title}</div>
+        <div className="event-stat-value">{value}</div>
+      </div>
+      {path && <span className="event-stat-arrow">→</span>}
+    </div>
+  );
+
   return (
     <div className="col-sm-6 col-xl-3">
-      <div className="event-stat-card">
-        <div className="event-stat-icon">{icon}</div>
-        <div>
-          <div className="event-stat-label">{title}</div>
-          <div className="event-stat-value">{value}</div>
-        </div>
-      </div>
+      {path ? <Link to={path} className="event-stat-link" aria-label={`Open ${title}`}>{content}</Link> : content}
     </div>
   );
 }
@@ -411,6 +462,103 @@ function TrendIllustration() {
       <circle cx="143" cy="5" r="6" />
     </svg>
   );
+}
+
+function RegistrationTrendChart({ data }) {
+  const width = 520;
+  const height = 180;
+  const left = 28;
+  const right = 12;
+  const top = 16;
+  const bottom = 34;
+  const chartHeight = height - top - bottom;
+  const chartWidth = width - left - right;
+  const maxValue = Math.max(...data.map((item) => item.count), 1);
+  const step = chartWidth / Math.max(data.length - 1, 1);
+  const points = data.map((item, index) => ({
+    ...item,
+    x: left + index * step,
+    y: top + chartHeight - (item.count / maxValue) * chartHeight
+  }));
+
+  return (
+    <div className="event-real-trend-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Registrations during the last seven days">
+        {[0, 0.5, 1].map((ratio) => (
+          <line
+            key={ratio}
+            className="grid-line"
+            x1={left}
+            x2={width - right}
+            y1={top + chartHeight * ratio}
+            y2={top + chartHeight * ratio}
+          />
+        ))}
+        {points.map((point) => (
+          <rect
+            key={`bar-${point.key}`}
+            className="trend-bar"
+            x={point.x - 13}
+            y={point.y}
+            width="26"
+            height={top + chartHeight - point.y}
+            rx="6"
+          />
+        ))}
+        <polyline className="trend-line" points={points.map((point) => `${point.x},${point.y}`).join(" ")} />
+        {points.map((point) => (
+          <g key={point.key}>
+            <circle className="trend-point" cx={point.x} cy={point.y} r="5" />
+            <text className="trend-value" x={point.x} y={Math.max(12, point.y - 10)}>{point.count}</text>
+            <text className="trend-label" x={point.x} y={height - 8}>{point.label}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function RegistrationDonut({ participants, audience }) {
+  const total = participants + audience;
+  const participantPercentage = total ? Math.round((participants / total) * 100) : 0;
+
+  return (
+    <div
+      className="event-real-donut"
+      style={{
+        background: `conic-gradient(#4f46e5 0 ${participantPercentage}%, #22c55e ${participantPercentage}% 100%)`
+      }}
+      role="img"
+      aria-label={`${participantPercentage}% participants and ${100 - participantPercentage}% audience`}
+    >
+      <div><strong>{total}</strong><span>Total</span></div>
+    </div>
+  );
+}
+
+function buildRegistrationTrend(registrations) {
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    return {
+      key: date.toISOString().slice(0, 10),
+      date,
+      label: date.toLocaleDateString("en-IN", { weekday: "short" }),
+      count: 0
+    };
+  });
+
+  registrations.forEach((registration) => {
+    const value = registration.registrationDate || registration.createdAt || registration.registeredAt;
+    if (!value) return;
+    const registrationDate = new Date(value);
+    registrationDate.setHours(0, 0, 0, 0);
+    const day = days.find((item) => item.date.getTime() === registrationDate.getTime());
+    if (day) day.count += 1;
+  });
+
+  return days;
 }
 
 function DonutIllustration() {
@@ -604,6 +752,145 @@ const dashboardStyles = `
   .event-chart-illustration circle {
     fill: #cfd9ff;
   }
+
+  .event-stat-link { color: inherit; display: block; text-decoration: none; }
+  .event-stat-card.is-action { cursor: pointer; position: relative; }
+  .event-stat-arrow {
+    color: #818cf8;
+    font-size: 20px;
+    margin-left: auto;
+    opacity: 0;
+    transform: translateX(-5px);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .event-stat-link:hover .event-stat-arrow { opacity: 1; transform: translateX(0); }
+
+  .event-real-trend-chart {
+    max-width: 560px;
+    width: 100%;
+  }
+
+  .event-real-trend-chart svg {
+    display: block;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .event-real-trend-chart .grid-line {
+    stroke: #e2e8f0;
+    stroke-dasharray: 5 5;
+    stroke-width: 1;
+  }
+
+  .event-real-trend-chart .trend-bar {
+    fill: #e0e7ff;
+  }
+
+  .event-real-trend-chart .trend-line {
+    fill: none;
+    stroke: #4f46e5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 4;
+  }
+
+  .event-real-trend-chart .trend-point {
+    fill: #fff;
+    stroke: #4f46e5;
+    stroke-width: 3;
+  }
+
+  .event-real-trend-chart .trend-label,
+  .event-real-trend-chart .trend-value {
+    fill: #64748b;
+    font-size: 11px;
+    text-anchor: middle;
+  }
+
+  .event-real-trend-chart .trend-value {
+    fill: #312e81;
+    font-weight: 700;
+  }
+
+  .event-chart-insights {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 5px 0 18px;
+    max-width: 460px;
+    width: 100%;
+  }
+
+  .event-chart-insights > div {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 9px 12px;
+  }
+
+  .event-chart-insights span,
+  .event-chart-insights strong {
+    display: block;
+  }
+
+  .event-chart-insights span { color: #64748b; font-size: 12px; }
+  .event-chart-insights strong { color: #0f172a; font-size: 20px; margin-top: 2px; }
+
+  .event-real-donut {
+    align-items: center;
+    border-radius: 50%;
+    display: flex;
+    height: 180px;
+    justify-content: center;
+    margin-bottom: 22px;
+    position: relative;
+    width: 180px;
+  }
+
+  .event-real-donut::after {
+    background: #fff;
+    border-radius: 50%;
+    content: "";
+    height: 108px;
+    position: absolute;
+    width: 108px;
+  }
+
+  .event-real-donut > div {
+    position: relative;
+    text-align: center;
+    z-index: 1;
+  }
+
+  .event-real-donut strong,
+  .event-real-donut span { display: block; }
+  .event-real-donut strong { color: #0f172a; font-size: 30px; line-height: 1; }
+  .event-real-donut span { color: #64748b; font-size: 12px; margin-top: 5px; }
+
+  .event-registration-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    justify-content: center;
+    margin-bottom: 22px;
+  }
+
+  .event-registration-legend span {
+    align-items: center;
+    color: #475569;
+    display: flex;
+    gap: 7px;
+  }
+
+  .event-registration-legend i {
+    border-radius: 50%;
+    height: 10px;
+    width: 10px;
+  }
+
+  .event-registration-legend i.participant { background: #4f46e5; }
+  .event-registration-legend i.audience { background: #22c55e; }
+  .event-registration-legend b { color: #0f172a; margin-left: 3px; }
 
   .event-action-button {
     align-items: center;

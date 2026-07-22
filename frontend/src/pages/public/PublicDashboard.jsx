@@ -16,18 +16,63 @@ import {
   BsFire,
   BsArrowRight,
   BsBriefcase,
-  BsPersonWorkspace,
   BsHeartPulse,
   BsCupHot,
   BsMusicNoteBeamed,
   BsTrophy,
-  BsPalette,
-  BsLightbulb,
-  BsPersonLinesFill,
-  BsCameraReels,
-  BsGift,
   BsCrosshair,
 } from "react-icons/bs";
+
+const EVENT_CATEGORIES = [
+  { label: "All Events", icon: <BsGrid />, keywords: [] },
+  {
+    label: "Education",
+    icon: <BsMortarboard />,
+    keywords: ["education", "college fest", "seminar", "workshop", "symposium", "webinar", "conference"],
+  },
+  {
+    label: "Technology & Startup",
+    icon: <BsLaptop />,
+    keywords: ["technology", "technical", "tech", "hackathon", "coding", "software", "ai", "startup", "product launch"],
+  },
+  {
+    label: "Business & Career",
+    icon: <BsBriefcase />,
+    keywords: ["business", "corporate", "career", "job fair", "career fair", "placement", "training", "networking", "alumni", "exhibition", "expo"],
+  },
+  {
+    label: "Health & Fitness",
+    icon: <BsHeartPulse />,
+    keywords: ["health", "medical", "fitness", "wellness", "yoga", "marathon", "cycling", "zumba", "gym", "blood donation"],
+  },
+  {
+    label: "Food & Lifestyle",
+    icon: <BsCupHot />,
+    keywords: ["food", "cooking", "restaurant", "catering", "lifestyle"],
+  },
+  {
+    label: "Music & Entertainment",
+    icon: <BsMusicNoteBeamed />,
+    keywords: ["music", "concert", "festival", "dj", "dance", "comedy", "film", "movie", "show", "cultural", "entertainment"],
+  },
+  {
+    label: "Sports",
+    icon: <BsTrophy />,
+    keywords: ["sport", "physical", "tournament", "championship", "game"],
+  },
+  {
+    label: "Community & Social",
+    icon: <BsPeople />,
+    keywords: ["community", "public awareness", "charity", "donation", "social", "meetup"],
+  },
+];
+
+const eventMatchesCategory = (event, category) => {
+  if (category.label === "All Events") return true;
+
+  const eventText = `${event.eventType || ""} ${event.eventName || ""}`.toLowerCase();
+  return category.keywords.some((keyword) => eventText.includes(keyword));
+};
 
 const districts = [
   { district: "Ariyalur", state: "Tamil Nadu" },
@@ -131,31 +176,12 @@ function PublicDashboard() {
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
-  const [categorySearch, setCategorySearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("All Events");
   const [loading, setLoading] = useState(true);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [showLocationMenu, setShowLocationMenu] = useState(false);
   const [showLocationConsent, setShowLocationConsent] = useState(false);
-
-  const categories = [
-    { label: "All", icon: <BsGrid /> },
-    { label: "Education", icon: <BsMortarboard /> },
-    { label: "Technology", icon: <BsLaptop /> },
-    { label: "Business", icon: <BsBriefcase /> },
-    { label: "Career", icon: <BsPersonWorkspace /> },
-    { label: "Healthcare", icon: <BsHeartPulse /> },
-    { label: "Food & Drinks", icon: <BsCupHot /> },
-    { label: "Music", icon: <BsMusicNoteBeamed /> },
-    { label: "Sports", icon: <BsTrophy /> },
-    { label: "Arts & Culture", icon: <BsPalette /> },
-    { label: "Community", icon: <BsPeople /> },
-    { label: "Startup", icon: <BsLightbulb /> },
-    { label: "Networking", icon: <BsPersonLinesFill /> },
-    { label: "Entertainment", icon: <BsCameraReels /> },
-    { label: "Charity", icon: <BsGift /> },
-  ];
 
   useEffect(() => {
     loadEvents();
@@ -238,12 +264,6 @@ function PublicDashboard() {
     );
   };
 
-  const filteredCategories = useMemo(() => {
-    return categories.filter((category) =>
-      category.label.toLowerCase().includes(categorySearch.toLowerCase())
-    );
-  }, [categories, categorySearch]);
-
   const locationSuggestions = useMemo(() => {
     const locationText = location.trim().toLowerCase();
 
@@ -269,55 +289,12 @@ function PublicDashboard() {
       const matchesSearch = searchText.includes(search.toLowerCase());
       const matchesLocation = locationText.includes(location.toLowerCase());
 
-      const type = event.eventType?.toLowerCase() || "";
-
-      const matchesCategory =
-        activeCategory === "All" ||
-        (activeCategory === "Education" &&
-          (type.includes("college") ||
-            type.includes("education") ||
-            type.includes("seminar") ||
-            type.includes("symposium") ||
-            type.includes("workshop"))) ||
-        (activeCategory === "Technology" &&
-          (type.includes("tech") ||
-            type.includes("hackathon") ||
-            type.includes("coding") ||
-            type.includes("ai") ||
-            type.includes("webinar"))) ||
-        (activeCategory === "Business" &&
-          (type.includes("business") ||
-            type.includes("corporate") ||
-            type.includes("expo") ||
-            type.includes("conference"))) ||
-        (activeCategory === "Career" &&
-          (type.includes("career") ||
-            type.includes("placement") ||
-            type.includes("job"))) ||
-        (activeCategory === "Healthcare" &&
-          (type.includes("medical") || type.includes("health"))) ||
-        (activeCategory === "Food & Drinks" &&
-          (type.includes("food") || type.includes("cooking"))) ||
-        (activeCategory === "Music" &&
-          (type.includes("music") || type.includes("concert"))) ||
-        (activeCategory === "Sports" &&
-          (type.includes("sports") || type.includes("tournament"))) ||
-        (activeCategory === "Arts & Culture" &&
-          (type.includes("cultural") ||
-            type.includes("dance") ||
-            type.includes("art"))) ||
-        (activeCategory === "Community" &&
-          (type.includes("community") || type.includes("public"))) ||
-        (activeCategory === "Startup" &&
-          (type.includes("startup") || type.includes("pitch"))) ||
-        (activeCategory === "Networking" &&
-          (type.includes("network") || type.includes("meetup"))) ||
-        (activeCategory === "Entertainment" &&
-          (type.includes("movie") ||
-            type.includes("show") ||
-            type.includes("festival"))) ||
-        (activeCategory === "Charity" &&
-          (type.includes("charity") || type.includes("donation")));
+      const selectedCategory = EVENT_CATEGORIES.find(
+        (category) => category.label === activeCategory
+      );
+      const matchesCategory = selectedCategory
+        ? eventMatchesCategory(event, selectedCategory)
+        : true;
 
       return matchesSearch && matchesLocation && matchesCategory;
     });
@@ -465,6 +442,60 @@ function PublicDashboard() {
             width: 245px;
           }
 
+          .public-event-mini-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 425px;
+          }
+
+          .public-event-mini-card > img {
+            flex: 0 0 150px;
+            height: 150px;
+            object-fit: cover;
+            width: 100%;
+          }
+
+          .public-event-mini-card-body {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            min-height: 0;
+          }
+
+          .public-event-mini-title {
+            display: -webkit-box;
+            min-height: 66px;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+          }
+
+          .public-event-mini-meta {
+            align-items: flex-start;
+            display: flex;
+            gap: 6px;
+          }
+
+          .public-event-mini-meta svg {
+            flex: 0 0 auto;
+            margin-top: 2px;
+          }
+
+          .public-event-mini-venue {
+            display: -webkit-box;
+            min-height: 40px;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+          }
+
+          .public-event-mini-footer {
+            margin-top: auto;
+          }
+
           .current-location-btn {
             width: 38px;
             height: 38px;
@@ -608,7 +639,11 @@ function PublicDashboard() {
           color: "#fff",
         }}
       >
-        <div className="public-dashboard-brand d-flex align-items-center gap-3 fw-bold">
+        <Link
+          to="/"
+          className="public-dashboard-brand d-flex align-items-center gap-3 fw-bold text-decoration-none"
+          aria-label="Go to FIC BackRooms home page"
+        >
           <div
             className="d-flex align-items-center justify-content-center"
             style={{
@@ -644,7 +679,7 @@ function PublicDashboard() {
               FIC BackRooms
             </div>
           </div>
-        </div>
+        </Link>
 
         <div className="public-dashboard-nav-links d-flex align-items-center gap-4">
           <Link to="/" className="public-nav-link text-white text-decoration-none">
@@ -830,21 +865,19 @@ function PublicDashboard() {
       <main className="public-dashboard-main container py-4">
         <section className="mb-4">
           <div className="bg-white rounded-4 shadow-sm p-3">
-            <div className="d-flex align-items-center gap-2 mb-3">
-              <BsSearch className="text-muted" />
-              <input
-                className="form-control border-0 shadow-none"
-                placeholder="Search categories"
-                value={categorySearch}
-                onChange={(e) => setCategorySearch(e.target.value)}
-              />
+            <div className="mb-3">
+              <h5 className="fw-bold mb-1">Browse by category</h5>
+              <p className="text-muted small mb-0">
+                Select a category to view only its related events.
+              </p>
             </div>
 
             <div className="category-scroll">
-              {filteredCategories.map((category) => (
+              {EVENT_CATEGORIES.map((category) => (
                 <button
                   key={category.label}
                   onClick={() => setActiveCategory(category.label)}
+                  aria-pressed={activeCategory === category.label}
                   className={`btn category-pill d-flex align-items-center gap-2 px-4 py-2 ${
                     activeCategory === category.label
                       ? "btn-primary"
@@ -853,7 +886,7 @@ function PublicDashboard() {
                   style={{ borderRadius: "12px" }}
                 >
                   {category.icon}
-                  {category.label}
+                  <span>{category.label}</span>
                 </button>
               ))}
             </div>
@@ -1080,35 +1113,30 @@ function FeaturedCard({ event }) {
 
 function EventMiniCard({ event }) {
   return (
-    <div className="border rounded-4 overflow-hidden h-100 bg-white event-hover">
+    <div className="border rounded-4 overflow-hidden bg-white event-hover public-event-mini-card">
       <img
         src={event.bannerUrl || getDefaultBanner(event.eventType)}
         alt={event.eventName}
-        style={{
-          width: "100%",
-          height: "120px",
-          objectFit: "cover",
-        }}
       />
 
-      <div className="p-3">
+      <div className="p-3 public-event-mini-card-body">
         <small className="text-primary fw-bold">
           {event.eventType || "EVENT"}
         </small>
 
-        <h6 className="fw-bold mt-1 mb-2">{event.eventName}</h6>
+        <h6 className="fw-bold mt-1 mb-2 public-event-mini-title">{event.eventName}</h6>
 
-        <p className="text-muted mb-2" style={{ fontSize: "13px" }}>
-          <BsCalendarEvent className="me-1" />
-          {formatDate(event.startDateTime)}
+        <p className="text-muted mb-2 public-event-mini-meta" style={{ fontSize: "13px" }}>
+          <BsCalendarEvent />
+          <span>{formatDate(event.startDateTime)}</span>
         </p>
 
-        <p className="text-muted mb-3" style={{ fontSize: "13px" }}>
-          <BsGeoAlt className="me-1" />
-          {event.venue || "Online"}
+        <p className="text-muted mb-3 public-event-mini-meta" style={{ fontSize: "13px" }}>
+          <BsGeoAlt />
+          <span className="public-event-mini-venue">{event.venue || "Online"}</span>
         </p>
 
-        <div className="d-flex justify-content-between align-items-center">
+        <div className="d-flex justify-content-between align-items-center public-event-mini-footer">
           <span
             className={`fw-bold ${
               event.paid ? "text-danger" : "text-success"

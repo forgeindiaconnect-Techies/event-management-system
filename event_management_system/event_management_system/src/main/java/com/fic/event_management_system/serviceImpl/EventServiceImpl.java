@@ -58,6 +58,8 @@ public class EventServiceImpl implements EventService {
     public Event createEvent(Event event) {
         tenantSecurityService.requirePortalAdminOrOrganizer();
 
+        normalizeRegistrationPermissions(event);
+
         subscriptionLimitService.assertCanCreateEvent(
                 tenantSecurityService.getLoggedInPortalId()
         );
@@ -85,14 +87,8 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public Event getPublicEventById(Long id) {
-        Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
-
-        if (event.getStatus() != EventStatus.PUBLISHED) {
-            throw new RuntimeException("Event is not published");
-        }
-
-        return event;
+        return eventRepository.findPublicEventByIdAndStatus(id, EventStatus.PUBLISHED)
+                .orElseThrow(() -> new RuntimeException("Event is not available"));
     }
 
     @Override
@@ -130,6 +126,9 @@ public class EventServiceImpl implements EventService {
         existingEvent.setBannerUrl(event.getBannerUrl());
         existingEvent.setCertificateEnabled(event.getCertificateEnabled());
         existingEvent.setCertificateTitle(event.getCertificateTitle());
+        normalizeRegistrationPermissions(event);
+        existingEvent.setAllowParticipantRegistration(event.getAllowParticipantRegistration());
+        existingEvent.setAllowAudienceRegistration(event.getAllowAudienceRegistration());
 
         Event savedEvent = eventRepository.save(existingEvent);
 
@@ -139,6 +138,20 @@ public class EventServiceImpl implements EventService {
         }
 
         return savedEvent;
+    }
+
+    private void normalizeRegistrationPermissions(Event event) {
+        boolean participantAllowed = event.getAllowParticipantRegistration() == null
+                || Boolean.TRUE.equals(event.getAllowParticipantRegistration());
+        boolean audienceAllowed = event.getAllowAudienceRegistration() == null
+                || Boolean.TRUE.equals(event.getAllowAudienceRegistration());
+
+        if (!participantAllowed && !audienceAllowed) {
+            throw new RuntimeException("Allow at least one registration type");
+        }
+
+        event.setAllowParticipantRegistration(participantAllowed);
+        event.setAllowAudienceRegistration(audienceAllowed);
     }
 
     @Override
@@ -279,7 +292,7 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        return eventRepository.findByStatus(EventStatus.PUBLISHED);
+        return eventRepository.findPublicEventsByStatus(EventStatus.PUBLISHED);
     }
 
     @Override

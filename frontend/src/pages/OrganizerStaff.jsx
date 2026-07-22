@@ -8,6 +8,7 @@ import {
   BsPersonX,
   BsSearch,
   BsArrowClockwise,
+  BsTrash,
 } from "react-icons/bs";
 
 function OrganizerStaff() {
@@ -39,6 +40,21 @@ function OrganizerStaff() {
     } catch (error) {
       console.log(error);
       setMessage("Unable to load staff members.");
+    }
+  };
+
+  const deleteStaff = async (staff) => {
+    const confirmed = window.confirm(
+      `Delete ${staff.firstName || "this"} ${staff.lastName || "staff member"}? This account will lose portal access.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/users/${staff.id}`);
+      setMessage("Staff member deleted successfully.");
+      await loadStaffs();
+    } catch (error) {
+      setMessage(error.response?.data?.message || error.response?.data || "Unable to delete the staff member.");
     }
   };
 
@@ -153,6 +169,7 @@ function OrganizerStaff() {
                   <th style={{ fontSize: "15px" }}>Phone</th>
                   <th style={{ fontSize: "15px" }}>Role</th>
                   <th style={{ fontSize: "15px" }}>Status</th>
+                  <th style={{ fontSize: "15px" }}>Actions</th>
                 </tr>
               </thead>
 
@@ -187,6 +204,16 @@ function OrganizerStaff() {
                       >
                         {staff.active ? "Active" : "Inactive"}
                       </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => deleteStaff(staff)}
+                        title="Delete staff member"
+                      >
+                        <BsTrash /> Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

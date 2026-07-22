@@ -8,7 +8,9 @@ import com.fic.event_management_system.repository.EventAssignmentRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.repository.RoleInvitationRepository;
 import com.fic.event_management_system.enums.InvitationStatus;
+import com.fic.event_management_system.enums.NotificationType;
 import com.fic.event_management_system.security.TenantSecurityService;
+import com.fic.event_management_system.service.NotificationService;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,17 +23,20 @@ public class EventAssignmentController {
     private final UserRepository userRepository;
     private final TenantSecurityService tenantSecurityService;
     private final RoleInvitationRepository roleInvitationRepository;
+    private final NotificationService notificationService;
 
     public EventAssignmentController(
             EventAssignmentRepository eventAssignmentRepository,
             UserRepository userRepository,
             TenantSecurityService tenantSecurityService,
-            RoleInvitationRepository roleInvitationRepository) {
+            RoleInvitationRepository roleInvitationRepository,
+            NotificationService notificationService) {
 
         this.eventAssignmentRepository = eventAssignmentRepository;
         this.userRepository = userRepository;
         this.tenantSecurityService = tenantSecurityService;
         this.roleInvitationRepository = roleInvitationRepository;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/user/{userId}")
@@ -86,6 +91,10 @@ public class EventAssignmentController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Never allow an admin/organizer to attach a user from another portal
+        // to an event by changing the email or event ID in the request.
+        tenantSecurityService.requireUserInLoggedInPortal(user.getId());
+
         Event event = tenantSecurityService.getEventFromLoggedInPortal(request.eventId());
         RoleName roleName = parseRoleName(request.roleName());
 
@@ -110,6 +119,33 @@ public class EventAssignmentController {
 
         EventAssignment savedAssignment = eventAssignmentRepository.save(assignment);
 
+        notificationService.createNotification(
+                user,
+                event.getPortal(),
+                event,
+                NotificationType.EVENT_ASSIGNED,
+                "Assigned to " + event.getEventName(),
+                "You were assigned as " + roleName.name().replace('_', ' ')
+                        + " for " + event.getEventName() + ".",
+                roleHomeUrl(roleName),
+                "EVENT_ROLE_ASSIGNMENT_" + savedAssignment.getId() + "_USER_" + user.getId()
+        );
+
+        User assignedBy = tenantSecurityService.getLoggedInUser();
+        notificationService.createNotification(
+                assignedBy,
+                event.getPortal(),
+                event,
+                NotificationType.EVENT_ASSIGNED,
+                "Team member assigned",
+                buildUserName(user) + " was assigned as "
+                        + roleName.name().replace('_', ' ') + " for " + event.getEventName() + ".",
+                tenantSecurityService.hasRole("ORGANIZER")
+                        ? "/organizer/team-assignment"
+                        : "/events/" + event.getId() + "/team",
+                "EVENT_ROLE_ASSIGNMENT_" + savedAssignment.getId() + "_ACTOR_" + assignedBy.getId()
+        );
+
         roleInvitationRepository
                 .findFirstByEmailAndPortalIdAndRoleNameAndStatusOrderByIdDesc(
                         email,
@@ -129,6 +165,21 @@ public class EventAssignmentController {
                 });
 
         return savedAssignment;
+    }
+
+    private String roleHomeUrl(RoleName roleName) {
+        return switch (roleName) {
+            case Staff -> "/staff";
+            case VOLUNTEER -> "/volunteer";
+            case COORDINATOR -> "/coordinator";
+            case SPEAKER -> "/speaker";
+            case JUDGE -> "/judge";
+            case TRAINER -> "/mentor";
+            case CHIEF_GUEST -> "/chief-guest";
+            case ORGANIZER -> "/organizer";
+            case PORTAL_ADMIN -> "/admin";
+            default -> "/access";
+        };
     }
 
     private static String buildUserName(User user) {

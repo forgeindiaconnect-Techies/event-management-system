@@ -133,6 +133,20 @@ public class PortalRegistrationServiceImpl
                 welcomeDeduplicationKey
         );
 
+        for (User superAdmin : userRepository.findByRole_RoleName(RoleName.SUPER_ADMIN)) {
+            notificationService.createNotification(
+                    superAdmin,
+                    portal,
+                    null,
+                    NotificationType.PORTAL_CREATED,
+                    "New portal created",
+                    portal.getPortalName() + " was created by "
+                            + owner.getFirstName() + " " + owner.getLastName() + ".",
+                    "/super-admin/portals",
+                    "SUPER_ADMIN_PORTAL_CREATED_" + portal.getId() + "_" + superAdmin.getId()
+            );
+        }
+
         emailService.queueEmail(
                 owner.getEmail(),
                 "Welcome to FIC BackRooms - choose your plan",

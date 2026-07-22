@@ -49,6 +49,11 @@ function RegistrationForm() {
   const [form, setForm] = useState(emptyField);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [accessSaving, setAccessSaving] = useState(false);
+  const [registrationAccess, setRegistrationAccess] = useState({
+    allowParticipantRegistration: true,
+    allowAudienceRegistration: true
+  });
   const [message, setMessage] = useState("");
 
   const loadRegistrationForm = useCallback(async () => {
@@ -62,7 +67,12 @@ function RegistrationForm() {
       ]);
 
       if (eventRes.status === "fulfilled") {
-        setEvent(eventRes.value.data);
+        const loadedEvent = eventRes.value.data;
+        setEvent(loadedEvent);
+        setRegistrationAccess({
+          allowParticipantRegistration: loadedEvent.allowParticipantRegistration !== false,
+          allowAudienceRegistration: loadedEvent.allowAudienceRegistration !== false
+        });
       }
 
       if (fieldsRes.status === "fulfilled") {
@@ -88,6 +98,15 @@ function RegistrationForm() {
         (field) => field.registrationType === selectedType && !isReservedTicketField(field)
       ),
     [fields, selectedType]
+  );
+
+  const enabledRegistrationTypes = useMemo(
+    () => registrationTypes.filter((type) =>
+      type.value === "PARTICIPANT"
+        ? registrationAccess.allowParticipantRegistration
+        : registrationAccess.allowAudienceRegistration
+    ),
+    [registrationAccess]
   );
 
   const updateField = (key, value) => {
@@ -147,6 +166,41 @@ function RegistrationForm() {
     setForm({ ...emptyField, registrationType: value });
   };
 
+  const toggleRegistrationAccess = (key) => {
+    const next = { ...registrationAccess, [key]: !registrationAccess[key] };
+    if (!next.allowParticipantRegistration && !next.allowAudienceRegistration) {
+      setMessage("At least one registration type must remain enabled.");
+      return;
+    }
+
+    setMessage("");
+    setRegistrationAccess(next);
+    const disabledType = key === "allowParticipantRegistration" ? "PARTICIPANT" : "AUDIENCE";
+    if (!next[key] && selectedType === disabledType) {
+      changeSelectedType(disabledType === "PARTICIPANT" ? "AUDIENCE" : "PARTICIPANT");
+    }
+  };
+
+  const saveRegistrationAccess = async () => {
+    if (!event) return;
+
+    try {
+      setAccessSaving(true);
+      setMessage("");
+      const response = await api.put(`/events/${id}`, { ...event, ...registrationAccess });
+      setEvent(response.data);
+      setMessage("Allowed registration types saved successfully.");
+    } catch (error) {
+      const responseData = error.response?.data;
+      setMessage(
+        (typeof responseData === "string" ? responseData : responseData?.message) ||
+          "Unable to save registration types."
+      );
+    } finally {
+      setAccessSaving(false);
+    }
+  };
+
   const saveForm = () => {
     setMessage(`${labelForType(selectedType)} registration form saved successfully.`);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -176,8 +230,54 @@ function RegistrationForm() {
 
       {message && <div className="alert alert-info py-2">{message}</div>}
 
+      <div className="card border-0 shadow-sm mb-4 registration-access-card">
+        <div className="card-body">
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <h4 className="fw-semibold mb-1" style={{ fontSize: "18px" }}>
+                Allowed Registration Types
+              </h4>
+              <p className="text-muted small mb-0">
+                Enable the people who can register. Disabled types are hidden from the public form.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary d-inline-flex align-items-center gap-2"
+              onClick={saveRegistrationAccess}
+              disabled={accessSaving || !event}
+            >
+              <BsSave /> {accessSaving ? "Saving..." : "Save Access"}
+            </button>
+          </div>
+
+          <div className="registration-access-options">
+            <button
+              type="button"
+              className={registrationAccess.allowParticipantRegistration ? "active" : ""}
+              onClick={() => toggleRegistrationAccess("allowParticipantRegistration")}
+            >
+              <span className="registration-access-check">
+                {registrationAccess.allowParticipantRegistration ? "✓" : ""}
+              </span>
+              <span><b>Participants</b><small>Competitors, runners, performers or contestants</small></span>
+            </button>
+            <button
+              type="button"
+              className={registrationAccess.allowAudienceRegistration ? "active" : ""}
+              onClick={() => toggleRegistrationAccess("allowAudienceRegistration")}
+            >
+              <span className="registration-access-check">
+                {registrationAccess.allowAudienceRegistration ? "✓" : ""}
+              </span>
+              <span><b>Audience</b><small>Visitors, spectators, guests or ticket holders</small></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="row g-3 mb-4">
-        {registrationTypes.map((type) => (
+        {enabledRegistrationTypes.map((type) => (
           <div className="col-md-6" key={type.value}>
             <button
               type="button"
@@ -446,6 +546,50 @@ function formatOptions(options) {
 }
 
 const registrationFormStyles = `
+  .registration-access-options {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .registration-access-options > button {
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    color: #334155;
+    display: flex;
+    gap: 11px;
+    padding: 14px;
+    text-align: left;
+  }
+
+  .registration-access-options > button.active {
+    background: #eef2ff;
+    border-color: #4f46e5;
+    color: #312e81;
+  }
+
+  .registration-access-check {
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    display: flex;
+    flex: 0 0 22px;
+    height: 22px;
+    justify-content: center;
+  }
+
+  .registration-access-options > button.active .registration-access-check {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #fff;
+  }
+
+  .registration-access-options b,
+  .registration-access-options small { display: block; }
+  .registration-access-options small { color: #64748b; line-height: 1.4; margin-top: 3px; }
+
   .registration-type-tab {
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -461,6 +605,10 @@ const registrationFormStyles = `
     background: #eef2ff;
     border-color: #4f46e5;
     color: #4f46e5;
+  }
+
+  @media (max-width: 767px) {
+    .registration-access-options { grid-template-columns: 1fr; }
   }
 `;
 

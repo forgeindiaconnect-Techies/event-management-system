@@ -17,11 +17,12 @@ import AdminNavbar from "../components/Navbar/AdminNavbar";
 import api from "../api/axiosConfig";
 import "../styles/Admin.css";
 
-const PLAN_ORDER = { STANDARD: 1, PROFESSIONAL: 2, ENTERPRISE: 3 };
+const PLAN_ORDER = { STANDARD: 1, PROFESSIONAL: 2, ENTERPRISE: 3, CUSTOM: 4 };
 const PLAN_ACCENTS = {
   STANDARD: "#2563eb",
   PROFESSIONAL: "#7c3aed",
   ENTERPRISE: "#12085c",
+  CUSTOM: "#0f766e",
 };
 
 function AdminSubscription() {
@@ -604,8 +605,8 @@ function getPlanAction(
     if (daysRemaining <= 5) {
       return { label: `Renew ${planName}`, disabled: false };
     }
-    if (targetCode === "ENTERPRISE") {
-      return { label: "Extend ProMax", disabled: false };
+    if (["ENTERPRISE", "CUSTOM"].includes(targetCode)) {
+      return { label: `Extend ${planName}`, disabled: false };
     }
     return { label: "Current plan", disabled: true };
   }

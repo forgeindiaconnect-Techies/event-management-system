@@ -103,7 +103,7 @@ public class AuthServiceImpl implements AuthService {
             case "JUDGE":
                 return "/judge";
 
-            case "MENTOR":
+            case "TRAINER":
                 return "/mentor";
 
             case "CHIEF_GUEST":

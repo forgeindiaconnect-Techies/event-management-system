@@ -90,12 +90,13 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         }
 
         Portal portal;
-        Event event = null;
+        Event resolvedEvent;
 
         if (request.getEventId() != null) {
-            event = tenantSecurityService.getEventFromLoggedInPortal(request.getEventId());
-            portal = event.getPortal();
+            resolvedEvent = tenantSecurityService.getEventFromLoggedInPortal(request.getEventId());
+            portal = resolvedEvent.getPortal();
         } else {
+            resolvedEvent = null;
             if (!isMainPortalRole(request.getRoleName())) {
                 throw new RuntimeException("Event is required for this role invitation");
             }
@@ -105,6 +106,9 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
 
             tenantSecurityService.requireSamePortal(portal.getId());
         }
+
+        // Used by notification lambdas below, so keep this reference effectively final.
+        final Event event = resolvedEvent;
 
         User invitedBy = tenantSecurityService.getUserFromLoggedInPortal(request.getInvitedById());
 
@@ -174,6 +178,32 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 "ROLE_INVITATION_" + saved.getId(),
                 LocalDateTime.now()
         );
+
+        notificationService.createNotification(
+                invitedBy,
+                portal,
+                event,
+                NotificationType.USER_INVITED,
+                "Invitation sent",
+                "Invitation sent to " + email + " as " + displayRole(request.getRoleName())
+                        + (event == null ? "." : " for " + event.getEventName() + "."),
+                actorTeamUrl(invitedBy),
+                "ROLE_INVITATION_SENT_" + saved.getId() + "_ACTOR_" + invitedBy.getId()
+        );
+
+        userRepository.findByEmail(email).ifPresent(existingUser ->
+                notificationService.createNotification(
+                        existingUser,
+                        portal,
+                        event,
+                        NotificationType.USER_INVITED,
+                        "New role invitation",
+                        "You were invited as " + displayRole(request.getRoleName())
+                                + (event == null ? " in " + portal.getPortalName() + "."
+                                : " for " + event.getEventName() + "."),
+                        "/role-invitation/accept/" + saved.getToken(),
+                        "ROLE_INVITATION_RECEIVED_" + saved.getId() + "_USER_" + existingUser.getId()
+                ));
 
         return saved;
     }
@@ -287,9 +317,37 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         user.setPhoneNumber(request.getPhoneNumber());
         user.setPassword(request.getPassword());
         user.setRole(role);
-        user.setPortal(isMainPortalRole(request.getRoleName()) ? portal : null);
+        // Every manually created account belongs to the portal that created it.
+        // Event-specific access is still controlled by EventAssignment.
+        user.setPortal(portal);
         user.setActive(true);
         user = userRepository.save(user);
+
+        User createdBy = tenantSecurityService.getLoggedInUser();
+        notificationService.createNotification(
+                user,
+                portal,
+                event,
+                NotificationType.USER_INVITED,
+                "Your account is ready",
+                "You were added to " + portal.getPortalName() + " as "
+                        + displayRole(request.getRoleName()) + ". Sign in using your temporary password.",
+                roleHomeUrl(request.getRoleName()),
+                "MANUAL_USER_CREATED_" + user.getId()
+        );
+
+        notificationService.createNotification(
+                createdBy,
+                portal,
+                event,
+                NotificationType.USER_INVITED,
+                "Team member added",
+                user.getFirstName() + " " + user.getLastName() + " was added as "
+                        + displayRole(request.getRoleName())
+                        + (event == null ? "." : " for " + event.getEventName() + "."),
+                actorTeamUrl(createdBy),
+                "MANUAL_USER_CREATED_" + user.getId() + "_ACTOR_" + createdBy.getId()
+        );
 
         if (event != null) {
             RoleInvitation assignmentSource = new RoleInvitation();
@@ -335,6 +393,18 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
 
         if (invitation.getEventId() != null) {
             createEventAssignment(invitation, user);
+        } else {
+            notificationService.createNotification(
+                    user,
+                    invitation.getPortal(),
+                    null,
+                    NotificationType.USER_INVITED,
+                    "Role access activated",
+                    "Your " + displayRole(invitation.getRoleName()) + " access to "
+                            + invitation.getPortal().getPortalName() + " is ready.",
+                    roleHomeUrl(invitation.getRoleName()),
+                    "ROLE_ACCESS_ACTIVATED_" + invitation.getId() + "_USER_" + user.getId()
+            );
         }
 
         invitation.setStatus(InvitationStatus.ACCEPTED);
@@ -348,7 +418,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 "Invitation accepted",
                 invitation.getEmail() + " accepted the "
                         + invitation.getRoleName() + " invitation.",
-                "/admin/invitations",
+                actorTeamUrl(invitation.getInvitedBy()),
                 "INVITATION_ACCEPTED_" + invitation.getId()
         );
 
@@ -369,11 +439,9 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         newUser.setRole(role);
         newUser.setActive(true);
 
-        if (isMainPortalRole(invitation.getRoleName())) {
-            newUser.setPortal(invitation.getPortal());
-        } else {
-            newUser.setPortal(null);
-        }
+        // Keep the tenant relationship for every invited role. The assignment
+        // determines which event the member can access, not portal_id being null.
+        newUser.setPortal(invitation.getPortal());
 
         return userRepository.save(newUser);
     }
@@ -390,7 +458,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
             changed = true;
         }
 
-        if (isMainPortalRole(invitation.getRoleName()) && user.getPortal() == null) {
+        if (user.getPortal() == null && invitation.getPortal() != null) {
             user.setPortal(invitation.getPortal());
             changed = true;
         }
@@ -429,7 +497,48 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         assignment.setSessionDate(invitation.getSessionDate());
         assignment.setSessionTime(invitation.getSessionTime());
 
-        eventAssignmentRepository.save(assignment);
+        EventAssignment savedAssignment = eventAssignmentRepository.save(assignment);
+
+        notificationService.createNotification(
+                user,
+                event.getPortal(),
+                event,
+                NotificationType.EVENT_ASSIGNED,
+                "Assigned to " + event.getEventName(),
+                "You were assigned as " + displayRole(invitation.getRoleName())
+                        + " for " + event.getEventName() + ".",
+                roleHomeUrl(invitation.getRoleName()),
+                "EVENT_ROLE_ASSIGNMENT_" + savedAssignment.getId() + "_USER_" + user.getId()
+        );
+    }
+
+    private String actorTeamUrl(User actor) {
+        if (actor != null && actor.getRole() != null
+                && actor.getRole().getRoleName() == RoleName.ORGANIZER) {
+            return "/organizer/invite-staff";
+        }
+        return "/admin/teams";
+    }
+
+    private String roleHomeUrl(RoleName roleName) {
+        if (roleName == null) return "/access";
+        return switch (roleName) {
+            case PORTAL_ADMIN -> "/admin";
+            case ORGANIZER -> "/organizer";
+            case Staff -> "/staff";
+            case VOLUNTEER -> "/volunteer";
+            case COORDINATOR -> "/coordinator";
+            case SPEAKER -> "/speaker";
+            case JUDGE -> "/judge";
+            case TRAINER -> "/mentor";
+            case CHIEF_GUEST -> "/chief-guest";
+            default -> "/access";
+        };
+    }
+
+    private String displayRole(RoleName roleName) {
+        if (roleName == null) return "team member";
+        return roleName.name().replace('_', ' ');
     }
 
     private boolean isMainPortalRole(RoleName roleName) {
@@ -437,7 +546,11 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 || roleName == RoleName.ORGANIZER
                 || roleName == RoleName.Staff
                 || roleName == RoleName.COORDINATOR
-                || roleName == RoleName.VOLUNTEER;
+                || roleName == RoleName.VOLUNTEER
+                || roleName == RoleName.SPEAKER
+                || roleName == RoleName.JUDGE
+                || roleName == RoleName.TRAINER
+                || roleName == RoleName.CHIEF_GUEST;
     }
 
     @Override
@@ -474,7 +587,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 "Invitation declined",
                 invitation.getEmail() + " declined the "
                         + invitation.getRoleName() + " invitation.",
-                "/admin/invitations",
+                actorTeamUrl(invitation.getInvitedBy()),
                 "INVITATION_REJECTED_" + invitation.getId()
         );
 
@@ -503,11 +616,15 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
 
     @Override
     public List<RoleInvitation> getInvitationsByOrganizer(Long organizerId) {
+        tenantSecurityService.requirePortalAdminOrOrganizer();
+        tenantSecurityService.getUserFromLoggedInPortal(organizerId);
         return invitationRepository.findByInvitedByIdOrderByIdDesc(organizerId);
     }
 
     @Override
     public List<RoleInvitation> getInvitationsByEventAndRole(Long eventId, RoleName roleName) {
+        tenantSecurityService.requirePortalAdminOrOrganizer();
+        tenantSecurityService.getEventFromLoggedInPortal(eventId);
         return invitationRepository.findByEventIdAndRoleNameOrderByIdDesc(eventId, roleName);
     }
 }

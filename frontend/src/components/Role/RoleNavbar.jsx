@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import HelpMenu from "../Help/HelpMenu";
 import { NotificationBell } from "../Navbar/AdminNavbar";
+import { getEventLifecycle, loadRoleAssignments, OPERATIONAL_ROLES, resolveActiveAssignment, setActiveRoleAssignment } from "../../utils/roleAssignments";
 import {
   BsBox,
   BsBuilding,
@@ -15,6 +16,11 @@ import {
   BsShieldCheck,
   BsXLg,
   BsArrowLeftRight,
+  BsEye,
+  BsEyeSlash,
+  BsKey,
+  BsChevronDown,
+  BsCheck2,
 } from "react-icons/bs";
 
 function RoleNavbar() {
@@ -32,6 +38,14 @@ function RoleNavbar() {
   });
   const [userProfile, setUserProfile] = useState(getStoredUserProfile);
   const [profileForm, setProfileForm] = useState(getStoredUserProfile);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordVisibility, setPasswordVisibility] = useState({ current: false, next: false, confirm: false });
+  const [eventAssignments, setEventAssignments] = useState([]);
+  const [activeEventId, setActiveEventId] = useState(localStorage.getItem("activeEventId") || "");
+  const [showEventMenu, setShowEventMenu] = useState(false);
 
   const role = normalizeRole(
     localStorage.getItem("activeRole") || localStorage.getItem("role") || "STAFF"
@@ -39,6 +53,18 @@ function RoleNavbar() {
   const portalName = portalDetails.portalName || "Portal";
   const portalCode = portalDetails.portalCode || "N/A";
   const fullName = userProfile.fullName || userProfile.email || "User";
+
+  useEffect(() => {
+    if (!OPERATIONAL_ROLES.includes(role)) return;
+    let active = true;
+    loadRoleAssignments(role).then((items) => {
+      if (!active) return;
+      setEventAssignments(items);
+      const selected = resolveActiveAssignment(items);
+      setActiveEventId(String(selected?.event?.id || ""));
+    }).catch(() => setEventAssignments([]));
+    return () => { active = false; };
+  }, [role]);
 
   useEffect(() => {
     const portalId = localStorage.getItem("activePortalId") || localStorage.getItem("portalId");
@@ -145,6 +171,31 @@ function RoleNavbar() {
     setProfileMessage("");
   };
 
+  const changePassword = async (event) => {
+    event.preventDefault();
+    setPasswordMessage("");
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      await api.put("/users/me/password", {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordVisibility({ current: false, next: false, confirm: false });
+      setPasswordMessage("Password changed successfully. Use the new password for your next login.");
+    } catch (error) {
+      setPasswordMessage(error.response?.data?.message || error.response?.data || "Unable to change password.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
     <>
       <nav
@@ -171,6 +222,48 @@ function RoleNavbar() {
         </button>
 
         <div className="role-navbar-actions d-flex align-items-center gap-4">
+          {OPERATIONAL_ROLES.includes(role) && eventAssignments.length > 0 && (
+            <div className="role-event-switcher position-relative">
+              <button
+                type="button"
+                className="role-event-switcher-button"
+                onClick={() => setShowEventMenu((visible) => !visible)}
+                aria-expanded={showEventMenu}
+              >
+                <span className="role-event-switcher-copy">
+                  <small>ACTIVE EVENT</small>
+                  <strong>{eventAssignments.find((item) => String(item.event?.id) === activeEventId)?.event?.eventName || "Select event"}</strong>
+                </span>
+                <BsChevronDown className={showEventMenu ? "role-event-chevron open" : "role-event-chevron"} />
+              </button>
+
+              {showEventMenu && (
+                <>
+                  <button className="role-event-menu-backdrop" aria-label="Close event menu" onClick={() => setShowEventMenu(false)} />
+                  <div className="role-event-menu shadow-lg">
+                    <div className="role-event-menu-heading">
+                      <strong>Switch assigned event</strong>
+                      <small>Select an event to update this workspace</small>
+                    </div>
+                    {eventAssignments.map((item) => {
+                      const selected = String(item.event?.id) === activeEventId;
+                      const lifecycle = getEventLifecycle(item.event);
+                      return <button key={item.id} type="button" className={`role-event-menu-item ${selected ? "selected" : ""}`} onClick={() => {
+                        setActiveRoleAssignment(item);
+                        setActiveEventId(String(item.event?.id));
+                        setShowEventMenu(false);
+                        window.location.reload();
+                      }}>
+                        <span className="role-event-menu-text"><strong>{item.event?.eventName}</strong><small>{item.portalName || portalName}</small></span>
+                        <span className={`role-event-status ${lifecycle.toLowerCase()}`}>{lifecycle}</span>
+                        {selected && <BsCheck2 className="role-event-selected" />}
+                      </button>;
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <NotificationBell />
 
           <HelpMenu />
@@ -292,6 +385,50 @@ function RoleNavbar() {
                 <ProfileInfo icon={<BsShieldCheck />} label="Portal Code" value={portalCode} />
               </div>
 
+              <div className="bg-light rounded-4 p-3 mb-3">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2"
+                  onClick={() => {
+                    setShowPasswordForm((visible) => !visible);
+                    setPasswordMessage("");
+                  }}
+                >
+                  <BsKey /> {showPasswordForm ? "Close Change Password" : "Change Password"}
+                </button>
+
+                {showPasswordForm && (
+                  <form className="mt-3" onSubmit={changePassword}>
+                    <PasswordInput
+                      label="Current Password"
+                      value={passwordForm.currentPassword}
+                      visible={passwordVisibility.current}
+                      onChange={(value) => setPasswordForm((current) => ({ ...current, currentPassword: value }))}
+                      toggle={() => setPasswordVisibility((current) => ({ ...current, current: !current.current }))}
+                    />
+                    <PasswordInput
+                      label="New Password"
+                      value={passwordForm.newPassword}
+                      visible={passwordVisibility.next}
+                      onChange={(value) => setPasswordForm((current) => ({ ...current, newPassword: value }))}
+                      toggle={() => setPasswordVisibility((current) => ({ ...current, next: !current.next }))}
+                    />
+                    <PasswordInput
+                      label="Confirm New Password"
+                      value={passwordForm.confirmPassword}
+                      visible={passwordVisibility.confirm}
+                      onChange={(value) => setPasswordForm((current) => ({ ...current, confirmPassword: value }))}
+                      toggle={() => setPasswordVisibility((current) => ({ ...current, confirm: !current.confirm }))}
+                    />
+                    <div className="text-muted mb-2" style={{ fontSize: "12px" }}>Use at least 6 characters and do not reuse the temporary password.</div>
+                    {passwordMessage && <div className="alert alert-info py-2" style={{ fontSize: "12px" }}>{passwordMessage}</div>}
+                    <button className="btn btn-primary btn-sm w-100" disabled={changingPassword}>
+                      {changingPassword ? "Updating..." : "Update Password"}
+                    </button>
+                  </form>
+                )}
+              </div>
+
               <button
                 type="button"
                 className="btn btn-outline-primary w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
@@ -351,6 +488,28 @@ function ProfileInput({ label, name, type = "text", value, onChange }) {
         value={value}
         onChange={onChange}
       />
+    </div>
+  );
+}
+
+function PasswordInput({ label, value, visible, onChange, toggle }) {
+  return (
+    <div className="mb-2">
+      <label className="form-label mb-1" style={{ fontSize: "12px" }}>{label}</label>
+      <div className="input-group input-group-sm">
+        <input
+          className="form-control"
+          type={visible ? "text" : "password"}
+          value={value}
+          minLength={6}
+          autoComplete="new-password"
+          onChange={(event) => onChange(event.target.value)}
+          required
+        />
+        <button type="button" className="btn btn-outline-secondary" onClick={toggle} aria-label={visible ? "Hide password" : "Show password"}>
+          {visible ? <BsEyeSlash /> : <BsEye />}
+        </button>
+      </div>
     </div>
   );
 }

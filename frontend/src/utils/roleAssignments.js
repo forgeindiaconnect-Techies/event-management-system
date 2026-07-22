@@ -93,3 +93,44 @@ export async function loadRoleAssignments(roleName, legacyEndpoint) {
 
   return mergeAssignments(eventAssignments, legacyAssignments);
 }
+
+export const OPERATIONAL_ROLES = ["COORDINATOR", "STAFF", "VOLUNTEER"];
+
+export function getEventLifecycle(event) {
+  const status = String(event?.status || "").toUpperCase();
+  if (status === "CANCELLED") return "CANCELLED";
+  if (status === "COMPLETED") return "COMPLETED";
+
+  const now = Date.now();
+  const start = event?.startDateTime ? new Date(event.startDateTime).getTime() : null;
+  const end = event?.endDateTime ? new Date(event.endDateTime).getTime() : null;
+  if (end && end < now) return "COMPLETED";
+  if (start && start > now) return "UPCOMING";
+  if (start && (!end || end >= now)) return "RUNNING";
+  return status || "UPCOMING";
+}
+
+export function setActiveRoleAssignment(assignment) {
+  const event = getAssignmentEvent(assignment);
+  if (!event?.id) return;
+  localStorage.setItem("activeEventId", String(event.id));
+  localStorage.setItem("activeEventName", event.eventName || "Event");
+  localStorage.setItem("activeAssignmentId", String(assignment.assignmentId || assignment.id || ""));
+  if (assignment.portalId) localStorage.setItem("activePortalId", String(assignment.portalId));
+  if (assignment.portalName) localStorage.setItem("activePortalName", assignment.portalName);
+  window.dispatchEvent(new CustomEvent("role-active-event-changed", { detail: assignment }));
+}
+
+export function resolveActiveAssignment(assignments = []) {
+  const activeId = localStorage.getItem("activeEventId");
+  const valid = assignments.filter((item) => item.active !== false && getAssignmentEvent(item)?.id);
+  const selected = valid.find((item) => String(getAssignmentEvent(item).id) === String(activeId)) || valid[0] || null;
+  if (selected && String(getAssignmentEvent(selected).id) !== String(activeId)) setActiveRoleAssignment(selected);
+  return selected;
+}
+
+export function filterToActiveEvent(assignments = []) {
+  const activeId = localStorage.getItem("activeEventId");
+  if (!activeId) return assignments;
+  return assignments.filter((item) => String(getAssignmentEvent(item)?.id) === String(activeId));
+}

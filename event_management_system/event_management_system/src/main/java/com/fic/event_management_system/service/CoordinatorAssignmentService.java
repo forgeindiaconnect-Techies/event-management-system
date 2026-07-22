@@ -12,4 +12,6 @@ public interface CoordinatorAssignmentService {
     List<CoordinatorAssignment> getEventsByCoordinator(Long coordinatorId);
 
     void removeCoordinatorAssignment(Long assignmentId);
+
+    CoordinatorAssignment submitCompletionReport(Long eventId, String report);
 }

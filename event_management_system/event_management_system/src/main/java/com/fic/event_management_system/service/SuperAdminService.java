@@ -22,6 +22,10 @@ public interface SuperAdminService {
 
     List<SubscriptionPlan> getSubscriptionPlans();
 
+    SubscriptionPlan createCustomSubscriptionPlan(
+            UpdateSubscriptionPlanRequest request
+    );
+
     SubscriptionPlan updateSubscriptionPlan(
             SubscriptionPlanCode planCode,
             UpdateSubscriptionPlanRequest request

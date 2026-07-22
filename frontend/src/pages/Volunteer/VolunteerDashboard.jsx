@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import RoleLayout from "../../layouts/RoleLayout";
 import api from "../../api/axiosConfig";
-import { loadRoleAssignments } from "../../utils/roleAssignments";
+import { filterToActiveEvent, loadRoleAssignments, resolveActiveAssignment } from "../../utils/roleAssignments";
 import RoleIncidentReporter from "../../components/Role/RoleIncidentReporter";
 import "../../styles/Admin.css";
 import {
@@ -26,10 +26,13 @@ function VolunteerDashboard() {
 
     try {
       const assigned = await loadRoleAssignments("VOLUNTEER", `/volunteer-assignments/volunteer/${volunteerId}`);
+      resolveActiveAssignment(assigned);
       const taskRes = await api.get(`/volunteer-tasks/volunteer/${volunteerId}`);
 
-      setAssignments(assigned);
-      setTasks(taskRes.data || []);
+      const selected = filterToActiveEvent(assigned);
+      const activeEventId = selected[0]?.event?.id;
+      setAssignments(selected);
+      setTasks((taskRes.data || []).filter((task) => !activeEventId || String(task.assignment?.event?.id || task.event?.id || task.eventId) === String(activeEventId)));
     } catch (error) {
       console.log(error);
     }

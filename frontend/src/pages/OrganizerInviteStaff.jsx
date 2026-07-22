@@ -10,6 +10,8 @@ import {
   BsSearch,
   BsArrowClockwise,
   BsPersonVcard,
+  BsEye,
+  BsEyeSlash,
 } from "react-icons/bs";
 
 function OrganizerInviteStaff() {
@@ -20,13 +22,16 @@ function OrganizerInviteStaff() {
   });
 
   const [invitations, setInvitations] = useState([]);
+  const [portalMembers, setPortalMembers] = useState([]);
   const [events, setEvents] = useState([]);
   const [assignmentSelections, setAssignmentSelections] = useState({});
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
   const [addMode, setAddMode] = useState("email");
   const [manualData, setManualData] = useState({ firstName: "", lastName: "", phoneNumber: "", password: "" });
+  const [showTemporaryPassword, setShowTemporaryPassword] = useState(false);
 
   const roles = [
     "Staff",
@@ -34,14 +39,33 @@ function OrganizerInviteStaff() {
     "COORDINATOR",
     "SPEAKER",
     "JUDGE",
-    "MENTOR",
+    "TRAINER",
     "CHIEF_GUEST",
   ];
 
   useEffect(() => {
     loadInvitations();
+    loadPortalMembers();
     loadEvents();
   }, []);
+
+  const loadPortalMembers = async () => {
+    const portalId = localStorage.getItem("portalId");
+    if (!portalId) return;
+
+    try {
+      const response = await api.get(`/users/portal/${portalId}`);
+      setPortalMembers(response.data || []);
+    } catch (error) {
+      console.log(error);
+      setPortalMembers([]);
+    }
+  };
+
+  const refreshHistory = () => {
+    loadInvitations();
+    loadPortalMembers();
+  };
 
   const loadEvents = async () => {
     const organizerId = localStorage.getItem("userId");
@@ -64,6 +88,7 @@ function OrganizerInviteStaff() {
     } catch (error) {
       console.log(error);
       setMessage("Unable to load sent invitations.");
+      setMessageType("danger");
     }
   };
 
@@ -103,6 +128,7 @@ function OrganizerInviteStaff() {
       await api.post("/role-invitations/invite", payload);
 
       setMessage("Invitation sent successfully.");
+      setMessageType("success");
 
       setFormData({
         email: "",
@@ -110,10 +136,11 @@ function OrganizerInviteStaff() {
         eventId: "",
       });
 
-      loadInvitations();
+      refreshHistory();
     } catch (error) {
       console.log(error);
       setMessage(error.response?.data?.message || "Failed to send invitation.");
+      setMessageType("danger");
     }
 
     setLoading(false);
@@ -134,11 +161,14 @@ function OrganizerInviteStaff() {
         eventId: selectedEvent ? Number(selectedEvent.id) : null,
       });
       setMessage("User created and assigned successfully. No invitation email was sent.");
+      setMessageType("success");
       setFormData({ email: "", roleName: "Staff", eventId: "" });
       setManualData({ firstName: "", lastName: "", phoneNumber: "", password: "" });
-      loadInvitations();
+      setShowTemporaryPassword(false);
+      refreshHistory();
     } catch (error) {
       setMessage(error.response?.data?.message || "Failed to create the user.");
+      setMessageType("danger");
     } finally {
       setLoading(false);
     }
@@ -149,6 +179,7 @@ function OrganizerInviteStaff() {
 
     if (!eventId) {
       setMessage("Please select an event before assigning.");
+      setMessageType("warning");
       return;
     }
 
@@ -161,6 +192,7 @@ function OrganizerInviteStaff() {
       });
 
       setMessage("User assigned to event successfully.");
+      setMessageType("success");
       setAssignmentSelections((current) => ({
         ...current,
         [invite.id]: "",
@@ -169,17 +201,64 @@ function OrganizerInviteStaff() {
     } catch (error) {
       console.log(error);
       setMessage(error.response?.data?.message || "Failed to assign user to event.");
+      setMessageType("danger");
     }
   };
 
-  const filteredInvitations = invitations.filter((invite) => {
+  const deleteCreatedUser = async (row) => {
+    if (!row.userId) return;
+    if (!window.confirm(`Delete the account for ${row.email}? This user will lose portal access.`)) return;
+
+    try {
+      await api.delete(`/users/${row.userId}`);
+      setMessage("User deleted successfully.");
+      setMessageType("success");
+      refreshHistory();
+    } catch (error) {
+      setMessage(error.response?.data?.message || error.response?.data || "Unable to delete the user.");
+      setMessageType("danger");
+    }
+  };
+
+  const invitationEmails = new Set(
+    invitations.map((invite) => invite.email?.trim().toLowerCase()).filter(Boolean)
+  );
+  const visibleRoleNames = new Set(roles);
+  const manualMembers = portalMembers.filter((member) => {
+    const email = member.email?.trim().toLowerCase();
+    return email && visibleRoleNames.has(member.role?.roleName) && !invitationEmails.has(email);
+  });
+  const historyRows = [
+    ...invitations.map((invite) => ({
+      ...invite,
+      userId: portalMembers.find(
+        (member) => member.email?.trim().toLowerCase() === invite.email?.trim().toLowerCase()
+      )?.id,
+      historyType: "EMAIL",
+    })),
+    ...manualMembers.map((member) => ({
+      id: `manual-${member.id}`,
+      userId: member.id,
+      email: member.email,
+      roleName: member.role?.roleName,
+      status: member.active === false ? "INACTIVE" : "ACTIVE",
+      eventName: null,
+      expiryDate: null,
+      createdAt: member.createdAt,
+      historyType: "MANUAL",
+    })),
+  ];
+
+  const filteredInvitations = historyRows.filter((invite) => {
     const email = invite.email?.toLowerCase() || "";
     const role = invite.roleName?.toLowerCase() || "";
     const status = invite.status?.toLowerCase() || "";
+    const source = invite.historyType === "MANUAL" ? "added manually" : "email invitation";
     return (
       email.includes(search.toLowerCase()) ||
       role.includes(search.toLowerCase()) ||
-      status.includes(search.toLowerCase())
+      status.includes(search.toLowerCase()) ||
+      source.includes(search.toLowerCase())
     );
   });
 
@@ -188,6 +267,8 @@ function OrganizerInviteStaff() {
     if (status === "PENDING") return "bg-warning text-dark";
     if (status === "EXPIRED") return "bg-danger";
     if (status === "REJECTED") return "bg-secondary";
+    if (status === "ACTIVE") return "bg-success";
+    if (status === "INACTIVE") return "bg-secondary";
     return "bg-secondary";
   };
 
@@ -216,14 +297,12 @@ function OrganizerInviteStaff() {
 
         <button
           className="btn btn-outline-primary d-flex align-items-center gap-2"
-          onClick={loadInvitations}
+          onClick={refreshHistory}
           style={{ borderRadius: "10px", fontSize: "15px" }}
         >
           <BsArrowClockwise /> Refresh
         </button>
       </div>
-
-      {message && <div className="alert alert-info">{message}</div>}
 
       <div className="row g-4 mb-4">
         <div className="col-lg-7">
@@ -232,6 +311,12 @@ function OrganizerInviteStaff() {
               <BsPersonPlus className="me-2" />
               Add Staff & Roles
             </h4>
+
+            {message && (
+              <div className={`alert alert-${messageType} py-3`} role="alert">
+                {message}
+              </div>
+            )}
 
             <div className="organizer-mode-tabs d-flex gap-2 p-1 rounded-3 mb-4" style={{ background: "#f1f3f8" }}>
               <button type="button" className={`btn flex-fill ${addMode === "email" ? "btn-primary" : "btn-light"}`} onClick={() => setAddMode("email")}>
@@ -268,8 +353,32 @@ function OrganizerInviteStaff() {
               </div>
 
               {addMode === "manual" && <div className="row g-3 mb-3">
-                <div className="col-md-6"><label className="form-label fw-semibold">Phone Number</label><input className="form-control" value={manualData.phoneNumber} onChange={(e) => setManualData({ ...manualData, phoneNumber: e.target.value })} required /></div>
-                <div className="col-md-6"><label className="form-label fw-semibold">Temporary Password</label><input type="password" minLength={6} className="form-control" value={manualData.password} onChange={(e) => setManualData({ ...manualData, password: e.target.value })} required /></div>
+                <div className="col-md-6"><label className="form-label fw-semibold">Phone Number</label><input className="form-control" style={{ height: "48px" }} value={manualData.phoneNumber} onChange={(e) => setManualData({ ...manualData, phoneNumber: e.target.value })} required /></div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Temporary Password</label>
+                  <div className="input-group" style={{ height: "48px" }}>
+                    <input
+                      type={showTemporaryPassword ? "text" : "password"}
+                      minLength={6}
+                      className="form-control"
+                      style={{ height: "48px" }}
+                      value={manualData.password}
+                      onChange={(e) => setManualData({ ...manualData, password: e.target.value })}
+                      autoComplete="new-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      style={{ width: "52px", height: "48px" }}
+                      onClick={() => setShowTemporaryPassword((visible) => !visible)}
+                      aria-label={showTemporaryPassword ? "Hide password" : "Show password"}
+                      title={showTemporaryPassword ? "Hide password" : "Show password"}
+                    >
+                      {showTemporaryPassword ? <BsEyeSlash /> : <BsEye />}
+                    </button>
+                  </div>
+                </div>
               </div>}
 
               <div className="mb-4">
@@ -284,7 +393,7 @@ function OrganizerInviteStaff() {
                 >
                   {roles.map((role) => (
                     <option key={role} value={role}>
-                      {role}
+                      {formatRoleLabel(role)}
                     </option>
                   ))}
                 </select>
@@ -349,7 +458,7 @@ function OrganizerInviteStaff() {
                   <td className="text-muted">Evaluate competitions</td>
                 </tr>
                 <tr>
-                  <td>Mentor</td>
+                  <td>Trainer</td>
                   <td className="text-muted">Guide participants</td>
                 </tr>
                 <tr>
@@ -366,10 +475,10 @@ function OrganizerInviteStaff() {
         <div className="organizer-section-header d-flex justify-content-between align-items-center mb-3">
           <div>
             <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
-              Sent Invitations
+              User Invitation & Creation History
             </h2>
             <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
-              Track invitation status for invited users.
+              Track email invitations and users added manually.
             </p>
           </div>
 
@@ -380,7 +489,7 @@ function OrganizerInviteStaff() {
             <BsSearch className="me-2 text-primary" />
             <input
               className="form-control border-0 shadow-none p-0"
-              placeholder="Search invitations..."
+              placeholder="Search history..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ fontSize: "15px" }}
@@ -390,7 +499,7 @@ function OrganizerInviteStaff() {
 
         {filteredInvitations.length === 0 ? (
           <div className="text-center py-4">
-            <p className="text-muted mb-0">No invitations found.</p>
+            <p className="text-muted mb-0">No invitation or manual creation history found.</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -400,10 +509,12 @@ function OrganizerInviteStaff() {
                   <th>#</th>
                   <th>Email</th>
                   <th>Role</th>
+                  <th>Added Through</th>
                   <th>Event</th>
                   <th>Status</th>
                   <th>Expiry Date</th>
                   <th>Assign</th>
+                  <th>Delete</th>
                 </tr>
               </thead>
 
@@ -415,15 +526,22 @@ function OrganizerInviteStaff() {
                     <td>
                       <span className="badge bg-primary">{invite.roleName}</span>
                     </td>
+                    <td>
+                      <span className={`badge ${invite.historyType === "MANUAL" ? "bg-info text-dark" : "bg-light text-dark"}`}>
+                        {invite.historyType === "MANUAL" ? "Added manually" : "Email invitation"}
+                      </span>
+                    </td>
                     <td>{invite.eventName || "Not assigned"}</td>
                     <td>
                       <span className={`badge ${statusBadge(invite.status)}`}>
                         {invite.status}
                       </span>
                     </td>
-                    <td>{formatDate(invite.expiryDate)}</td>
+                    <td>{invite.historyType === "MANUAL" ? "—" : formatDate(invite.expiryDate)}</td>
                     <td style={{ minWidth: "260px" }}>
-                      {invite.eventId ? (
+                      {invite.historyType === "MANUAL" ? (
+                        <span className="text-muted">Created account</span>
+                      ) : invite.eventId ? (
                         <span className="badge bg-success-subtle text-success px-3 py-2">Assigned</span>
                       ) : <div className="d-flex gap-2">
                         <select
@@ -454,6 +572,19 @@ function OrganizerInviteStaff() {
                         </button>
                       </div>}
                     </td>
+                    <td>
+                      {invite.userId ? (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => deleteCreatedUser(invite)}
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -463,6 +594,13 @@ function OrganizerInviteStaff() {
       </div>
     </OrganizerLayout>
   );
+}
+
+function formatRoleLabel(role) {
+  return String(role || "")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export default OrganizerInviteStaff;

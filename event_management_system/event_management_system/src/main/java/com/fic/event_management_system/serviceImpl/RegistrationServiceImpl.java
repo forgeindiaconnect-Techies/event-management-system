@@ -101,8 +101,9 @@ public class RegistrationServiceImpl implements RegistrationService {
             Integer ticketQuantity,
             String qrGenerationMode) {
 
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
+        Event event = eventRepository
+                .findPublicEventByIdAndStatus(eventId, EventStatus.PUBLISHED)
+                .orElseThrow(() -> new RuntimeException("Event is not available for registration"));
 
         subscriptionLimitService.assertCanRegister(eventId);
 
@@ -114,6 +115,15 @@ public class RegistrationServiceImpl implements RegistrationService {
         RegistrationType type =
                 RegistrationType.valueOf(registrationType.toUpperCase());
 
+        if (type == RegistrationType.PARTICIPANT
+                && Boolean.FALSE.equals(event.getAllowParticipantRegistration())) {
+            throw new RuntimeException("Participant registration is not available for this event");
+        }
+        if (type == RegistrationType.AUDIENCE
+                && Boolean.FALSE.equals(event.getAllowAudienceRegistration())) {
+            throw new RuntimeException("Audience registration is not available for this event");
+        }
+
         int quantity = normalizeQuantity(ticketQuantity);
         String qrMode = normalizeQrMode(qrGenerationMode, type);
         int seatUse = type == RegistrationType.AUDIENCE ? quantity : 1;
@@ -124,10 +134,6 @@ public class RegistrationServiceImpl implements RegistrationService {
                 type)) {
 
             throw new RuntimeException("Already registered for this event as " + type);
-        }
-
-        if (event.getStatus() != EventStatus.PUBLISHED) {
-            throw new RuntimeException("Registration allowed only for published events");
         }
 
         if (event.getRegistrationDeadline() != null &&
@@ -499,6 +505,23 @@ public class RegistrationServiceImpl implements RegistrationService {
     public Registration publicRegister(
             Long eventId,
             PublicRegistrationRequest request) {
+
+        String email = request.getEmail() == null
+                ? ""
+                : request.getEmail().trim().toLowerCase();
+        String phoneNumber = request.getPhoneNumber() == null
+                ? ""
+                : request.getPhoneNumber().trim();
+
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$")) {
+            throw new RuntimeException("Enter a valid email address");
+        }
+        if (!phoneNumber.matches("^\\d{10,15}$")) {
+            throw new RuntimeException("Phone number must contain 10 to 15 digits only");
+        }
+
+        request.setEmail(email);
+        request.setPhoneNumber(phoneNumber);
 
         PublicParticipant participant =
                 publicParticipantRepository.findByEmail(request.getEmail())

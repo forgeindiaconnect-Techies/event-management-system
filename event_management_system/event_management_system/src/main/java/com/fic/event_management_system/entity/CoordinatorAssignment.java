@@ -15,6 +15,11 @@ public class CoordinatorAssignment {
 
     private LocalDateTime assignedAt;
 
+    @Column(length = 5000)
+    private String completionReport;
+
+    private LocalDateTime reportSubmittedAt;
+
     @ManyToOne
     @JoinColumn(name = "coordinator_id", nullable = false)
     private User coordinator;
@@ -79,4 +84,9 @@ public class CoordinatorAssignment {
     public void setAssignedBy(User assignedBy) {
         this.assignedBy = assignedBy;
     }
+
+    public String getCompletionReport() { return completionReport; }
+    public void setCompletionReport(String completionReport) { this.completionReport = completionReport; }
+    public LocalDateTime getReportSubmittedAt() { return reportSubmittedAt; }
+    public void setReportSubmittedAt(LocalDateTime reportSubmittedAt) { this.reportSubmittedAt = reportSubmittedAt; }
 }

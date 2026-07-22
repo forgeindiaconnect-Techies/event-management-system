@@ -10,6 +10,6 @@ public enum RoleName {
     COORDINATOR,
     SPEAKER,
     JUDGE,
-    MENTOR,
+    TRAINER,
     CHIEF_GUEST
 }

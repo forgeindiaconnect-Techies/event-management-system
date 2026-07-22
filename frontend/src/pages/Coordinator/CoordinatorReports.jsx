@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import RoleLayout from "../../layouts/RoleLayout";
 import api from "../../api/axiosConfig";
-import { loadRoleAssignments } from "../../utils/roleAssignments";
+import { filterToActiveEvent, loadRoleAssignments } from "../../utils/roleAssignments";
 import "../../styles/Admin.css";
 import {
   BsBarChart,
@@ -16,6 +16,7 @@ function CoordinatorReports() {
   const [registrations, setRegistrations] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [message, setMessage] = useState("");
+  const [drafts, setDrafts] = useState({});
 
   useEffect(() => {
     loadReports();
@@ -25,11 +26,10 @@ function CoordinatorReports() {
     const coordinatorId = localStorage.getItem("userId");
 
     try {
-      const coordRes = await api.get(
+      const assigned = filterToActiveEvent(await loadRoleAssignments(
+        "COORDINATOR",
         `/coordinator-assignments/coordinator/${coordinatorId}`
-      );
-
-      const assigned = coordRes.data || [];
+      ));
       const eventIds = assigned.map((a) => a.event?.id).filter(Boolean);
 
       const registrationResults = await Promise.all(
@@ -41,6 +41,7 @@ function CoordinatorReports() {
       );
 
       setAssignments(assigned);
+      setDrafts(Object.fromEntries(assigned.map(item => [item.event?.id, item.completionReport || ""])));
       setRegistrations(registrationResults.flatMap((res) => res.data || []));
       setTickets(ticketResults.flatMap((res) => res.data || []));
       setMessage("");
@@ -61,6 +62,16 @@ function CoordinatorReports() {
     { title: "Present", value: present, icon: <BsPersonCheck /> },
     { title: "Tickets Verified", value: usedTickets, icon: <BsTicketPerforated /> },
   ];
+
+  const submitReport = async (eventId) => {
+    const report = drafts[eventId]?.trim();
+    if (!report) { setMessage("Enter the event completion report before submitting."); return; }
+    try {
+      await api.put(`/coordinator-assignments/event/${eventId}/completion-report`, { report });
+      setMessage("Event completion report submitted successfully.");
+      loadReports();
+    } catch (error) { setMessage(error.response?.data?.message || "Unable to submit completion report."); }
+  };
 
   return (
     <RoleLayout>
@@ -162,6 +173,16 @@ function CoordinatorReports() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="admin-bento-card mt-4">
+        <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>Event Completion Reports</h2>
+        <p className="text-muted">Submit the final operational summary only for events assigned to you.</p>
+        {assignments.map((assignment) => <div className="border rounded p-3 mb-3" key={`report-${assignment.id}`}>
+          <div className="d-flex justify-content-between gap-3 mb-2"><strong>{assignment.event?.eventName}</strong><small className="text-muted">{assignment.reportSubmittedAt ? `Last submitted: ${new Date(assignment.reportSubmittedAt).toLocaleString()}` : "Not submitted"}</small></div>
+          <textarea className="form-control" rows="4" placeholder="Summarize attendance, task completion, incidents, vendor/resource status, and handover notes..." value={drafts[assignment.event?.id] || ""} onChange={e=>setDrafts({...drafts,[assignment.event?.id]:e.target.value})}/>
+          <button className="btn btn-primary mt-2" onClick={()=>submitReport(assignment.event?.id)}>Submit completion report</button>
+        </div>)}
       </div>
     </RoleLayout>
   );

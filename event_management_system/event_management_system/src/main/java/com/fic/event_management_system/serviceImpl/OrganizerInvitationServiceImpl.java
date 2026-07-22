@@ -117,6 +117,31 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
                 LocalDateTime.now()
         );
 
+        notificationService.createNotification(
+                savedInvitation.getInvitedBy(),
+                savedInvitation.getPortal(),
+                null,
+                NotificationType.USER_INVITED,
+                "Organizer invitation sent",
+                "Invitation sent to " + savedInvitation.getEmail() + " as Organizer.",
+                "/admin/organizers",
+                "ORGANIZER_INVITATION_SENT_" + savedInvitation.getId()
+                        + "_ACTOR_" + savedInvitation.getInvitedBy().getId()
+        );
+
+        userRepository.findByEmail(savedInvitation.getEmail()).ifPresent(existingUser ->
+                notificationService.createNotification(
+                        existingUser,
+                        savedInvitation.getPortal(),
+                        null,
+                        NotificationType.USER_INVITED,
+                        "New organizer invitation",
+                        "You were invited to join " + portalName + " as an Organizer.",
+                        "/invitation/accept/" + savedInvitation.getToken(),
+                        "ORGANIZER_INVITATION_RECEIVED_" + savedInvitation.getId()
+                                + "_USER_" + existingUser.getId()
+                ));
+
         return savedInvitation;
     }
 
@@ -249,6 +274,18 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
                         + " was added directly as an organizer.",
                 "/admin/organizers",
                 "ORGANIZER_MANUAL_" + savedUser.getId()
+        );
+
+        notificationService.createNotification(
+                savedUser,
+                portal,
+                null,
+                NotificationType.USER_INVITED,
+                "Your organizer account is ready",
+                "You were added to " + portal.getPortalName()
+                        + " as an Organizer. Sign in using your temporary password.",
+                "/organizer",
+                "ORGANIZER_MANUAL_" + savedUser.getId() + "_USER"
         );
 
         return savedUser;

@@ -4,10 +4,12 @@ import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.User;
 import com.fic.event_management_system.entity.VolunteerAssignment;
 import com.fic.event_management_system.enums.RoleName;
+import com.fic.event_management_system.enums.NotificationType;
 import com.fic.event_management_system.repository.EventRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.repository.VolunteerAssignmentRepository;
 import com.fic.event_management_system.service.VolunteerAssignmentService;
+import com.fic.event_management_system.service.NotificationService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,15 +20,18 @@ public class VolunteerAssignmentServiceImpl implements VolunteerAssignmentServic
     private final VolunteerAssignmentRepository volunteerAssignmentRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public VolunteerAssignmentServiceImpl(
             VolunteerAssignmentRepository volunteerAssignmentRepository,
             EventRepository eventRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationService notificationService) {
 
         this.volunteerAssignmentRepository = volunteerAssignmentRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -58,7 +63,22 @@ public class VolunteerAssignmentServiceImpl implements VolunteerAssignmentServic
         assignment.setAssignedBy(assignedBy);
         assignment.setActive(true);
 
-        return volunteerAssignmentRepository.save(assignment);
+        VolunteerAssignment saved = volunteerAssignmentRepository.save(assignment);
+        notificationService.createNotification(
+                volunteer, event.getPortal(), event, NotificationType.EVENT_ASSIGNED,
+                "Assigned to " + event.getEventName(),
+                "You were added to the volunteer team for " + event.getEventName() + ".",
+                "/volunteer/events",
+                "VOLUNTEER_ASSIGNMENT_" + saved.getId() + "_USER_" + volunteer.getId()
+        );
+        notificationService.createNotification(
+                assignedBy, event.getPortal(), event, NotificationType.EVENT_ASSIGNED,
+                "Volunteer assigned",
+                volunteer.getFirstName() + " " + volunteer.getLastName() + " was assigned to " + event.getEventName() + ".",
+                "/events/" + event.getId() + "/team",
+                "VOLUNTEER_ASSIGNMENT_" + saved.getId() + "_ACTOR_" + assignedBy.getId()
+        );
+        return saved;
     }
 
     @Override

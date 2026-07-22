@@ -40,6 +40,20 @@ public class UserController {
 
         return userService.updateUser(id, user);
     }
+
+    @PutMapping("/me/password")
+    public String changeOwnPassword(@RequestBody ChangePasswordRequest request) {
+        userService.changeOwnPassword(
+                request.currentPassword(),
+                request.newPassword()
+        );
+        return "Password changed successfully";
+    }
+
+    public record ChangePasswordRequest(
+            String currentPassword,
+            String newPassword
+    ) {}
     
     @GetMapping("/organizers/portal/{portalId}")
     public List<User> getOrganizersByPortal(@PathVariable Long portalId) {
@@ -49,5 +63,11 @@ public class UserController {
     @GetMapping("/portal/{portalId}")
     public List<User> getUsersByPortal(@PathVariable Long portalId) {
         return userService.getUsersByPortal(portalId);
+    }
+
+    @DeleteMapping("/{id}")
+    public String deletePortalUser(@PathVariable Long id) {
+        userService.deletePortalUser(id);
+        return "User deleted successfully";
     }
 }

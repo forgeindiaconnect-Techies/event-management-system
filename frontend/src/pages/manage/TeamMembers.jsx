@@ -3,25 +3,50 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   FaCheckCircle,
   FaEnvelope,
+  FaEye,
+  FaEyeSlash,
   FaMicrophone,
+  FaPaperPlane,
   FaPlus,
   FaShieldAlt,
   FaTasks,
   FaUserTie,
+  FaUserPlus,
   FaUsers
 } from "react-icons/fa";
 import api from "../../api/axiosConfig";
+
+const teamRoles = ["Staff", "VOLUNTEER", "COORDINATOR", "SPEAKER", "JUDGE", "TRAINER", "CHIEF_GUEST"];
+
+const emptyInvite = {
+  email: "",
+  roleName: "Staff",
+  firstName: "",
+  lastName: "",
+  phoneNumber: "",
+  password: ""
+};
 
 function TeamMembers() {
   const navigate = useNavigate();
   const { id } = useParams();
 
+  const [event, setEvent] = useState(null);
   const [members, setMembers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
+  const [addMode, setAddMode] = useState("email");
+  const [inviteForm, setInviteForm] = useState(emptyInvite);
+  const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    async function loadMembers() {
+    loadTeamData();
+  }, [id]);
+
+  async function loadTeamData() {
       try {
         const [
           eventRes,
@@ -39,16 +64,17 @@ function TeamMembers() {
           api.get(`/chief-guest-assignments/event/${id}`)
         ]);
 
-        const event = eventRes.status === "fulfilled" ? eventRes.value.data : null;
+        const loadedEvent = eventRes.status === "fulfilled" ? eventRes.value.data : null;
+        setEvent(loadedEvent);
         const eventMembers = [];
 
-        if (event?.organizer) {
+        if (loadedEvent?.organizer) {
           eventMembers.push({
-            id: `organizer-${event.organizer.id}`,
-            user: event.organizer,
+            id: `organizer-${loadedEvent.organizer.id}`,
+            user: loadedEvent.organizer,
             role: "Event Organizer",
             responsibility: "Owns event setup and team coordination",
-            active: event.organizer.active !== false
+            active: loadedEvent.organizer.active !== false
           });
         }
 
@@ -61,13 +87,69 @@ function TeamMembers() {
         );
 
         setMembers(eventMembers);
+
+        const inviteResults = await Promise.allSettled(
+          teamRoles.map((role) => api.get(`/role-invitations/event/${id}/role/${role}`))
+        );
+        setInvitations(
+          inviteResults
+            .filter((result) => result.status === "fulfilled")
+            .flatMap((result) => result.value.data || [])
+            .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+        );
       } catch (error) {
         setMessage("Failed to load event team members.");
       }
-    }
+  }
 
-    loadMembers();
-  }, [id]);
+  const updateInvite = (field, value) => {
+    setInviteForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const submitMember = async (submitEvent) => {
+    submitEvent.preventDefault();
+    setSubmitting(true);
+    setMessage("");
+
+    const portalId = Number(localStorage.getItem("portalId") || event?.portal?.id);
+    const invitedById = Number(localStorage.getItem("userId"));
+    const commonPayload = {
+      email: inviteForm.email.trim(),
+      roleName: inviteForm.roleName,
+      portalId,
+      invitedById,
+      eventId: Number(id),
+      eventName: event?.eventName,
+      eventDescription: event?.description,
+      eventVenue: event?.venue || event?.meetingLink,
+      eventStartDateTime: event?.startDateTime
+    };
+
+    try {
+      if (addMode === "email") {
+        await api.post("/role-invitations/invite", commonPayload);
+        setMessage("Team invitation sent successfully.");
+      } else {
+        await api.post("/role-invitations/manual", {
+          ...commonPayload,
+          firstName: inviteForm.firstName.trim(),
+          lastName: inviteForm.lastName.trim(),
+          phoneNumber: inviteForm.phoneNumber.trim(),
+          password: inviteForm.password
+        });
+        setMessage("Team member created and assigned to this event successfully.");
+      }
+
+      setInviteForm(emptyInvite);
+      setShowPassword(false);
+      setShowInvite(false);
+      await loadTeamData();
+    } catch (error) {
+      setMessage(error.response?.data?.message || error.response?.data || "Unable to add the team member.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const filteredMembers = useMemo(() => {
     const query = search.toLowerCase();
@@ -97,13 +179,93 @@ function TeamMembers() {
         <button
           type="button"
           className="team-primary-btn"
-          onClick={() => navigate("/organizer/invite-staff")}
+          onClick={() => setShowInvite((current) => !current)}
         >
           <FaPlus /> Invite Team Members
         </button>
       </div>
 
       {message && <div className="team-message">{message}</div>}
+
+      {showInvite && (
+        <section className="team-card team-invite-card">
+          <div className="team-card-header">
+            <div>
+              <h2>Add Team Member</h2>
+              <p>Send an invitation link or create and assign the member manually for this event.</p>
+            </div>
+            <button type="button" className="team-close-btn" onClick={() => setShowInvite(false)} aria-label="Close">×</button>
+          </div>
+
+          <div className="team-invite-body">
+            <div className="team-mode-tabs">
+              <button type="button" className={addMode === "email" ? "active" : ""} onClick={() => setAddMode("email")}>
+                <FaPaperPlane /> Email Invitation
+              </button>
+              <button type="button" className={addMode === "manual" ? "active" : ""} onClick={() => setAddMode("manual")}>
+                <FaUserPlus /> Add Manually
+              </button>
+            </div>
+
+            <form onSubmit={submitMember}>
+              {addMode === "manual" && (
+                <div className="team-form-grid">
+                  <label>First Name *<input value={inviteForm.firstName} onChange={(e) => updateInvite("firstName", e.target.value)} required /></label>
+                  <label>Last Name *<input value={inviteForm.lastName} onChange={(e) => updateInvite("lastName", e.target.value)} required /></label>
+                </div>
+              )}
+
+              <div className="team-form-grid">
+                <label>{addMode === "email" ? "Email Address" : "Login Email"} *<input type="email" value={inviteForm.email} onChange={(e) => updateInvite("email", e.target.value)} required /></label>
+                <label>Event Role *
+                  <select value={inviteForm.roleName} onChange={(e) => updateInvite("roleName", e.target.value)} required>
+                    {teamRoles.map((role) => <option key={role} value={role}>{role === "TRAINER" ? "Trainer" : formatRole(role)}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              {addMode === "manual" && (
+                <div className="team-form-grid">
+                  <label>Phone Number *<input value={inviteForm.phoneNumber} onChange={(e) => updateInvite("phoneNumber", e.target.value)} required /></label>
+                  <label>
+                    Temporary Password *
+                    <span className="team-password-field">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        minLength={6}
+                        value={inviteForm.password}
+                        onChange={(e) => updateInvite("password", e.target.value)}
+                        autoComplete="new-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((visible) => !visible)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </span>
+                    <small className="team-field-help">
+                      This is the member's first login password. Share it securely and ask them to change it after signing in.
+                    </small>
+                  </label>
+                </div>
+              )}
+
+              <div className="team-event-lock"><strong>Assigned Event:</strong> {event?.eventName || `Event #${id}`}</div>
+              <div className="team-form-actions">
+                <button type="button" className="team-secondary-btn" onClick={() => setShowInvite(false)}>Cancel</button>
+                <button type="submit" className="team-primary-btn" disabled={submitting}>
+                  {addMode === "email" ? <FaPaperPlane /> : <FaUserPlus />}
+                  {submitting ? "Processing..." : addMode === "email" ? "Send Invitation" : "Create & Assign"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      )}
 
       <div className="team-tabs">
         <button type="button" className="active">
@@ -193,6 +355,32 @@ function TeamMembers() {
       <section className="team-card">
         <div className="team-card-header">
           <div>
+            <h2>Sent Invitations</h2>
+            <p>Invitations sent specifically for this event.</p>
+          </div>
+          <strong>{invitations.length} invitation{invitations.length === 1 ? "" : "s"}</strong>
+        </div>
+        <div className="team-table-wrap">
+          <table className="team-table">
+            <thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Expires</th></tr></thead>
+            <tbody>
+              {invitations.map((invitation) => (
+                <tr key={invitation.id}>
+                  <td>{invitation.email}</td>
+                  <td><RoleBadge role={formatRole(invitation.roleName)} /></td>
+                  <td><span className={`team-invite-status ${String(invitation.status || "pending").toLowerCase()}`}>{formatRole(invitation.status || "PENDING")}</span></td>
+                  <td>{invitation.expiryDate ? new Date(invitation.expiryDate).toLocaleDateString("en-IN") : "—"}</td>
+                </tr>
+              ))}
+              {invitations.length === 0 && <tr><td colSpan="4" className="team-empty">No invitations sent for this event.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="team-card">
+        <div className="team-card-header">
+          <div>
             <h2>Roles & Privileges</h2>
             <p>Review what each default event role can manage.</p>
           </div>
@@ -255,6 +443,10 @@ function getInitials(user) {
   const first = user?.firstName?.[0] || "";
   const last = user?.lastName?.[0] || "";
   return `${first}${last}` || "TM";
+}
+
+function formatRole(value) {
+  return String(value || "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const rolePreview = [
@@ -599,6 +791,164 @@ const teamStyles = `
     font-weight: 600;
   }
 
+  .team-invite-card {
+    border-color: #c7d2fe;
+  }
+
+  .team-close-btn {
+    background: #f8fafc;
+    border: 0;
+    border-radius: 7px;
+    color: #334155;
+    font-size: 25px;
+    height: 38px;
+    line-height: 1;
+    width: 38px;
+  }
+
+  .team-invite-body {
+    padding: 20px;
+  }
+
+  .team-mode-tabs {
+    background: #f1f5f9;
+    border-radius: 8px;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 20px;
+    padding: 5px;
+  }
+
+  .team-mode-tabs button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: #475569;
+    display: flex;
+    font-weight: 600;
+    gap: 8px;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  .team-mode-tabs button.active {
+    background: #2563eb;
+    color: #ffffff;
+  }
+
+  .team-form-grid {
+    align-items: start;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 16px;
+  }
+
+  .team-form-grid label {
+    align-self: start;
+    color: #0f172a;
+    display: grid;
+    font-size: 14px;
+    font-weight: 600;
+    gap: 7px;
+  }
+
+  .team-form-grid input,
+  .team-form-grid select {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 400;
+    height: 44px;
+    min-height: 44px;
+    padding: 9px 12px;
+  }
+
+  .team-form-grid input:focus,
+  .team-form-grid select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    outline: none;
+  }
+
+  .team-password-field {
+    display: block;
+    position: relative;
+  }
+
+  .team-password-field input {
+    padding-right: 46px;
+    width: 100%;
+  }
+
+  .team-password-field button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: #64748b;
+    display: flex;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+    position: absolute;
+    right: 4px;
+    top: 2px;
+    width: 40px;
+  }
+
+  .team-password-field button:hover {
+    color: #2563eb;
+  }
+
+  .team-field-help {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .team-event-lock {
+    background: #eef2ff;
+    border-radius: 7px;
+    color: #3730a3;
+    font-size: 14px;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+  }
+
+  .team-form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .team-invite-status {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 9px;
+  }
+
+  .team-invite-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .team-invite-status.accepted {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .team-invite-status.rejected,
+  .team-invite-status.expired {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
   @media (max-width: 1100px) {
     .team-summary-grid,
     .team-role-grid {
@@ -624,7 +974,12 @@ const teamStyles = `
     }
 
     .team-summary-grid,
-    .team-role-grid {
+    .team-role-grid,
+    .team-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .team-mode-tabs {
       grid-template-columns: 1fr;
     }
   }

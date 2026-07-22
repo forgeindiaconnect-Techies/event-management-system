@@ -1,218 +1,24 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import RoleLayout from "../../layouts/RoleLayout";
 import api from "../../api/axiosConfig";
-import { loadRoleAssignments } from "../../utils/roleAssignments";
+import { filterToActiveEvent, loadRoleAssignments } from "../../utils/roleAssignments";
 import "../../styles/Admin.css";
-import {
-  BsListTask,
-  BsSend,
-  BsArrowClockwise,
-} from "react-icons/bs";
 
-function CoordinatorTasks() {
-  const [assignments, setAssignments] = useState([]);
-  const [volunteerAssignments, setVolunteerAssignments] = useState([]);
-  const [message, setMessage] = useState("");
-
-  const [form, setForm] = useState({
-    assignmentId: "",
-    title: "",
-    description: "",
-    priority: "MEDIUM",
-    startTime: "",
-    endTime: "",
-  });
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    const coordinatorId = localStorage.getItem("userId");
-
-    try {
-      const coordRes = await api.get(
-        `/coordinator-assignments/coordinator/${coordinatorId}`
-      );
-
-      const assignedEvents = coordRes.data || [];
-      setAssignments(assignedEvents);
-
-      const volunteerResults = await Promise.all(
-        assignedEvents.map((assignment) =>
-          api.get(`/volunteer-assignments/event/${assignment.event?.id}`)
-        )
-      );
-
-      setVolunteerAssignments(
-        volunteerResults.flatMap((res) => res.data || [])
-      );
-
-      setMessage("");
-    } catch (error) {
-      console.log(error);
-      setMessage("Unable to load task data.");
-    }
-  };
-
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const createTask = async (e) => {
-    e.preventDefault();
-
-    if (!form.assignmentId || !form.title) {
-      setMessage("Please select volunteer and enter task title.");
-      return;
-    }
-
-    try {
-      await api.post("/volunteer-tasks", {
-        title: form.title,
-        description: form.description,
-        priority: form.priority,
-        startTime: form.startTime || null,
-        endTime: form.endTime || null,
-        assignment: { id: Number(form.assignmentId) },
-        assignedBy: { id: Number(localStorage.getItem("userId")) },
-      });
-
-      setMessage("Task assigned successfully.");
-
-      setForm({
-        assignmentId: "",
-        title: "",
-        description: "",
-        priority: "MEDIUM",
-        startTime: "",
-        endTime: "",
-      });
-    } catch (error) {
-      console.log(error);
-      setMessage(error.response?.data?.message || "Failed to assign task.");
-    }
-  };
-
-  return (
-    <RoleLayout>
-      <div className="d-flex justify-content-between align-items-start mb-4">
-        <div>
-          <h1 className="fw-bold mb-1" style={{ fontSize: "24px" }}>
-            Volunteer Tasks
-          </h1>
-          <p className="text-muted mb-0">
-            Assign tasks to volunteers for your coordinated events.
-          </p>
-        </div>
-
-        <button className="btn btn-outline-primary" onClick={loadData}>
-          <BsArrowClockwise className="me-2" />
-          Refresh
-        </button>
-      </div>
-
-      {message && <div className="alert alert-info">{message}</div>}
-
-      <div className="admin-bento-card">
-        <h4 className="fw-bold mb-4">
-          <BsListTask className="me-2" />
-          Assign New Task
-        </h4>
-
-        <form onSubmit={createTask}>
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">Volunteer</label>
-              <select
-                className="form-select"
-                name="assignmentId"
-                value={form.assignmentId}
-                onChange={handleChange}
-              >
-                <option value="">Select volunteer</option>
-                {volunteerAssignments.map((assignment) => (
-                  <option key={assignment.id} value={assignment.id}>
-                    {assignment.volunteer?.firstName}{" "}
-                    {assignment.volunteer?.lastName} -{" "}
-                    {assignment.event?.eventName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">Priority</label>
-              <select
-                className="form-select"
-                name="priority"
-                value={form.priority}
-                onChange={handleChange}
-              >
-                <option value="LOW">LOW</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="HIGH">HIGH</option>
-                <option value="URGENT">URGENT</option>
-              </select>
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">Task Title</label>
-              <input
-                className="form-control"
-                name="title"
-                placeholder="Registration desk, hall setup..."
-                value={form.title}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">Start Time</label>
-              <input
-                className="form-control"
-                type="datetime-local"
-                name="startTime"
-                value={form.startTime}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">End Time</label>
-              <input
-                className="form-control"
-                type="datetime-local"
-                name="endTime"
-                value={form.endTime}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="col-md-12">
-              <label className="form-label fw-semibold">Description</label>
-              <textarea
-                className="form-control"
-                rows="3"
-                name="description"
-                placeholder="Explain the task details..."
-                value={form.description}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <button className="btn btn-primary mt-4">
-            <BsSend className="me-2" />
-            Assign Task
-          </button>
-        </form>
-      </div>
-    </RoleLayout>
-  );
+const initial = { title:"", description:"", taskType:"TASK", category:"EVENT_OPERATIONS", priority:"MEDIUM", status:"NOT_STARTED", assignedUserId:"", assignedUserName:"", dueDateTime:"" };
+export default function CoordinatorTasks() {
+  const [events,setEvents]=useState([]), [eventId,setEventId]=useState(""), [tasks,setTasks]=useState([]), [assignees,setAssignees]=useState([]);
+  const [form,setForm]=useState(initial), [message,setMessage]=useState("");
+  useEffect(()=>{(async()=>{ try { const id=localStorage.getItem("userId"); const a=await loadRoleAssignments("COORDINATOR",`/coordinator-assignments/coordinator/${id}`); const e=filterToActiveEvent(a).filter(x=>x.active!==false&&x.event?.id).map(x=>x.event); setEvents(e); if(e[0]) setEventId(String(e[0].id)); } catch { setMessage("Unable to load assigned events."); } })();},[]);
+  useEffect(()=>{ if(eventId) loadWorkspace(eventId); },[eventId]);
+  async function loadWorkspace(id){ const [t,s,v]=await Promise.allSettled([api.get(`/events/${id}/operations/tasks`),api.get(`/staff-assignments/event/${id}`),api.get(`/volunteer-assignments/event/${id}`)]); setTasks(t.status==="fulfilled"?t.value.data||[]:[]); const people=[]; if(s.status==="fulfilled") (s.value.data||[]).forEach(x=>people.push({user:x.staff,role:"Staff"})); if(v.status==="fulfilled") (v.value.data||[]).forEach(x=>people.push({user:x.volunteer,role:"Volunteer"})); setAssignees(people.filter(x=>x.user?.id)); }
+  function change(e){ const {name,value}=e.target; if(name==="assignedUserId"){const p=assignees.find(x=>String(x.user.id)===value); setForm({...form,assignedUserId:value,assignedUserName:p?`${p.user.firstName||""} ${p.user.lastName||""}`.trim():""});} else setForm({...form,[name]:value}); }
+  async function save(e){e.preventDefault(); try {await api.post(`/events/${eventId}/operations/tasks`,{...form,assignedUserId:Number(form.assignedUserId)}); setForm(initial); setMessage("Task assigned successfully."); loadWorkspace(eventId);} catch(err){setMessage(err.response?.data?.message||"Unable to assign task.");}}
+  return <RoleLayout><PageHead title="Tasks" text="Assign operational work to staff and volunteers, then monitor deadlines."/>{message&&<div className="alert alert-info">{message}</div>}
+    <div className="admin-bento-card mb-4"><label className="form-label fw-semibold">Assigned event</label><select className="form-select" value={eventId} onChange={e=>setEventId(e.target.value)}>{events.map(e=><option key={e.id} value={e.id}>{e.eventName}</option>)}</select></div>
+    <form className="admin-bento-card mb-4" onSubmit={save}><h2 className="h5 fw-bold mb-3">Assign task</h2><div className="row g-3"><Field label="Title" name="title" value={form.title} change={change}/><Select label="Assigned person" name="assignedUserId" value={form.assignedUserId} change={change} options={assignees.map(x=>[x.user.id,`${x.user.firstName} ${x.user.lastName} — ${x.role}`])}/><Select label="Category" name="category" value={form.category} change={change} options={["EVENT_OPERATIONS","REGISTRATION","VENUE_SETUP","GUEST_SUPPORT","SAFETY","LOGISTICS"].map(x=>[x,x.replaceAll("_"," ")])}/><Select label="Priority" name="priority" value={form.priority} change={change} options={["LOW","MEDIUM","HIGH","URGENT"].map(x=>[x,x])}/><Field label="Deadline" name="dueDateTime" type="datetime-local" value={form.dueDateTime} change={change}/><div className="col-12"><label className="form-label fw-semibold">Description</label><textarea className="form-control" name="description" value={form.description} onChange={change}/></div></div><button className="btn btn-primary mt-3" disabled={!eventId||!form.title||!form.assignedUserId}>Assign Task</button></form>
+    <div className="admin-bento-card"><h2 className="h5 fw-bold">Task progress</h2><div className="table-responsive"><table className="table align-middle"><thead><tr><th>Task</th><th>Assigned to</th><th>Priority</th><th>Status</th><th>Deadline</th></tr></thead><tbody>{tasks.map(t=><tr key={t.id}><td><b>{t.title}</b><div className="text-muted small">{t.category?.replaceAll("_"," ")}</div></td><td>{t.assignedUserName||"Unassigned"}</td><td>{t.priority}</td><td><span className="badge bg-primary">{String(t.status).replaceAll("_"," ")}</span></td><td>{t.dueDateTime?new Date(t.dueDateTime).toLocaleString():"—"}</td></tr>)}{!tasks.length&&<tr><td colSpan="5" className="text-center text-muted py-4">No tasks assigned yet.</td></tr>}</tbody></table></div></div>
+  </RoleLayout>;
 }
-
-export default CoordinatorTasks;
+function PageHead({title,text}){return <div className="mb-4"><h1 className="fw-bold fs-3">{title}</h1><p className="text-muted">{text}</p></div>};
+function Field({label,name,value,change,type="text"}){return <div className="col-md-6"><label className="form-label fw-semibold">{label}</label><input required={name==="title"} className="form-control" name={name} type={type} value={value} onChange={change}/></div>};
+function Select({label,name,value,change,options}){return <div className="col-md-6"><label className="form-label fw-semibold">{label}</label><select required={name==="assignedUserId"} className="form-select" name={name} value={value} onChange={change}><option value="">Select {label.toLowerCase()}</option>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>};

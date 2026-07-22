@@ -57,6 +57,13 @@ public class SuperAdminController {
         return superAdminService.getSubscriptionPlans();
     }
 
+    @PostMapping("/subscription-plans")
+    public SubscriptionPlan createCustomSubscriptionPlan(
+            @RequestBody UpdateSubscriptionPlanRequest request
+    ) {
+        return superAdminService.createCustomSubscriptionPlan(request);
+    }
+
     @PutMapping("/subscription-plans/{planCode}")
     public SubscriptionPlan updateSubscriptionPlan(
             @PathVariable SubscriptionPlanCode planCode,

@@ -93,6 +93,7 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
   if (!profile) return null;
 
   const signOut = () => {
+    if (!window.confirm("Are you sure you want to log out?")) return;
     localStorage.clear();
     setOpen(false);
     navigate("/");

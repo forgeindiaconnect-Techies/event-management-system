@@ -1,85 +1,142 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BsArrowLeft, BsChatDots, BsSend } from "react-icons/bs";
+import api from "../../api/axiosConfig";
 
-const topics = [
-  ["event", "Events & publishing"],
-  ["invite", "Invitations & roles"],
-  ["registration", "Registrations & tickets"],
-  ["payment", "Payments & refunds"],
-  ["exhibitor", "Exhibitors & booths"],
-  ["subscription", "Subscriptions"],
-  ["access", "Account & access"]
-];
+function positiveNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
 
-const answers = {
-  event: "Open Events, select an event, complete Event Info and the required setup, then use Publish Event from the event header.",
-  invite: "Use Invite Organizers from Portal Admin or Invite Staff from Organizer. You can send an email invitation or add a user manually.",
-  registration: "Inside an event, open Registrations to configure the form, ticket classes, attendees, payments and generated tickets.",
-  payment: "A payment starts only after the user submits payment details and clicks Pay. Admins and organizers can review payment status from the event payment page.",
-  exhibitor: "Open Event → Exhibitors to add companies or stalls. Assign categories and booths from the Exhibitors and Booths sections.",
-  subscription: "Open Portal Subscription to review the current plan, expiry, payment history, upgrades, renewals and billing period.",
-  access: "Open your profile to edit account details or use Switch Role / Event when your account has access to multiple roles or events."
-};
+function currentChatContext() {
+  return {
+    role:
+      localStorage.getItem("activeRole") ||
+      localStorage.getItem("role") ||
+      null,
+    portalId: positiveNumber(
+      localStorage.getItem("activePortalId") ||
+      localStorage.getItem("portalId")
+    ),
+    eventId: positiveNumber(localStorage.getItem("activeEventId"))
+  };
+}
 
 function HelpAssistant({ onBack }) {
   const [messages, setMessages] = useState([
-    { from: "bot", text: "Hello! I’m the FIC Assistant. Choose a topic or type a short question." }
+    {
+      from: "bot",
+      text: "Hello! I’m the FIC Assistant. Choose a topic or type your question."
+    }
   ]);
   const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const messagesRef = useRef(null);
 
-  const answerTopic = (key, label) => {
+  useEffect(() => {
+    const container = messagesRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages, loading]);
+
+  const askAssistant = async (value) => {
+    const message = value.trim();
+    if (!message || loading) return;
+
     setMessages((current) => [
       ...current,
-      { from: "user", text: label },
-      { from: "bot", text: answers[key] }
+      { from: "user", text: message }
     ]);
+    setQuestion("");
+    setLoading(true);
+
+    try {
+      const response = await api.post("/chatbot", {
+        message,
+        ...currentChatContext()
+      });
+
+      const answer = response.data?.answer?.trim();
+      setMessages((current) => [
+        ...current,
+        {
+          from: "bot",
+          text:
+            answer ||
+            "I couldn’t generate an answer. Please try again or contact support."
+        }
+      ]);
+    } catch (error) {
+      const serverMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error;
+
+      setMessages((current) => [
+        ...current,
+        {
+          from: "bot",
+          text:
+            serverMessage ||
+            "The FIC Assistant is temporarily unavailable. Please try again shortly."
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitQuestion = (event) => {
     event.preventDefault();
-    const value = question.trim();
-    if (!value) return;
-
-    const normalized = value.toLowerCase();
-    const match = topics.find(([key, label]) =>
-      normalized.includes(key) || label.toLowerCase().split(" ").some((word) => word.length > 4 && normalized.includes(word))
-    );
-    const response = match
-      ? answers[match[0]]
-      : "I don’t have a prepared answer for that yet. Please use Feedback & Support to send the question to the support team.";
-
-    setMessages((current) => [
-      ...current,
-      { from: "user", text: value },
-      { from: "bot", text: response }
-    ]);
-    setQuestion("");
+    askAssistant(question);
   };
 
   return (
     <div className="fic-assistant">
       <div className="fic-help-view-header">
-        <button type="button" onClick={onBack} aria-label="Back to Help menu"><BsArrowLeft /></button>
-        <span><BsChatDots /><strong>Ask FIC Assistant</strong></span>
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to Help menu"
+        >
+          <BsArrowLeft />
+        </button>
+        <span>
+          <BsChatDots />
+          <strong>Ask FIC Assistant</strong>
+        </span>
       </div>
 
-      <div className="fic-assistant-messages">
+      <div className="fic-assistant-messages" ref={messagesRef}>
         {messages.map((message, index) => (
-          <div key={`${message.from}-${index}`} className={`fic-assistant-message ${message.from}`}>
+          <div
+            key={`${message.from}-${index}`}
+            className={`fic-assistant-message ${message.from}`}
+          >
             {message.text}
           </div>
         ))}
-      </div>
-
-      <div className="fic-assistant-topics">
-        {topics.map(([key, label]) => (
-          <button type="button" key={key} onClick={() => answerTopic(key, label)}>{label}</button>
-        ))}
+        {loading && (
+          <div className="fic-assistant-message bot" role="status">
+            FIC Assistant is thinking…
+          </div>
+        )}
       </div>
 
       <form className="fic-assistant-input" onSubmit={submitQuestion}>
-        <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Type your question..." aria-label="Question for FIC Assistant" />
-        <button type="submit" aria-label="Send question"><BsSend /></button>
+        <input
+          value={question}
+          disabled={loading}
+          onChange={(event) => setQuestion(event.target.value)}
+          placeholder="Type your question..."
+          aria-label="Question for FIC Assistant"
+        />
+        <button
+          type="submit"
+          disabled={loading || !question.trim()}
+          aria-label="Send question"
+        >
+          <BsSend />
+        </button>
       </form>
     </div>
   );

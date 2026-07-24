@@ -278,16 +278,16 @@ function LandingPage() {
           <button onClick={handleFindEvents} className="landing-top-link landing-explore-link border-0 bg-transparent">
             Explore Events
           </button>
-        </div>
 
-        {showLandingProfile ? (
-          <UserProfileMenu dark mode="landing" />
-        ) : (
-          <div className="landing-auth-actions">
-            <Link to="/create-portal" className="landing-signup-btn">Sign Up</Link>
-            <Link to="/login" className="landing-login-btn">Login</Link>
-          </div>
-        )}
+          {showLandingProfile ? (
+            <UserProfileMenu dark mode="landing" />
+          ) : (
+            <div className="landing-auth-actions">
+              <Link to="/create-portal" className="landing-signup-btn">Sign Up</Link>
+              <Link to="/login" className="landing-login-btn">Login</Link>
+            </div>
+          )}
+        </div>
       </nav>
 
       <section className="landing-hero">

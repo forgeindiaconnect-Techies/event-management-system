@@ -32,6 +32,11 @@ public class Portal {
 
     private Boolean deleted = false;
 
+    @Column(length = 1000)
+    private String deletionReason;
+
+    private LocalDateTime deletedAt;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -106,6 +111,22 @@ public class Portal {
 
 	public void setDeleted(Boolean deleted) {
 		this.deleted = deleted;
+	}
+
+	public String getDeletionReason() {
+		return deletionReason;
+	}
+
+	public void setDeletionReason(String deletionReason) {
+		this.deletionReason = deletionReason;
+	}
+
+	public LocalDateTime getDeletedAt() {
+		return deletedAt;
+	}
+
+	public void setDeletedAt(LocalDateTime deletedAt) {
+		this.deletedAt = deletedAt;
 	}
 
 	public LocalDateTime getCreatedAt() {

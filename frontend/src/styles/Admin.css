@@ -1564,6 +1564,20 @@
   }
 }
 
+.login-navbar-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.login-brand,
+.login-navbar-actions .public-nav-link,
+.login-navbar-actions .public-user-btn {
+  font-size: 18px;
+}
+
 /* Create Event mobile page. */
 @media (max-width: 767.98px) {
   .create-event-page {
@@ -1770,13 +1784,16 @@
   .login-navbar {
     gap: 8px;
     height: 58px !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 2px !important;
+    padding-right: 8px !important;
+    overflow: hidden;
   }
 
   .login-navbar > a:first-child {
-    gap: 6px !important;
+    gap: 4px !important;
+    flex: 0 1 auto;
     min-width: 0;
+    overflow: hidden;
   }
 
   .login-navbar > a:first-child svg {
@@ -1784,12 +1801,26 @@
     width: 23px;
   }
 
+  .login-navbar-logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+
   .login-brand {
-    font-size: 18px !important;
+    display: block;
+    max-width: 98px;
+    overflow: hidden;
+    font-size: 12px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .login-navbar-actions {
-    gap: 6px !important;
+    flex: 0 0 auto;
+    gap: 8px !important;
   }
 
   .login-navbar-actions .public-nav-link {
@@ -1798,8 +1829,8 @@
   }
 
   .login-navbar-actions .public-user-btn {
-    font-size: 11px;
-    padding: 6px 8px;
+    font-size: 12px;
+    padding: 6px 7px;
     white-space: nowrap;
   }
 
@@ -1850,7 +1881,8 @@
 
 @media (max-width: 380px) {
   .login-brand {
-    font-size: 16px !important;
+    max-width: 88px;
+    font-size: 11px !important;
   }
 
   .login-navbar-actions .public-nav-link {
@@ -1858,8 +1890,8 @@
   }
 
   .login-navbar-actions .public-user-btn {
-    font-size: 10px;
-    padding: 5px 6px;
+    font-size: 11px;
+    padding: 5px;
   }
 }
 
@@ -4099,4 +4131,266 @@ a:hover > .admin-dashboard-action-card .admin-dashboard-card-arrow {
   .role-event-switcher-copy small { display: none; }
   .role-event-switcher-copy strong { max-width: 112px; }
   .role-event-menu { position: fixed; top: 58px; left: 12px; right: 12px; width: auto; }
+}
+
+/* Final mobile pass for the recently added operational role workspaces. */
+@media (max-width: 767.98px) {
+  .role-layout-shell {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .role-layout-navbar {
+    height: 58px;
+  }
+
+  .role-layout-navbar .role-navbar {
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .role-navbar-brand {
+    flex: 0 1 auto;
+    max-width: 118px;
+    overflow: hidden;
+  }
+
+  .role-navbar-brand svg {
+    width: 21px;
+    height: 21px;
+    flex: 0 0 21px;
+  }
+
+  .role-navbar-actions {
+    min-width: 0;
+    margin-left: auto;
+  }
+
+  .role-navbar-actions .notification-wrapper,
+  .role-navbar-actions .help-menu-wrapper {
+    flex: 0 0 auto;
+  }
+
+  .role-event-switcher {
+    min-width: 0;
+    flex: 0 1 142px;
+  }
+
+  .role-event-switcher-button {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 5px 8px;
+    border-radius: 9px;
+  }
+
+  .role-event-switcher-copy strong {
+    max-width: 101px;
+    font-size: 11px;
+  }
+
+  .role-event-menu {
+    top: 64px;
+    max-height: min(68vh, 460px);
+    border-radius: 16px;
+  }
+
+  .role-event-menu-heading {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+  }
+
+  .role-event-menu-item {
+    min-height: 58px;
+    padding: 11px 12px;
+  }
+
+  .role-main-content {
+    min-width: 0;
+    padding: 62px 10px 24px !important;
+  }
+
+  .role-main-content > .mb-4:first-child,
+  .role-main-content > .d-flex:first-child {
+    margin-bottom: 16px !important;
+  }
+
+  .role-main-content h1,
+  .role-main-content .fs-3 {
+    margin-bottom: 5px !important;
+    font-size: 22px !important;
+    line-height: 1.2;
+  }
+
+  .role-main-content h2,
+  .role-main-content h3,
+  .role-main-content h4,
+  .role-main-content p,
+  .role-main-content strong {
+    overflow-wrap: anywhere;
+  }
+
+  .role-main-content > .row,
+  .role-main-content .row {
+    --bs-gutter-x: 10px;
+    --bs-gutter-y: 10px;
+  }
+
+  .role-main-content .col-lg-3,
+  .role-main-content .col-md-3,
+  .role-main-content .col-md-4,
+  .role-main-content .col-md-6,
+  .role-main-content .col-xl-4,
+  .role-main-content .col-lg-4 {
+    min-width: 0;
+  }
+
+  .role-main-content .admin-bento-card {
+    min-width: 0;
+    padding: 15px !important;
+    border-radius: 15px;
+  }
+
+  .role-main-content .row.mb-4 > [class*="col-"] .admin-bento-card {
+    min-height: 128px;
+  }
+
+  .role-main-content .admin-bento-icon {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 10px !important;
+    font-size: 20px;
+  }
+
+  .role-main-content .admin-bento-value {
+    font-size: 28px;
+  }
+
+  .role-main-content .d-flex.flex-wrap.gap-2 {
+    gap: 7px !important;
+  }
+
+  .role-main-content .d-flex.flex-wrap.gap-2 > .btn {
+    flex: 1 1 calc(50% - 7px);
+    min-height: 40px;
+    margin: 0 !important;
+    white-space: normal;
+  }
+
+  .role-main-content form.admin-bento-card .row > [class*="col-"],
+  .role-main-content .admin-bento-card .row > [class*="col-"] {
+    width: 100%;
+  }
+
+  .role-main-content textarea.form-control {
+    min-height: 100px;
+  }
+
+  .role-main-content .input-group[style] {
+    max-width: none !important;
+  }
+
+  .role-main-content .table-responsive {
+    position: relative;
+    width: calc(100% + 8px);
+    margin-right: -8px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #7665e8 #edf0f5;
+  }
+
+  .role-main-content .table-responsive::after {
+    position: sticky;
+    right: 0;
+    display: block;
+    width: 22px;
+    height: 3px;
+    margin: -3px 0 0 auto;
+    border-radius: 99px;
+    background: #7665e8;
+    content: "";
+  }
+
+  .role-main-content .table-responsive table {
+    min-width: 680px;
+    margin-bottom: 7px;
+  }
+
+  .role-main-content .table-responsive th,
+  .role-main-content .table-responsive td {
+    padding: 10px;
+    font-size: 12px;
+    vertical-align: middle;
+  }
+
+  .role-main-content .alert {
+    padding: 11px 12px;
+    font-size: 13px;
+  }
+
+  .role-profile-backdrop {
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .role-profile-drawer {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: min(88vh, 720px) !important;
+    max-height: 88vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .role-profile-drawer > div:first-child {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+}
+
+@media (max-width: 430px) {
+  .role-navbar-brand {
+    max-width: 38px;
+  }
+
+  .role-navbar-brand > span {
+    display: none !important;
+  }
+
+  .role-navbar-actions {
+    gap: 4px !important;
+  }
+
+  .role-event-switcher {
+    flex-basis: 134px;
+  }
+
+  .role-navbar-actions > button:not(.role-navbar-profile) {
+    width: 32px;
+    height: 32px;
+  }
+
+  .role-navbar-profile span {
+    width: 29px !important;
+    height: 29px !important;
+    flex-basis: 29px !important;
+  }
+
+  .role-main-content .row.mb-4 > [class*="col-"] {
+    width: 50%;
+  }
+
+  .role-main-content .row.mb-4 > [class*="col-"] .admin-bento-card {
+    min-height: 118px;
+  }
+
+  .role-main-content .d-flex.flex-wrap.gap-2 > .btn {
+    flex-basis: 100%;
+  }
 }

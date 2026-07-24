@@ -1,1 +1,5 @@
 event_management_system/event_management_system/src/main/resources/application.properties
+
+fic-chatbot-api/.venv/
+fic-chatbot-api/__pycache__/
+*.pyc

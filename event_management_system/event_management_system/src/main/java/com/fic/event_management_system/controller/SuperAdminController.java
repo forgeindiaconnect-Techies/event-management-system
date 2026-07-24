@@ -128,8 +128,11 @@ public class SuperAdminController {
     }
 
     @DeleteMapping("/portals/{portalId}")
-    public String deleteInactivePortal(@PathVariable Long portalId) {
-        superAdminService.deleteInactivePortal(portalId);
+    public String deleteInactivePortal(
+            @PathVariable Long portalId,
+            @RequestParam String reason
+    ) {
+        superAdminService.deleteInactivePortal(portalId, reason);
         return "Inactive portal deleted and all linked users logged out";
     }
 

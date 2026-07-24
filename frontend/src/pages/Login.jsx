@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axiosConfig";
 import { Eye, EyeOff } from "lucide-react";
+import ficLogo from "../assets/images/fic-logo.png";
 import {
-  BsBox,
   BsCalendarEvent,
   BsPeople,
   BsShieldCheck,
@@ -100,11 +100,10 @@ function Login() {
         style={{ height: "66px", background: "#12085c", color: "#fff" }}
       >
         <Link to="/" className="text-white text-decoration-none d-flex align-items-center gap-2">
-          <BsBox size={30} />
-          <span className="login-brand fw-bold" style={{ fontSize: "24px" }}>
-            BackRooms
+          <img className="login-navbar-logo" src={ficLogo} alt="FIC BackRooms logo" />
+          <span className="login-brand fw-bold">
+            FIC BackRooms
           </span>
-          <span style={{ opacity: 0.7 }}></span>
         </Link>
 
         <div className="login-navbar-actions d-flex align-items-center gap-3">

@@ -454,8 +454,13 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
     @Override
     @Transactional
-    public void deleteInactivePortal(Long portalId) {
+    public void deleteInactivePortal(Long portalId, String reason) {
         tenantSecurityService.requireSuperAdmin();
+
+        String normalizedReason = reason == null ? "" : reason.trim();
+        if (normalizedReason.length() < 10) {
+            throw new RuntimeException("Deletion reason must contain at least 10 characters");
+        }
 
         Portal portal = portalRepository.findById(portalId)
                 .orElseThrow(() -> new RuntimeException("Portal not found"));
@@ -482,6 +487,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         portal.setActive(false);
         portal.setDeleted(true);
+        portal.setDeletionReason(normalizedReason);
+        portal.setDeletedAt(java.time.LocalDateTime.now());
         portal.setPortalCode("DELETED-" + portal.getId() + "-" + purgeTime);
         portal.setDescription(null);
         portal.setLogoUrl(null);

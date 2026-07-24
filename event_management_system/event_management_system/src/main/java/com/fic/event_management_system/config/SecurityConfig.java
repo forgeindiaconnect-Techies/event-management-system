@@ -81,6 +81,7 @@ public class SecurityConfig {
                         ).hasAuthority("SUPER_ADMIN")
                         .requestMatchers("/api/email/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
+                        .requestMatchers("/api/chatbot/**").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/support-requests/**").hasAuthority("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/support-requests").hasAuthority("SUPER_ADMIN")
                         .requestMatchers("/api/support-requests/**").authenticated()

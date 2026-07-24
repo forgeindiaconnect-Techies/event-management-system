@@ -1175,6 +1175,19 @@ input::placeholder {
 .sa-sub-actions button.recover { color: #157052; }
 
 .sa-sub-modal-backdrop { position: fixed; inset: 0; z-index: 2500; display: grid; place-items: center; padding: 20px; background: rgba(15,18,34,.57); backdrop-filter: blur(5px); }
+.sa-delete-portal-modal { width: min(100%,620px); overflow: hidden; border-radius: 20px; background: #fff; box-shadow: 0 30px 80px rgba(8,10,27,.34); }
+.sa-delete-portal-modal header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 21px 23px; border-bottom: 1px solid #eceef3; }
+.sa-delete-portal-modal header span { color: #c62828; font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.sa-delete-portal-modal header h2 { margin: 4px 0 0; font-size: 22px; }
+.sa-delete-portal-modal header button { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 50%; background: #f2f4f7; }
+.sa-delete-portal-modal-body { display: grid; gap: 10px; padding: 22px 23px; }
+.sa-delete-portal-modal-body p { margin: 0 0 6px; color: #596273; line-height: 1.55; }
+.sa-delete-portal-modal-body label { font-weight: 750; }
+.sa-delete-portal-modal-body label b { color: #c62828; }
+.sa-delete-portal-modal-body textarea { min-height: 125px; padding: 12px 14px; resize: vertical; border: 1px solid #ced4df; border-radius: 10px; outline: 0; }
+.sa-delete-portal-modal-body textarea:focus { border-color: #dc3545; box-shadow: 0 0 0 3px rgba(220,53,69,.12); }
+.sa-delete-portal-modal-body small { color: #7a8495; text-align: right; }
+.sa-delete-portal-modal footer { display: flex; justify-content: flex-end; gap: 10px; padding: 17px 23px; border-top: 1px solid #eceef3; background: #fafbfc; }
 .sa-plan-editor,.sa-admin-receipt,.sa-audit-modal { width: min(100%,720px); max-height: calc(100vh - 40px); overflow-y: auto; border-radius: 21px; background: #fff; box-shadow: 0 30px 80px rgba(8,10,27,.32); }
 .sa-plan-editor header,.sa-admin-receipt header,.sa-audit-modal header { display: flex; align-items: center; justify-content: space-between; padding: 19px 21px; border-bottom: 1px solid #e8eaf0; }
 .sa-plan-editor header span,.sa-admin-receipt header span,.sa-audit-modal header span { color: #6956df; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -1237,6 +1250,184 @@ input::placeholder {
 
 @media (prefers-reduced-motion: reduce) {
   .sa-app-shell *, .sa-app-shell *::before, .sa-app-shell *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+/* Final mobile pass for recently added Super Admin pages and dialogs. */
+@media (max-width: 760px) {
+  .sa-app-shell {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .sa-app-shell .super-admin-page {
+    min-width: 0;
+  }
+
+  .sa-app-shell .super-admin-main {
+    min-width: 0;
+    padding: 68px 11px 25px !important;
+  }
+
+  .sa-app-shell .super-admin-main h1 {
+    font-size: 25px;
+    line-height: 1.2;
+  }
+
+  .sa-app-shell .sa-page-cards,
+  .sa-app-shell .sa-page-cards.three,
+  .sa-app-shell .sa-page-cards.four,
+  .sa-app-shell .email-delivery-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  .sa-app-shell .sa-metric {
+    min-width: 0;
+    min-height: 125px;
+    padding: 15px;
+    border-radius: 15px;
+  }
+
+  .sa-app-shell .sa-metric .admin-bento-icon {
+    position: static;
+    width: 39px;
+    height: 39px;
+    margin: 0 0 17px auto;
+    font-size: 18px;
+  }
+
+  .sa-app-shell .sa-metric h2 {
+    max-width: 100%;
+    font-size: 25px;
+  }
+
+  .sa-table-heading,
+  .sa-plan-management-heading,
+  .sa-subscription-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .sa-table-heading label,
+  .sa-subscription-search,
+  .sa-plan-management-heading button {
+    width: 100%;
+  }
+
+  .sa-panel,
+  .sa-subscription-workspace,
+  .sa-portal-card {
+    min-width: 0;
+    border-radius: 15px;
+  }
+
+  .sa-table-wrap,
+  .sa-subscription-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #7462e7 #eef0f5;
+  }
+
+  .sa-native-table,
+  .sa-subscription-table,
+  .email-delivery-table {
+    min-width: 820px;
+  }
+
+  .sa-subscription-tabs {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .sa-subscription-tabs button {
+    flex: 1 0 auto;
+    white-space: nowrap;
+  }
+
+  .sa-subscription-filters {
+    padding: 12px;
+  }
+
+  .sa-plan-management-grid,
+  .sa-plan-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sa-managed-plan,
+  .sa-plan-grid > .admin-bento-card {
+    min-height: 0;
+  }
+
+  .sa-sub-modal-backdrop {
+    align-items: end;
+    padding: 8px;
+  }
+
+  .sa-delete-portal-modal,
+  .sa-plan-editor,
+  .sa-admin-receipt,
+  .sa-audit-modal {
+    width: 100%;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    border-radius: 18px 18px 10px 10px;
+  }
+
+  .sa-delete-portal-modal header,
+  .sa-delete-portal-modal-body,
+  .sa-delete-portal-modal footer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .sa-delete-portal-modal footer,
+  .sa-plan-editor footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sa-delete-portal-modal footer button,
+  .sa-plan-editor footer button {
+    min-height: 43px;
+  }
+
+  .sa-plan-editor-grid,
+  .sa-plan-limit-grid,
+  .sa-plan-feature-grid,
+  .sa-admin-receipt-party,
+  .sa-admin-receipt-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .sa-admin-receipt-party > div:last-child,
+  .sa-admin-receipt-meta strong {
+    text-align: left;
+  }
+}
+
+@media (max-width: 420px) {
+  .sa-app-shell .super-admin-main {
+    padding-right: 9px !important;
+    padding-left: 9px !important;
+  }
+
+  .sa-app-shell .sa-metric {
+    min-height: 116px;
+    padding: 13px;
+  }
+
+  .sa-app-shell .sa-metric .admin-bento-icon {
+    margin-bottom: 12px;
+  }
+
+  .sa-app-shell .sa-metric h2 {
+    font-size: 23px;
+  }
 }
 
 .sa-flow-card, .sa-activity-card { min-height: 360px; }

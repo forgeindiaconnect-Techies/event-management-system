@@ -48,7 +48,7 @@ public interface SuperAdminService {
             SubscriptionPaymentStatus status
     );
 
-    void deleteInactivePortal(Long portalId);
+    void deleteInactivePortal(Long portalId, String reason);
 
     PortalSubscription recoverPaidSubscription(
             ManualSubscriptionRecoveryRequest request

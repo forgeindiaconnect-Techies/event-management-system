@@ -67,6 +67,9 @@ function SuperAdminDashboard({ section = "overview" }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [deletingPortalId, setDeletingPortalId] = useState(null);
+  const [portalPendingDeletion, setPortalPendingDeletion] = useState(null);
+  const [portalDeletionReason, setPortalDeletionReason] = useState("");
+  const [portalDeletionError, setPortalDeletionError] = useState("");
   const [profile, setProfile] = useState(() => ({
     id: localStorage.getItem("userId") || "",
     firstName: localStorage.getItem("firstName") || "",
@@ -145,25 +148,50 @@ function SuperAdminDashboard({ section = "overview" }) {
   const initials = `${profile.firstName?.[0] || "S"}${profile.lastName?.[0] || "A"}`.toUpperCase();
 
   const logout = () => {
+    if (!window.confirm("Are you sure you want to log out?")) return;
     localStorage.clear();
     navigate("/");
   };
 
-  const deletePortal = async (portal) => {
+  const requestPortalDeletion = (portal) => {
+    setPortalPendingDeletion(portal);
+    setPortalDeletionReason("");
+    setPortalDeletionError("");
+  };
+
+  const closePortalDeletion = () => {
+    if (deletingPortalId) return;
+    setPortalPendingDeletion(null);
+    setPortalDeletionReason("");
+    setPortalDeletionError("");
+  };
+
+  const deletePortal = async () => {
+    const portal = portalPendingDeletion;
+    const reason = portalDeletionReason.trim();
+    if (!portal) return;
+    if (reason.length < 10) {
+      setPortalDeletionError("Enter a clear deletion reason of at least 10 characters.");
+      return;
+    }
+
     const confirmed = window.confirm(
-      `Permanently delete ${portal.portalName}? The portal will be removed and all linked users will be immediately logged out and disabled.`
+      `Final confirmation: permanently delete ${portal.portalName}?\n\nReason: ${reason}\n\nAll linked users will be logged out and disabled. This action cannot be undone.`
     );
     if (!confirmed) return;
 
     try {
       setDeletingPortalId(portal.portalId);
       setMessage("");
-      await api.delete(`/super-admin/portals/${portal.portalId}`);
+      await api.delete(`/super-admin/portals/${portal.portalId}`, { params: { reason } });
       await refreshPlatformData();
       setMessage(`${portal.portalName} was deleted. It remains visible for historical reporting, and its payment records are preserved.`);
+      setPortalPendingDeletion(null);
+      setPortalDeletionReason("");
+      setPortalDeletionError("");
     } catch (error) {
       console.error(error);
-      setMessage(error.response?.data?.message || "Unable to delete this portal.");
+      setPortalDeletionError(error.response?.data?.message || "Unable to delete this portal.");
     } finally {
       setDeletingPortalId(null);
     }
@@ -221,10 +249,31 @@ function SuperAdminDashboard({ section = "overview" }) {
           <div className="sa-page-heading"><h1>{title}</h1><p>{subtitle}</p></div>
           {message && <div className="alert alert-info">{message}</div>}
           {loading ? <DashboardLoader /> : (
-            <PageContent section={section} dashboard={dashboard} portals={filteredPortals} allPortals={portals} money={money} search={search} setSearch={setSearch} email={email} onDeletePortal={deletePortal} deletingPortalId={deletingPortalId} onPlatformChange={refreshPlatformData} />
+            <PageContent section={section} dashboard={dashboard} portals={filteredPortals} allPortals={portals} money={money} search={search} setSearch={setSearch} email={email} onDeletePortal={requestPortalDeletion} deletingPortalId={deletingPortalId} onPlatformChange={refreshPlatformData} />
           )}
         </main>
       </div>
+      {portalPendingDeletion && (
+        <div className="sa-sub-modal-backdrop" onMouseDown={closePortalDeletion}>
+          <section className="sa-delete-portal-modal" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="delete-portal-title">
+            <header>
+              <div><span>Permanent action</span><h2 id="delete-portal-title">Delete {portalPendingDeletion.portalName}?</h2></div>
+              <button type="button" onClick={closePortalDeletion} disabled={Boolean(deletingPortalId)} aria-label="Close deletion dialog"><BsXLg /></button>
+            </header>
+            <div className="sa-delete-portal-modal-body">
+              <p>This disables every linked user, removes the portal from active use, and moves its events to trash. Historical payment records remain available.</p>
+              <label htmlFor="portal-deletion-reason">Reason for deletion <b>*</b></label>
+              <textarea id="portal-deletion-reason" value={portalDeletionReason} onChange={(event) => { setPortalDeletionReason(event.target.value); setPortalDeletionError(""); }} maxLength={1000} placeholder="Example: Portal owner requested permanent account closure." autoFocus />
+              <small>{portalDeletionReason.trim().length}/1000 characters · minimum 10</small>
+              {portalDeletionError && <div className="alert alert-danger mb-0">{portalDeletionError}</div>}
+            </div>
+            <footer>
+              <button type="button" className="btn btn-light" onClick={closePortalDeletion} disabled={Boolean(deletingPortalId)}>Cancel</button>
+              <button type="button" className="btn btn-danger" onClick={deletePortal} disabled={Boolean(deletingPortalId) || portalDeletionReason.trim().length < 10}>{deletingPortalId ? "Deleting..." : "Continue to final confirmation"}</button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

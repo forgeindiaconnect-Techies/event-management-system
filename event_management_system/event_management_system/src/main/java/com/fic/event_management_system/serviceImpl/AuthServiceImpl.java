@@ -32,6 +32,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest loginRequest) {
 
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (Boolean.TRUE.equals(user.getPasswordSetupRequired())) {
+            throw new RuntimeException("Set your password from the link sent to your email before signing in.");
+        }
+
+        if (Boolean.FALSE.equals(user.getActive())) {
+            throw new RuntimeException("User account is inactive");
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -41,13 +52,6 @@ public class AuthServiceImpl implements AuthService {
             );
         } catch (BadCredentialsException e) {
             throw new RuntimeException("Invalid email or password");
-        }
-
-        User user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (Boolean.FALSE.equals(user.getActive())) {
-            throw new RuntimeException("User account is inactive");
         }
 
         String token = jwtUtil.generateToken(user.getEmail());

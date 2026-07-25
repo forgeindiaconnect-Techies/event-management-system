@@ -421,7 +421,7 @@ function RoleNavbar() {
                       onChange={(value) => setPasswordForm((current) => ({ ...current, confirmPassword: value }))}
                       toggle={() => setPasswordVisibility((current) => ({ ...current, confirm: !current.confirm }))}
                     />
-                    <div className="text-muted mb-2" style={{ fontSize: "12px" }}>Use at least 6 characters and do not reuse the temporary password.</div>
+                    <div className="text-muted mb-2" style={{ fontSize: "12px" }}>Use at least 8 characters with uppercase, lowercase and a number.</div>
                     {passwordMessage && <div className="alert alert-info py-2" style={{ fontSize: "12px" }}>{passwordMessage}</div>}
                     <button className="btn btn-primary btn-sm w-100" disabled={changingPassword}>
                       {changingPassword ? "Updating..." : "Update Password"}

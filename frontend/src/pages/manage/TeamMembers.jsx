@@ -3,8 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   FaCheckCircle,
   FaEnvelope,
-  FaEye,
-  FaEyeSlash,
   FaMicrophone,
   FaPaperPlane,
   FaPlus,
@@ -23,8 +21,7 @@ const emptyInvite = {
   roleName: "Staff",
   firstName: "",
   lastName: "",
-  phoneNumber: "",
-  password: ""
+  phoneNumber: ""
 };
 
 function TeamMembers() {
@@ -40,7 +37,6 @@ function TeamMembers() {
   const [addMode, setAddMode] = useState("email");
   const [inviteForm, setInviteForm] = useState(emptyInvite);
   const [submitting, setSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     loadTeamData();
@@ -134,14 +130,12 @@ function TeamMembers() {
           ...commonPayload,
           firstName: inviteForm.firstName.trim(),
           lastName: inviteForm.lastName.trim(),
-          phoneNumber: inviteForm.phoneNumber.trim(),
-          password: inviteForm.password
+          phoneNumber: inviteForm.phoneNumber.trim()
         });
-        setMessage("Team member created and assigned to this event successfully.");
+        setMessage("Team member created and assigned. A one-hour set-password link was sent to their email.");
       }
 
       setInviteForm(emptyInvite);
-      setShowPassword(false);
       setShowInvite(false);
       await loadTeamData();
     } catch (error) {
@@ -227,30 +221,10 @@ function TeamMembers() {
               {addMode === "manual" && (
                 <div className="team-form-grid">
                   <label>Phone Number *<input value={inviteForm.phoneNumber} onChange={(e) => updateInvite("phoneNumber", e.target.value)} required /></label>
-                  <label>
-                    Temporary Password *
-                    <span className="team-password-field">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        minLength={6}
-                        value={inviteForm.password}
-                        onChange={(e) => updateInvite("password", e.target.value)}
-                        autoComplete="new-password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((visible) => !visible)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        title={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </span>
-                    <small className="team-field-help">
-                      This is the member's first login password. Share it securely and ask them to change it after signing in.
-                    </small>
-                  </label>
+                  <div className="team-password-notice">
+                    <strong>Password setup</strong>
+                    <span>A secure link is sent to the member's email. It expires after one hour and lets them choose their own password.</span>
+                  </div>
                 </div>
               )}
 
@@ -874,40 +848,19 @@ const teamStyles = `
     outline: none;
   }
 
-  .team-password-field {
-    display: block;
-    position: relative;
-  }
-
-  .team-password-field input {
-    padding-right: 46px;
-    width: 100%;
-  }
-
-  .team-password-field button {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: #64748b;
-    display: flex;
-    height: 40px;
-    justify-content: center;
-    padding: 0;
-    position: absolute;
-    right: 4px;
-    top: 2px;
-    width: 40px;
-  }
-
-  .team-password-field button:hover {
-    color: #2563eb;
-  }
-
-  .team-field-help {
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.45;
+  .team-password-notice {
+    align-self: end;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 7px;
+    box-sizing: border-box;
+    color: #3730a3;
+    display: grid;
+    font-size: 13px;
+    gap: 4px;
+    line-height: 1.4;
+    min-height: 44px;
+    padding: 10px 12px;
   }
 
   .team-event-lock {
@@ -977,6 +930,10 @@ const teamStyles = `
     .team-role-grid,
     .team-form-grid {
       grid-template-columns: 1fr;
+    }
+
+    .team-password-notice {
+      align-self: stretch;
     }
 
     .team-mode-tabs {

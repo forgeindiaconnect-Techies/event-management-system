@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.fic.event_management_system.service.EmailService;
 import com.fic.event_management_system.service.NotificationService;
+import com.fic.event_management_system.service.AccountActivationService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,6 +36,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
     private final PortalRepository portalRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final AccountActivationService accountActivationService;
 
     public OrganizerInvitationServiceImpl(
             OrganizerInvitationRepository invitationRepository,
@@ -42,7 +44,8 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
             RoleRepository roleRepository,
             PortalRepository portalRepository,
             EmailService emailService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            AccountActivationService accountActivationService) {
 
         this.invitationRepository = invitationRepository;
         this.userRepository = userRepository;
@@ -50,6 +53,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         this.portalRepository = portalRepository;
         this.emailService = emailService;
         this.notificationService = notificationService;
+        this.accountActivationService = accountActivationService;
     }
 
     @Override
@@ -230,10 +234,6 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
                 || request.getLastName() == null || request.getLastName().isBlank()) {
             throw new RuntimeException("Organizer first name and last name are required");
         }
-        if (request.getPassword() == null || request.getPassword().length() < 6) {
-            throw new RuntimeException("Password must contain at least 6 characters");
-        }
-
         String normalizedEmail = request.getEmail().trim().toLowerCase();
         if (userRepository.findByEmail(normalizedEmail).isPresent()) {
             throw new RuntimeException("A user already exists with this email");
@@ -257,12 +257,15 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         organizer.setLastName(request.getLastName().trim());
         organizer.setEmail(normalizedEmail);
         organizer.setPhoneNumber(request.getPhoneNumber());
-        organizer.setPassword(request.getPassword());
+        // A random placeholder prevents login until the recipient sets a password from the email link.
+        organizer.setPassword(UUID.randomUUID().toString());
         organizer.setRole(organizerRole);
         organizer.setPortal(portal);
-        organizer.setActive(true);
+        organizer.setActive(false);
+        organizer.setPasswordSetupRequired(true);
 
         User savedUser = userRepository.save(organizer);
+        accountActivationService.sendPasswordSetupLink(savedUser);
 
         notificationService.createNotification(
                 invitedBy,
@@ -274,18 +277,6 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
                         + " was added directly as an organizer.",
                 "/admin/organizers",
                 "ORGANIZER_MANUAL_" + savedUser.getId()
-        );
-
-        notificationService.createNotification(
-                savedUser,
-                portal,
-                null,
-                NotificationType.USER_INVITED,
-                "Your organizer account is ready",
-                "You were added to " + portal.getPortalName()
-                        + " as an Organizer. Sign in using your temporary password.",
-                "/organizer",
-                "ORGANIZER_MANUAL_" + savedUser.getId() + "_USER"
         );
 
         return savedUser;

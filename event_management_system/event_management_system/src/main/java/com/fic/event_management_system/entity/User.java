@@ -29,6 +29,9 @@ public class User {
 
     private Boolean active = true;
 
+    @Column(name = "password_setup_required")
+    private Boolean passwordSetupRequired = false;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -114,6 +117,14 @@ public class User {
 	public void setActive(Boolean active) {
 		this.active = active;
 	}
+
+    public Boolean getPasswordSetupRequired() {
+        return passwordSetupRequired;
+    }
+
+    public void setPasswordSetupRequired(Boolean passwordSetupRequired) {
+        this.passwordSetupRequired = passwordSetupRequired;
+    }
 
 	public LocalDateTime getCreatedAt() {
 		return createdAt;

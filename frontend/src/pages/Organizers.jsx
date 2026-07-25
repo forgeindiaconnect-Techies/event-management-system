@@ -23,7 +23,6 @@ function Organizers() {
     lastName: "",
     email: "",
     phoneNumber: "",
-    password: "",
   });
 
   useEffect(() => {
@@ -110,6 +109,11 @@ function Organizers() {
       return;
     }
 
+    if (!manualForm.firstName.trim() || !manualForm.lastName.trim() || !manualForm.email.trim() || !manualForm.phoneNumber.trim()) {
+      setMessage("First name, last name, email address and phone number are required.");
+      return;
+    }
+
     try {
       setLoading(true);
       setMessage("");
@@ -119,8 +123,8 @@ function Organizers() {
         portalId: Number(portalId),
         invitedById: Number(invitedById),
       });
-      setMessage("Organizer account created successfully. They can login using the entered email and password.");
-      setManualForm({ firstName: "", lastName: "", email: "", phoneNumber: "", password: "" });
+      setMessage("Organizer account created. A secure set-password link was sent to their email and expires in one hour.");
+      setManualForm({ firstName: "", lastName: "", email: "", phoneNumber: "" });
       fetchOrganizers();
     } catch (error) {
       console.log(error);
@@ -220,29 +224,25 @@ function Organizers() {
             </form> : <form onSubmit={handleManualAdd}>
               <div className="row g-3">
                 <div className="col-md-6">
-                  <label className="form-label">First Name</label>
+                  <label className="form-label">First Name <span className="text-danger">*</span></label>
                   <input className="form-control" name="firstName" value={manualForm.firstName} onChange={handleManualChange} required />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Last Name</label>
+                  <label className="form-label">Last Name <span className="text-danger">*</span></label>
                   <input className="form-control" name="lastName" value={manualForm.lastName} onChange={handleManualChange} required />
                 </div>
                 <div className="col-12">
-                  <label className="form-label">Login Email</label>
+                  <label className="form-label">Login Email <span className="text-danger">*</span></label>
                   <input className="form-control" type="email" name="email" value={manualForm.email} onChange={handleManualChange} placeholder="organizer@example.com" required />
-                  <small className="text-muted">No invitation is sent. This email is used only as the organizer's login ID.</small>
+                  <small className="text-muted">A secure set-password link will be sent to this email. It expires in one hour.</small>
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Phone Number</label>
-                  <input className="form-control" name="phoneNumber" value={manualForm.phoneNumber} onChange={handleManualChange} required />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Temporary Password</label>
-                  <input className="form-control" type="password" name="password" value={manualForm.password} onChange={handleManualChange} minLength={6} required />
+                  <label className="form-label">Phone Number <span className="text-danger">*</span></label>
+                  <input className="form-control" type="tel" inputMode="numeric" pattern="[0-9]{10,15}" name="phoneNumber" value={manualForm.phoneNumber} onChange={handleManualChange} required />
                 </div>
               </div>
               <button className="btn btn-primary mt-3" disabled={loading} style={{ borderRadius: "10px", padding: "9px 22px" }}>
-                {loading ? "Creating..." : "Create Organizer"}
+                {loading ? "Creating..." : "Create & Send Set-Password Link"}
               </button>
             </form>}
 

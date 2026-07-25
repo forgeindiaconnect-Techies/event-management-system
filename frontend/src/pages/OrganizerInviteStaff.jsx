@@ -10,8 +10,6 @@ import {
   BsSearch,
   BsArrowClockwise,
   BsPersonVcard,
-  BsEye,
-  BsEyeSlash,
 } from "react-icons/bs";
 
 function OrganizerInviteStaff() {
@@ -30,8 +28,7 @@ function OrganizerInviteStaff() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
   const [addMode, setAddMode] = useState("email");
-  const [manualData, setManualData] = useState({ firstName: "", lastName: "", phoneNumber: "", password: "" });
-  const [showTemporaryPassword, setShowTemporaryPassword] = useState(false);
+  const [manualData, setManualData] = useState({ firstName: "", lastName: "", phoneNumber: "" });
 
   const roles = [
     "Staff",
@@ -160,11 +157,10 @@ function OrganizerInviteStaff() {
         invitedById: Number(localStorage.getItem("userId")),
         eventId: selectedEvent ? Number(selectedEvent.id) : null,
       });
-      setMessage("User created and assigned successfully. No invitation email was sent.");
+      setMessage("User created and assigned. A one-hour set-password link was sent to their email.");
       setMessageType("success");
       setFormData({ email: "", roleName: "Staff", eventId: "" });
-      setManualData({ firstName: "", lastName: "", phoneNumber: "", password: "" });
-      setShowTemporaryPassword(false);
+      setManualData({ firstName: "", lastName: "", phoneNumber: "" });
       refreshHistory();
     } catch (error) {
       setMessage(error.response?.data?.message || "Failed to create the user.");
@@ -354,29 +350,9 @@ function OrganizerInviteStaff() {
 
               {addMode === "manual" && <div className="row g-3 mb-3">
                 <div className="col-md-6"><label className="form-label fw-semibold">Phone Number</label><input className="form-control" style={{ height: "48px" }} value={manualData.phoneNumber} onChange={(e) => setManualData({ ...manualData, phoneNumber: e.target.value })} required /></div>
-                <div className="col-md-6">
-                  <label className="form-label fw-semibold">Temporary Password</label>
-                  <div className="input-group" style={{ height: "48px" }}>
-                    <input
-                      type={showTemporaryPassword ? "text" : "password"}
-                      minLength={6}
-                      className="form-control"
-                      style={{ height: "48px" }}
-                      value={manualData.password}
-                      onChange={(e) => setManualData({ ...manualData, password: e.target.value })}
-                      autoComplete="new-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      style={{ width: "52px", height: "48px" }}
-                      onClick={() => setShowTemporaryPassword((visible) => !visible)}
-                      aria-label={showTemporaryPassword ? "Hide password" : "Show password"}
-                      title={showTemporaryPassword ? "Hide password" : "Show password"}
-                    >
-                      {showTemporaryPassword ? <BsEyeSlash /> : <BsEye />}
-                    </button>
+                <div className="col-md-6 d-flex align-items-end">
+                  <div className="alert alert-info w-100 mb-0 py-2 small">
+                    The member will receive a secure set-password link by email. The link expires after one hour.
                   </div>
                 </div>
               </div>}

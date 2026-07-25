@@ -19,6 +19,7 @@ import com.fic.event_management_system.repository.RoleRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.security.TenantSecurityService;
 import com.fic.event_management_system.service.EmailService;
+import com.fic.event_management_system.service.AccountActivationService;
 import com.fic.event_management_system.service.NotificationService;
 import com.fic.event_management_system.service.RoleInvitationService;
 import com.fic.event_management_system.service.SubscriptionLimitService;
@@ -44,6 +45,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
     private final TenantSecurityService tenantSecurityService;
     private final SubscriptionLimitService subscriptionLimitService;
     private final NotificationService notificationService;
+    private final AccountActivationService accountActivationService;
 
     public RoleInvitationServiceImpl(
             RoleInvitationRepository invitationRepository,
@@ -55,7 +57,8 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
             EventAssignmentRepository eventAssignmentRepository,
             TenantSecurityService tenantSecurityService,
             SubscriptionLimitService subscriptionLimitService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            AccountActivationService accountActivationService) {
 
         this.invitationRepository = invitationRepository;
         this.portalRepository = portalRepository;
@@ -67,6 +70,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         this.tenantSecurityService = tenantSecurityService;
         this.subscriptionLimitService = subscriptionLimitService;
         this.notificationService = notificationService;
+        this.accountActivationService = accountActivationService;
     }
 
     @Override
@@ -291,10 +295,6 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 || request.getLastName() == null || request.getLastName().isBlank()) {
             throw new RuntimeException("First name and last name are required");
         }
-        if (request.getPassword() == null || request.getPassword().length() < 6) {
-            throw new RuntimeException("Password must contain at least 6 characters");
-        }
-
         Event event = request.getEventId() == null ? null
                 : tenantSecurityService.getEventFromLoggedInPortal(request.getEventId());
         Portal portal = event != null ? event.getPortal() : portalRepository.findById(request.getPortalId())
@@ -315,13 +315,16 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         user.setLastName(request.getLastName().trim());
         user.setEmail(email);
         user.setPhoneNumber(request.getPhoneNumber());
-        user.setPassword(request.getPassword());
+        // A secure random placeholder prevents login until the recipient sets a password from their email link.
+        user.setPassword(UUID.randomUUID().toString());
         user.setRole(role);
         // Every manually created account belongs to the portal that created it.
         // Event-specific access is still controlled by EventAssignment.
         user.setPortal(portal);
-        user.setActive(true);
+        user.setActive(false);
+        user.setPasswordSetupRequired(true);
         user = userRepository.save(user);
+        accountActivationService.sendPasswordSetupLink(user);
 
         User createdBy = tenantSecurityService.getLoggedInUser();
         notificationService.createNotification(
@@ -329,10 +332,10 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 portal,
                 event,
                 NotificationType.USER_INVITED,
-                "Your account is ready",
+                "Set your password",
                 "You were added to " + portal.getPortalName() + " as "
-                        + displayRole(request.getRoleName()) + ". Sign in using your temporary password.",
-                roleHomeUrl(request.getRoleName()),
+                        + displayRole(request.getRoleName()) + ". Check your email to set your password.",
+                "/login",
                 "MANUAL_USER_CREATED_" + user.getId()
         );
 

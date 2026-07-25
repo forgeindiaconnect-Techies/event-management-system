@@ -77,12 +77,12 @@ import CreatePortal from "./pages/CreatePortal";
 import LandingPage from "./pages/LandingPage";
 import LandingGuidePage from "./pages/LandingGuidePage";
 import AcceptInvitation from "./pages/AcceptInvitation";
+import SetPassword from "./pages/SetPassword";
 
 import StaffDashboard from "./pages/Staff/StaffDashboard";
 import StaffEvents from "./pages/Staff/StaffEvents";
 import StaffTicketVerification from "./pages/Staff/StaffTicketVerification";
 import StaffAttendance from "./pages/Staff/StaffAttendance";
-
 import CoordinatorDashboard from "./pages/Coordinator/CoordinatorDashboard";
 import CoordinatorEvents from "./pages/Coordinator/CoordinatorEvents";
 import CoordinatorAttendance from "./pages/Coordinator/CoordinatorAttendance";
@@ -129,6 +129,7 @@ function App() {
 
 {/* Auth */}
 <Route path="/login" element={<Login />} />
+<Route path="/set-password" element={<SetPassword />} />
 <Route path="/choose-access" element={<ChooseAccess />} />
 <Route path="/help/tour" element={<TourCenter />} />
 <Route path="/help/tour/:tourType" element={<TourCenter />} />

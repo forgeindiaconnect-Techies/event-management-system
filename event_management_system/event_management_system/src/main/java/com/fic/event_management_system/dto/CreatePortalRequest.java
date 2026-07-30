@@ -8,6 +8,8 @@ public class CreatePortalRequest {
     private String description;
     private PortalCategory category;
     private String logoUrl;
+    private String organizationLocation;
+    private String timeZone;
 
     private String firstName;
     private String lastName;
@@ -45,6 +47,22 @@ public class CreatePortalRequest {
 
     public void setLogoUrl(String logoUrl) {
         this.logoUrl = logoUrl;
+    }
+
+    public String getOrganizationLocation() {
+        return organizationLocation;
+    }
+
+    public void setOrganizationLocation(String organizationLocation) {
+        this.organizationLocation = organizationLocation;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 
     public String getFirstName() {

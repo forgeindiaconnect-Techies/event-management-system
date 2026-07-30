@@ -28,6 +28,10 @@ public class Portal {
 
     private String logoUrl;
 
+    private String organizationLocation;
+
+    private String timeZone;
+
     private Boolean active = true;
 
     private Boolean deleted = false;
@@ -95,6 +99,22 @@ public class Portal {
 
 	public void setLogoUrl(String logoUrl) {
 		this.logoUrl = logoUrl;
+	}
+
+	public String getOrganizationLocation() {
+		return organizationLocation;
+	}
+
+	public void setOrganizationLocation(String organizationLocation) {
+		this.organizationLocation = organizationLocation;
+	}
+
+	public String getTimeZone() {
+		return timeZone;
+	}
+
+	public void setTimeZone(String timeZone) {
+		this.timeZone = timeZone;
 	}
 
 	public Boolean getActive() {

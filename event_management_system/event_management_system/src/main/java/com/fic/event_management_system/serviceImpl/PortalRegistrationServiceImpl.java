@@ -111,6 +111,8 @@ public class PortalRegistrationServiceImpl
         portal.setDescription(request.getDescription());
         portal.setCategory(request.getCategory());
         portal.setLogoUrl(request.getLogoUrl());
+        portal.setOrganizationLocation(request.getOrganizationLocation());
+        portal.setTimeZone(request.getTimeZone());
         portal.setActive(true);
         portal.setAdmin(owner);
 

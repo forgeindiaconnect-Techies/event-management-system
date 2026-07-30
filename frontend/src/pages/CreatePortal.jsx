@@ -12,8 +12,24 @@ import {
   BsTags,
   BsArrowRight,
 } from "react-icons/bs";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, MapPin, Clock3 } from "lucide-react";
 import ficLogo from "../assets/images/fic-logo.png";
+
+const LOCATION_TIMEZONES = [
+  ["Bengaluru, Karnataka, India", "Asia/Kolkata"],
+  ["Chennai, Tamil Nadu, India", "Asia/Kolkata"],
+  ["Hyderabad, Telangana, India", "Asia/Kolkata"],
+  ["Mumbai, Maharashtra, India", "Asia/Kolkata"],
+  ["New Delhi, India", "Asia/Kolkata"],
+  ["Dubai, United Arab Emirates", "Asia/Dubai"],
+  ["Singapore", "Asia/Singapore"],
+  ["London, United Kingdom", "Europe/London"],
+  ["New York, United States", "America/New_York"],
+  ["San Francisco, United States", "America/Los_Angeles"],
+];
+
+const browserTimeZone =
+  Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
 
 function CreatePortal() {
   const navigate = useNavigate();
@@ -22,7 +38,8 @@ function CreatePortal() {
     portalName: "",
     description: "",
     category: "COLLEGE",
-    logoUrl: "",
+    organizationLocation: "",
+    timeZone: browserTimeZone,
     firstName: "",
     lastName: "",
     email: "",
@@ -34,7 +51,21 @@ function CreatePortal() {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "organizationLocation") {
+      const matchedLocation = LOCATION_TIMEZONES.find(
+        ([location]) => location.toLowerCase() === value.trim().toLowerCase()
+      );
+      setForm({
+        ...form,
+        organizationLocation: value,
+        timeZone: matchedLocation?.[1] || browserTimeZone,
+      });
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -196,14 +227,34 @@ function CreatePortal() {
                   </div>
 
                   <div className="col-12">
-                    <label className="form-label fw-semibold">Logo URL</label>
-                    <input
-                      className="form-control"
-                      name="logoUrl"
-                      placeholder="https://example.com/logo.png"
-                      value={form.logoUrl}
-                      onChange={handleChange}
-                    />
+                    <label className="form-label fw-semibold">
+                      Organization Location
+                    </label>
+                    <div className="position-relative">
+                      <MapPin
+                        className="position-absolute text-muted"
+                        size={18}
+                        style={{ left: 14, top: "50%", transform: "translateY(-50%)" }}
+                      />
+                      <input
+                        className="form-control ps-5"
+                        name="organizationLocation"
+                        list="organization-location-options"
+                        placeholder="Enter your city, state and country"
+                        value={form.organizationLocation}
+                        onChange={handleChange}
+                        required
+                      />
+                      <datalist id="organization-location-options">
+                        {LOCATION_TIMEZONES.map(([location]) => (
+                          <option key={location} value={location} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <small className="d-flex align-items-center gap-2 text-muted mt-2">
+                      <Clock3 size={15} />
+                      Time zone: <strong>{form.timeZone}</strong>
+                    </small>
                   </div>
                 </div>
 

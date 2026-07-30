@@ -36,6 +36,12 @@ function Organizers() {
     refreshOrganizerData();
   }, []);
 
+  useEffect(() => {
+    if (!message) return undefined;
+    const timeoutId = window.setTimeout(() => setMessage(""), 15000);
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
+
   const refreshOrganizerData = async () => {
     await Promise.all([fetchOrganizers(), fetchInvitations()]);
   };
@@ -410,7 +416,9 @@ function Organizers() {
         </div>
       </div>
 
-      <div className="admin-bento-card mt-4">
+      <div className="row g-4 mt-0">
+        <div className="col-xl-6">
+      <div className="admin-bento-card h-100">
         <div className="admin-section-header d-flex justify-content-between align-items-center mb-3">
           <div>
             <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
@@ -427,7 +435,7 @@ function Organizers() {
             No organizer invitations sent yet.
           </div>
         ) : (
-          <div className="table-responsive">
+          <div className="table-responsive" style={{ maxHeight: "360px", overflow: "auto" }}>
             <table className="table align-middle mb-0">
               <thead>
                 <tr>
@@ -478,8 +486,10 @@ function Organizers() {
           </div>
         )}
       </div>
+        </div>
 
-      <div className="admin-bento-card mt-4">
+        <div className="col-xl-6">
+      <div className="admin-bento-card h-100">
         <div className="admin-section-header d-flex justify-content-between align-items-center mb-3">
           <div>
             <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
@@ -498,7 +508,7 @@ function Organizers() {
             </p>
           </div>
         ) : (
-          <div className="table-responsive">
+          <div className="table-responsive" style={{ maxHeight: "360px", overflow: "auto" }}>
             <table className="table align-middle mb-0">
               <thead>
                 <tr>
@@ -545,6 +555,8 @@ function Organizers() {
             </table>
           </div>
         )}
+      </div>
+        </div>
       </div>
     </AdminLayout>
   );

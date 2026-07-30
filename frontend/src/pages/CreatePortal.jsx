@@ -12,7 +12,7 @@ import {
   BsTags,
   BsArrowRight,
 } from "react-icons/bs";
-import { Eye, EyeOff, MapPin, Clock3 } from "lucide-react";
+import { Eye, EyeOff, MapPin, Clock3, ChevronDown, Check } from "lucide-react";
 import ficLogo from "../assets/images/fic-logo.png";
 
 const LOCATION_OPTIONS = {
@@ -157,6 +157,11 @@ function CreatePortal() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!location.country || !location.city) {
+      setMessage("Please select the organization country and state/region.");
+      return;
+    }
 
     try {
       const response = await api.post("/auth/create-portal", form);
@@ -319,31 +324,23 @@ function CreatePortal() {
                     </label>
                     <div className="row g-2">
                       <div className="col-md-6">
-                        <select
-                          className="form-select"
+                        <LocationDropdown
+                          label="Select country"
                           value={location.country}
-                          onChange={(event) => handleLocationChange("country", event.target.value)}
-                          required
-                        >
-                          <option value="">Select country</option>
-                          {Object.keys(LOCATION_OPTIONS).map((country) => (
-                            <option key={country} value={country}>{country}</option>
-                          ))}
-                        </select>
+                          options={Object.keys(LOCATION_OPTIONS)}
+                          onChange={(value) => handleLocationChange("country", value)}
+                        />
                       </div>
                       <div className="col-md-6">
-                        <select
-                          className="form-select"
+                        <LocationDropdown
+                          label="Select state/region"
                           value={location.city}
-                          onChange={(event) => handleLocationChange("city", event.target.value)}
-                          disabled={!location.country}
-                          required
-                        >
-                          <option value="">Select state/region</option>
-                          {(LOCATION_OPTIONS[location.country] || []).map(
-                            ([city]) => <option key={city} value={city}>{city}</option>
+                          options={(LOCATION_OPTIONS[location.country] || []).map(
+                            ([region]) => region
                           )}
-                        </select>
+                          onChange={(value) => handleLocationChange("city", value)}
+                          disabled={!location.country}
+                        />
                       </div>
                     </div>
                     <small className="d-flex align-items-center gap-2 text-muted mt-2">
@@ -485,6 +482,52 @@ function CreatePortal() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LocationDropdown({ label, value, options, onChange, disabled = false }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={`portal-location-dropdown ${open ? "is-open" : ""}`}>
+      <button
+        type="button"
+        className="portal-location-trigger"
+        onClick={() => !disabled && setOpen((current) => !current)}
+        disabled={disabled}
+        aria-expanded={open}
+      >
+        <span className={value ? "" : "text-muted"}>{value || label}</span>
+        <ChevronDown size={18} />
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            className="portal-location-backdrop"
+            aria-label="Close location options"
+            onClick={() => setOpen(false)}
+          />
+          <div className="portal-location-menu">
+            {options.map((option) => (
+              <button
+                type="button"
+                className={option === value ? "is-selected" : ""}
+                key={option}
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+              >
+                <span>{option}</span>
+                {option === value && <Check size={16} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

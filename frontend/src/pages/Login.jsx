@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axiosConfig";
 import { Eye, EyeOff } from "lucide-react";
 import ficLogo from "../assets/images/fic-logo.png";
+import { clearAssistantSession } from "../utils/assistantSession";
 import {
   BsCalendarEvent,
   BsPeople,
@@ -48,6 +49,7 @@ function Login() {
       const role = rawRole === "Staff" ? "STAFF" : rawRole.toUpperCase();
 
       localStorage.clear();
+      clearAssistantSession();
       localStorage.setItem("token", response.data.token || "");
       localStorage.setItem("role", role);
       localStorage.setItem("email", response.data.email || "");

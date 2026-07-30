@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import HelpMenu from "../Help/HelpMenu";
 import { NotificationBell } from "./AdminNavbar";
+import { clearAssistantSession } from "../../utils/assistantSession";
 import {
   BsBox,
   BsBuilding,
@@ -79,6 +80,7 @@ function OrganizerNavbar() {
   const logout = () => {
     if (!window.confirm("Are you sure you want to log out?")) return;
     localStorage.clear();
+    clearAssistantSession();
     navigate("/");
   };
 

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { BsArrowLeft, BsChatDots, BsSend } from "react-icons/bs";
 import api from "../../api/axiosConfig";
+import {
+  appendAssistantMessage,
+  loadAssistantMessages
+} from "../../utils/assistantSession";
 
 function positiveNumber(value) {
   const number = Number(value);
@@ -22,12 +26,7 @@ function currentChatContext() {
 }
 
 function HelpAssistant({ onBack }) {
-  const [messages, setMessages] = useState([
-    {
-      from: "bot",
-      text: "Hello! I’m the FIC Assistant. Choose a topic or type your question."
-    }
-  ]);
+  const [messages, setMessages] = useState(loadAssistantMessages);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesRef = useRef(null);
@@ -43,10 +42,9 @@ function HelpAssistant({ onBack }) {
     const message = value.trim();
     if (!message || loading) return;
 
-    setMessages((current) => [
-      ...current,
-      { from: "user", text: message }
-    ]);
+    setMessages(
+      appendAssistantMessage({ from: "user", text: message })
+    );
     setQuestion("");
     setLoading(true);
 
@@ -57,29 +55,27 @@ function HelpAssistant({ onBack }) {
       });
 
       const answer = response.data?.answer?.trim();
-      setMessages((current) => [
-        ...current,
-        {
+      setMessages(
+        appendAssistantMessage({
           from: "bot",
           text:
             answer ||
             "I couldn’t generate an answer. Please try again or contact support."
-        }
-      ]);
+        })
+      );
     } catch (error) {
       const serverMessage =
         error.response?.data?.message ||
         error.response?.data?.error;
 
-      setMessages((current) => [
-        ...current,
-        {
+      setMessages(
+        appendAssistantMessage({
           from: "bot",
           text:
             serverMessage ||
             "The FIC Assistant is temporarily unavailable. Please try again shortly."
-        }
-      ]);
+        })
+      );
     } finally {
       setLoading(false);
     }

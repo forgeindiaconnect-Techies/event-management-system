@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axiosConfig";
+import { clearAssistantSession } from "../utils/assistantSession";
 import {
   BsBox,
   BsBuilding,
@@ -41,6 +42,7 @@ function CreatePortal() {
       const response = await api.post("/auth/create-portal", form);
 
       localStorage.clear();
+      clearAssistantSession();
       localStorage.setItem("token", response.data.token || "");
       localStorage.setItem("role", response.data.role || "");
       localStorage.setItem("email", response.data.email || "");

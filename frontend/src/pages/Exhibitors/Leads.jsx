@@ -223,7 +223,7 @@ function Leads() {
               </div>
 
               <Input label="Interested In" value={form.interest} onChange={(value) => updateField("interest", value)} />
-              <Select label="Source" value={form.source} onChange={(value) => updateField("source", value)} options={["Booth Visit", "QR Scan", "Demo Request", "Business Card", "Walk-in"]} />
+              <Select label="Source" value={form.source} onChange={(value) => updateField("source", value)} options={["Booth Visit", "Demo Request", "Business Card", "Walk-in"]} />
               <Select label="Status" value={form.status} onChange={(value) => updateField("status", value)} options={["New", "Contacted", "Converted", "Lost"]} />
             </div>
             <div className="d-flex justify-content-end gap-2 mt-4">

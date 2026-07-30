@@ -41,8 +41,8 @@ export default function SupportRequestForm({ onBack }) {
   return <div className="fic-support-view">
     <div className="fic-help-view-header"><button type="button" onClick={onBack}><BsArrowLeft/></button><span><b>Feedback & Support</b></span></div>
     <div className="fic-direct-support">
-      <a href={`mailto:${supportEmail}?subject=FIC BackRooms Support`}><BsEnvelope/><span><b>Email Support</b><small>{supportEmail}</small></span></a>
-      <a href={`tel:${supportPhone}`}><BsTelephone/><span><b>Call Support</b><small>{supportPhone}</small></span></a>
+      <a href={`mailto:${supportEmail}?subject=FIC BackRooms Support`}><BsEnvelope/><span><b>Email Support</b><small>Send an email</small></span></a>
+      <a href={`tel:${supportPhone}`}><BsTelephone/><span><b>Call Support</b><small>Call our team</small></span></a>
       <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hello FIC BackRooms Support, I need assistance with the platform.")}`} target="_blank" rel="noreferrer"><BsWhatsapp/><span><b>WhatsApp Support</b><small>Start a conversation</small></span></a>
     </div>
     <div className="fic-support-tabs"><button type="button" className={tab==="new"?"active":""} onClick={()=>{setTab("new");setError("");}}>New Request</button><button type="button" className={tab==="mine"?"active":""} onClick={()=>{setTab("mine");setError("");}}>My Requests</button></div>

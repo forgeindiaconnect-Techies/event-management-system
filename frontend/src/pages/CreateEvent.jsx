@@ -5,11 +5,13 @@ import "../styles/Admin.css";
 
 function CreateEvent() {
   const navigate = useNavigate();
+const minimumDateTime = toDateTimeLocalValue(new Date());
 const role = localStorage.getItem("role");
 const normalizedRole = role?.toUpperCase();
 const [categorySearch, setCategorySearch] = useState("");
 const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 const [customCategory, setCustomCategory] = useState("");
+const [bannerWarning, setBannerWarning] = useState("");
 
   const [event, setEvent] = useState({
     eventName: "",
@@ -32,6 +34,38 @@ const [customCategory, setCustomCategory] = useState("");
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setEvent({ ...event, [name]: type === "checkbox" ? checked : value });
+    if (name === "bannerUrl") setBannerWarning("");
+  };
+
+  const validateBannerUrl = (value) => {
+    const bannerUrl = value.trim();
+    if (!bannerUrl) return Promise.resolve(true);
+
+    try {
+      const parsedUrl = new URL(bannerUrl);
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        return Promise.resolve(false);
+      }
+    } catch {
+      return Promise.resolve(false);
+    }
+
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(true);
+      image.onerror = () => resolve(false);
+      image.src = bannerUrl;
+    });
+  };
+
+  const checkBannerUrl = async () => {
+    const isValid = await validateBannerUrl(event.bannerUrl);
+    setBannerWarning(
+      isValid
+        ? ""
+        : "This banner URL is not supported or the image cannot be loaded. Use a direct HTTP or HTTPS image URL."
+    );
+    return isValid;
   };
 
   const selectMode = (mode) => {
@@ -48,6 +82,37 @@ const [customCategory, setCustomCategory] = useState("");
 
     if (event.eventType === "Other" && !customCategory.trim()) {
       alert("Please enter your event category.");
+      return;
+    }
+
+    const now = new Date();
+    const startDateTime = new Date(event.startDateTime);
+    const endDateTime = new Date(event.endDateTime);
+    const registrationDeadline = event.registrationDeadline
+      ? new Date(event.registrationDeadline)
+      : null;
+
+    if (startDateTime <= now) {
+      alert("The event start date and time must be in the future.");
+      return;
+    }
+
+    if (endDateTime <= startDateTime) {
+      alert("The event end date and time must be after the start date and time.");
+      return;
+    }
+
+    if (registrationDeadline && registrationDeadline < now) {
+      alert("The registration deadline cannot be in the past.");
+      return;
+    }
+
+    if (registrationDeadline && registrationDeadline >= endDateTime) {
+      alert("The registration deadline must be before the event finishes.");
+      return;
+    }
+
+    if (!(await checkBannerUrl())) {
       return;
     }
 
@@ -282,6 +347,7 @@ const filteredCategoryGroups = categoryGroups
                     name="startDateTime"
                     value={event.startDateTime}
                     onChange={handleChange}
+                    min={minimumDateTime}
                     required
                   />
                 </div>
@@ -294,6 +360,7 @@ const filteredCategoryGroups = categoryGroups
                     name="endDateTime"
                     value={event.endDateTime}
                     onChange={handleChange}
+                    min={event.startDateTime || minimumDateTime}
                     required
                   />
                 </div>
@@ -346,6 +413,8 @@ const filteredCategoryGroups = categoryGroups
                     name="registrationDeadline"
                     value={event.registrationDeadline}
                     onChange={handleChange}
+                    min={minimumDateTime}
+                    max={event.endDateTime || undefined}
                   />
                 </div>
               </div>
@@ -410,11 +479,23 @@ const filteredCategoryGroups = categoryGroups
               <div className="mb-3">
                 <label className="form-label fw-semibold">Banner URL</label>
                 <input
-                  className="form-control"
+                  className={`form-control ${bannerWarning ? "is-invalid" : ""}`}
                   name="bannerUrl"
+                  type="text"
+                  inputMode="url"
+                  placeholder="https://example.com/event-banner.jpg"
                   value={event.bannerUrl}
                   onChange={handleChange}
+                  onBlur={checkBannerUrl}
                 />
+                {bannerWarning && (
+                  <div className="invalid-feedback d-block">{bannerWarning}</div>
+                )}
+                {!event.bannerUrl && (
+                  <div className="form-text">
+                    Leave this blank to use the default event banner.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -458,6 +539,11 @@ const filteredCategoryGroups = categoryGroups
       </div>
     </div>
   );
+}
+
+function toDateTimeLocalValue(date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
 function ModeCard({ title, text, active, onClick }) {

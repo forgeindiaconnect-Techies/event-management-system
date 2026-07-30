@@ -71,20 +71,26 @@ function Agenda() {
       {
         key: "morning",
         title: "Morning",
-        time: "Before 12:00 PM",
-        sessions: sessions.filter((session) => session.period === "morning")
+        time: "06:00 AM - 11:59 AM",
+        sessions: sessions.filter((session) => sessionOverlapsPeriod(session, 6 * 60, 12 * 60))
       },
       {
         key: "noon",
         title: "Noon",
         time: "12:00 PM - 04:00 PM",
-        sessions: sessions.filter((session) => session.period === "noon")
+        sessions: sessions.filter((session) => sessionOverlapsPeriod(session, 12 * 60, 16 * 60))
       },
       {
         key: "evening",
         title: "Evening",
-        time: "After 04:00 PM",
-        sessions: sessions.filter((session) => session.period === "evening")
+        time: "04:00 PM - 09:59 PM",
+        sessions: sessions.filter((session) => sessionOverlapsPeriod(session, 16 * 60, 22 * 60))
+      },
+      {
+        key: "night",
+        title: "Night Session",
+        time: "10:00 PM onwards",
+        sessions: sessions.filter((session) => sessionOverlapsPeriod(session, 22 * 60, 24 * 60))
       }
     ],
     [sessions]
@@ -133,6 +139,16 @@ function Agenda() {
 
     if (!form.title.trim() || !form.date || !form.startTime || !form.endTime) {
       setMessage("Session title, date, start time and end time are required.");
+      return;
+    }
+
+    if (form.endTime <= form.startTime) {
+      setMessage("Session end time must be after the start time.");
+      return;
+    }
+
+    if (form.startTime < "06:00") {
+      setMessage("Agenda sessions cannot start before 6:00 AM.");
       return;
     }
 
@@ -256,6 +272,7 @@ function Agenda() {
                 <label className="form-label fw-semibold">Start Time *</label>
                 <input
                   type="time"
+                  min="06:00"
                   className="form-control"
                   value={form.startTime}
                   onChange={(e) => updateField("startTime", e.target.value)}
@@ -270,6 +287,13 @@ function Agenda() {
                   onChange={(e) => updateField("endTime", e.target.value)}
                 />
               </div>
+              {includesNightTime(form.startTime, form.endTime) ? (
+                <div className="col-12">
+                  <div className="alert alert-warning mb-0" role="alert">
+                    This session includes time at or after 10:00 PM and will also appear under Night Session.
+                  </div>
+                </div>
+              ) : null}
               <div className="col-md-6">
                 <label className="form-label fw-semibold">Venue / Hall</label>
                 <input
@@ -300,6 +324,7 @@ function Agenda() {
                   <option value="morning">Morning</option>
                   <option value="noon">Noon</option>
                   <option value="evening">Evening</option>
+                  <option value="night">Night Session</option>
                 </select>
               </div>
             </div>
@@ -427,7 +452,7 @@ function Agenda() {
               </div>
 
               <SettingRow label="Session ordering" value="Time based" />
-              <SettingRow label="Display format" value="Morning / Noon / Evening" />
+              <SettingRow label="Display format" value="Morning / Noon / Evening / Night" />
               <SettingRow label="Capacity tracking" value="Editable" />
               <SettingRow label="Speaker assignment" value="Optional" />
               <SettingRow label="Venue assignment" value="Optional" />
@@ -435,8 +460,9 @@ function Agenda() {
               <div className="bg-light border rounded-3 p-3 mt-3">
                 <div className="fw-semibold mb-1">Time split</div>
                 <p className="text-muted small mb-0">
-                  Start time before 12:00 PM is Morning, 12:00 PM to 3:59 PM is Noon,
-                  and 4:00 PM onwards is Evening.
+                  Sessions can start from 6:00 AM. Start time before 12:00 PM is Morning,
+                  12:00 PM to 3:59 PM is Noon, 4:00 PM to 9:59 PM is Evening,
+                  and 10:00 PM onwards is a Night Session.
                 </p>
               </div>
             </div>
@@ -480,7 +506,28 @@ function getPeriod(time) {
   const hour = Number(time.split(":")[0]);
   if (hour < 12) return "morning";
   if (hour < 16) return "noon";
+  if (hour >= 22) return "night";
   return "evening";
+}
+
+function timeToMinutes(time) {
+  if (!time) return null;
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function sessionOverlapsPeriod(session, periodStart, periodEnd) {
+  const sessionStart = timeToMinutes(session.startTime);
+  const sessionEnd = timeToMinutes(session.endTime);
+
+  if (sessionStart === null || sessionEnd === null) return false;
+  return sessionStart < periodEnd && sessionEnd > periodStart;
+}
+
+function includesNightTime(startTime, endTime) {
+  const start = timeToMinutes(startTime);
+  const end = timeToMinutes(endTime);
+  return (start !== null && start >= 22 * 60) || (end !== null && end > 22 * 60);
 }
 
 function formatTime(time) {

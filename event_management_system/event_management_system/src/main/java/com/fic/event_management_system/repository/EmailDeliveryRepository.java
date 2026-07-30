@@ -51,6 +51,11 @@ public interface EmailDeliveryRepository
 
     long countByStatus(EmailDeliveryStatus status);
 
+    long countByDeduplicationKeyStartingWithAndStatus(
+            String deduplicationKeyPrefix,
+            EmailDeliveryStatus status
+    );
+
     @Modifying
     @Query("""
         update EmailDelivery delivery

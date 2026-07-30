@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { clearAssistantSession } from "../../utils/assistantSession";
 import {
   BsBarChart,
   BsBox,
@@ -150,6 +151,7 @@ function SuperAdminDashboard({ section = "overview" }) {
   const logout = () => {
     if (!window.confirm("Are you sure you want to log out?")) return;
     localStorage.clear();
+    clearAssistantSession();
     navigate("/");
   };
 

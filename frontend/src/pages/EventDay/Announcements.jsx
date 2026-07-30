@@ -22,24 +22,21 @@ function Announcements() {
     loadData();
   }, [id]);
 
-  const storageKey = `event-day-announcements-${id}`;
-
   const loadData = async () => {
     try {
-      const registrationsRes = await api.get(`/registrations/event/${id}`);
+      const [registrationsRes, announcementsRes] = await Promise.all([
+        api.get(`/registrations/event/${id}`),
+        api.get(`/events/${id}/announcements`),
+      ]);
       setRegistrations(registrationsRes.data || []);
+      setAnnouncements(announcementsRes.data || []);
+      setMessage("");
     } catch (error) {
       console.log(error);
       setRegistrations([]);
+      setAnnouncements([]);
+      setMessage("Unable to load announcements.");
     }
-
-    const saved = localStorage.getItem(storageKey);
-    setAnnouncements(saved ? JSON.parse(saved) : []);
-  };
-
-  const saveAnnouncements = (nextAnnouncements) => {
-    setAnnouncements(nextAnnouncements);
-    localStorage.setItem(storageKey, JSON.stringify(nextAnnouncements));
   };
 
   const recipientCount = useMemo(() => {
@@ -59,7 +56,7 @@ function Announcements() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.title.trim() || !form.message.trim()) {
@@ -67,36 +64,58 @@ function Announcements() {
       return;
     }
 
-    const newAnnouncement = {
-      id: Date.now(),
-      ...form,
-      recipients: recipientCount,
-      read: 0,
-      createdAt: new Date().toISOString(),
-    };
+    if (form.status === "Scheduled" && !form.scheduledAt) {
+      setMessage("Choose a future date and time for the scheduled announcement.");
+      return;
+    }
 
-    saveAnnouncements([newAnnouncement, ...announcements]);
-    setForm(initialForm);
-    setMessage("Announcement saved successfully.");
+    try {
+      const payload = {
+        title: form.title,
+        message: form.message,
+        audience: form.audience.toUpperCase().replaceAll(" ", "_").replaceAll("-", "_"),
+        status: form.status.toUpperCase(),
+        scheduledAt: form.status === "Scheduled"
+          ? new Date(form.scheduledAt).toISOString().slice(0, 19)
+          : null,
+      };
+      const response = await api.post(`/events/${id}/announcements`, payload);
+      setAnnouncements((current) => [response.data, ...current]);
+      setForm(initialForm);
+      setMessage(
+        form.status === "Draft"
+          ? "Announcement saved as a draft."
+          : `${response.data.recipientCount} announcement emails queued successfully.`
+      );
+    } catch (error) {
+      setMessage(error.response?.data?.message || error.response?.data?.error || "Unable to save announcement.");
+    }
   };
 
-  const publishAnnouncement = (announcementId) => {
-    const next = announcements.map((announcement) =>
-      announcement.id === announcementId
-        ? {
-            ...announcement,
-            status: "Published",
-            read: Math.round((announcement.recipients || 0) * 0.75),
-          }
-        : announcement
-    );
-    saveAnnouncements(next);
-    setMessage("Announcement published.");
+  const publishAnnouncement = async (announcementId) => {
+    try {
+      const response = await api.post(`/events/${id}/announcements/${announcementId}/publish`);
+      setAnnouncements((current) =>
+        current.map((announcement) =>
+          announcement.id === announcementId ? response.data : announcement
+        )
+      );
+      setMessage("Announcement emails queued for delivery.");
+    } catch (error) {
+      setMessage(error.response?.data?.message || error.response?.data?.error || "Unable to publish announcement.");
+    }
   };
 
-  const deleteAnnouncement = (announcementId) => {
-    saveAnnouncements(announcements.filter((announcement) => announcement.id !== announcementId));
-    setMessage("Announcement deleted.");
+  const deleteAnnouncement = async (announcementId) => {
+    try {
+      await api.delete(`/events/${id}/announcements/${announcementId}`);
+      setAnnouncements((current) =>
+        current.filter((announcement) => announcement.id !== announcementId)
+      );
+      setMessage("Draft announcement deleted.");
+    } catch (error) {
+      setMessage(error.response?.data?.message || error.response?.data?.error || "Unable to delete announcement.");
+    }
   };
 
   return (
@@ -175,10 +194,12 @@ function Announcements() {
                     <label className="form-label fw-semibold">Schedule</label>
                     <input
                       className="form-control"
-                      type="time"
+                      type="datetime-local"
                       name="scheduledAt"
                       value={form.scheduledAt}
                       onChange={handleChange}
+                      disabled={form.status !== "Scheduled"}
+                      min={toDateTimeLocalValue(new Date())}
                     />
                   </div>
                 </div>
@@ -205,7 +226,7 @@ function Announcements() {
                       <th>Announcement</th>
                       <th>Status</th>
                       <th>Recipients</th>
-                      <th>Read</th>
+                      <th>Sent</th>
                       <th className="text-end">Actions</th>
                     </tr>
                   </thead>
@@ -222,19 +243,19 @@ function Announcements() {
                           <td>
                             <div className="fw-semibold">{announcement.title}</div>
                             <div className="text-muted small">{announcement.message}</div>
-                            {announcement.scheduledAt && (
-                              <div className="text-muted small">Scheduled: {announcement.scheduledAt}</div>
+                            {announcement.scheduledAt && announcement.status === "SCHEDULED" && (
+                              <div className="text-muted small">Scheduled: {formatScheduledTime(announcement.scheduledAt)}</div>
                             )}
                           </td>
                           <td>
                             <span className={`badge ${getStatusClass(announcement.status)}`}>
-                              {announcement.status}
+                              {formatLabel(announcement.status)}
                             </span>
                           </td>
-                          <td>{announcement.recipients}</td>
-                          <td>{announcement.read}</td>
+                          <td>{announcement.recipientCount}</td>
+                          <td>{announcement.sentCount}</td>
                           <td className="text-end">
-                            {announcement.status !== "Published" && (
+                            {announcement.status === "DRAFT" && (
                               <button
                                 className="btn btn-sm btn-outline-primary me-2"
                                 onClick={() => publishAnnouncement(announcement.id)}
@@ -242,12 +263,14 @@ function Announcements() {
                                 <BsSend />
                               </button>
                             )}
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => deleteAnnouncement(announcement.id)}
-                            >
-                              <BsTrash />
-                            </button>
+                            {announcement.status === "DRAFT" && (
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => deleteAnnouncement(announcement.id)}
+                              >
+                                <BsTrash />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -264,9 +287,23 @@ function Announcements() {
 }
 
 function getStatusClass(status) {
-  if (status === "Published") return "text-bg-success";
-  if (status === "Scheduled") return "text-bg-primary";
+  if (status === "PUBLISHED") return "text-bg-success";
+  if (status === "SCHEDULED") return "text-bg-primary";
   return "text-bg-secondary";
+}
+
+function formatLabel(value = "") {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatScheduledTime(value) {
+  const timestamp = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;
+  return new Date(timestamp).toLocaleString();
+}
+
+function toDateTimeLocalValue(date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
 export default Announcements;

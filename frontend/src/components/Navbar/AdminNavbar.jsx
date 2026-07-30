@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import HelpMenu from "../Help/HelpMenu";
+import { clearAssistantSession } from "../../utils/assistantSession";
 import {
   BsBox,
   BsBuilding,
@@ -94,6 +95,7 @@ function AdminNavbar() {
   const logout = () => {
     if (!window.confirm("Are you sure you want to log out?")) return;
     localStorage.clear();
+    clearAssistantSession();
     navigate("/");
   };
 
@@ -695,7 +697,9 @@ export function NotificationBell() {
 
 function formatNotificationDate(value) {
   if (!value) return "";
-  const date = new Date(value);
+  const timestamp = String(value);
+  const hasTimeZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp);
+  const date = new Date(hasTimeZone ? timestamp : `${timestamp}Z`);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString([], {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   });

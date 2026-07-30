@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAssistantSession } from "../utils/assistantSession";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -33,6 +34,7 @@ api.interceptors.response.use(
     // A 403 means the user is logged in but lacks permission for one action.
     if (error.response?.status === 401) {
       localStorage.clear();
+      clearAssistantSession();
       window.location.href = "/login";
     }
 

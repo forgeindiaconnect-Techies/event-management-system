@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Default event banner</title>
+  <desc id="description">FIC BackRooms default event banner</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17105f"/>
+      <stop offset="0.55" stop-color="#4338ca"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <circle cx="1030" cy="80" r="310" fill="url(#glow)"/>
+  <circle cx="120" cy="610" r="360" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity=".16" stroke-width="2">
+    <path d="M875 88l170 98-170 98-170-98z"/>
+    <path d="M705 186v190l170 98 170-98V186"/>
+    <path d="M875 284v190"/>
+  </g>
+  <g transform="translate(120 170)">
+    <path d="M80 0l80 46v92l-80 46L0 138V46z" fill="#fff" fill-opacity=".12" stroke="#fff" stroke-width="5"/>
+    <path d="M0 46l80 46 80-46M80 92v92" fill="none" stroke="#fff" stroke-width="5"/>
+  </g>
+  <text x="330" y="275" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="700">FIC BackRooms</text>
+  <text x="333" y="345" fill="#ffffff" fill-opacity=".82" font-family="Arial, Helvetica, sans-serif" font-size="34">Event banner</text>
+</svg>

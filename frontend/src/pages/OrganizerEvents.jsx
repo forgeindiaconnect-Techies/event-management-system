@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import OrganizerLayout from "../layouts/OrganizerLayout";
 import api from "../api/axiosConfig";
-import { getDefaultBanner } from "../utils/bannerUtils";
+import { getDefaultBanner, useDefaultBannerOnError } from "../utils/bannerUtils";
 import { useNavigate } from "react-router-dom";
 import "../styles/Admin.css";
 import {
@@ -193,6 +193,7 @@ function OrganizerEvents() {
                 <div className="position-relative">
                   <img
   src={event.bannerUrl || getDefaultBanner(event.eventType)}
+  onError={useDefaultBannerOnError}
   alt={event.eventName}
   className="card-img-top event-card-image"
   style={{

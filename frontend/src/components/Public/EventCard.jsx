@@ -3,7 +3,10 @@ import {
   FaCalendarAlt,
   FaMapMarkerAlt
 } from "react-icons/fa";
-import { getDefaultBanner } from "../../utils/bannerUtils";
+import {
+  getDefaultBanner,
+  useDefaultBannerOnError
+} from "../../utils/bannerUtils";
 
 function EventCard({ event }) {
   const navigate = useNavigate();
@@ -34,6 +37,7 @@ function EventCard({ event }) {
             event.bannerUrl ||
             getDefaultBanner(event.eventType)
           }
+          onError={useDefaultBannerOnError}
           alt={event.eventName}
           className="w-100"
           style={{

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import "../styles/Admin.css";
 import api from "../api/axiosConfig";
+import { buildLoginDetails, generateTemporaryPassword } from "../utils/temporaryCredentials";
 import {
   BsEnvelope,
   BsPersonPlus,
@@ -18,11 +19,13 @@ function Organizers() {
   const [loading, setLoading] = useState(false);
   const [organizers, setOrganizers] = useState([]);
   const [addMode, setAddMode] = useState("email");
+  const [createdCredentials, setCreatedCredentials] = useState(null);
   const [manualForm, setManualForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
+    password: "",
   });
 
   useEffect(() => {
@@ -109,8 +112,8 @@ function Organizers() {
       return;
     }
 
-    if (!manualForm.firstName.trim() || !manualForm.lastName.trim() || !manualForm.email.trim() || !manualForm.phoneNumber.trim()) {
-      setMessage("First name, last name, email address and phone number are required.");
+    if (!manualForm.firstName.trim() || !manualForm.lastName.trim() || !manualForm.email.trim() || !manualForm.phoneNumber.trim() || !manualForm.password) {
+      setMessage("First name, last name, email, phone number and temporary password are required.");
       return;
     }
 
@@ -123,8 +126,9 @@ function Organizers() {
         portalId: Number(portalId),
         invitedById: Number(invitedById),
       });
-      setMessage("Organizer account created. A secure set-password link was sent to their email and expires in one hour.");
-      setManualForm({ firstName: "", lastName: "", email: "", phoneNumber: "" });
+      setCreatedCredentials({ email: manualForm.email.trim(), password: manualForm.password });
+      setMessage("Organizer account created. Copy and share the login details privately.");
+      setManualForm({ firstName: "", lastName: "", email: "", phoneNumber: "", password: "" });
       fetchOrganizers();
     } catch (error) {
       console.log(error);
@@ -240,9 +244,17 @@ function Organizers() {
                   <label className="form-label">Phone Number <span className="text-danger">*</span></label>
                   <input className="form-control" type="tel" inputMode="numeric" pattern="[0-9]{10,15}" name="phoneNumber" value={manualForm.phoneNumber} onChange={handleManualChange} required />
                 </div>
+                <div className="col-md-6">
+                  <label className="form-label">Temporary Password <span className="text-danger">*</span></label>
+                  <div className="input-group">
+                    <input className="form-control" name="password" value={manualForm.password} onChange={handleManualChange} minLength="8" required />
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setManualForm((current) => ({ ...current, password: generateTemporaryPassword() }))}>Generate</button>
+                  </div>
+                  <small className="text-muted">Use at least 8 characters with uppercase, lowercase and a number.</small>
+                </div>
               </div>
               <button className="btn btn-primary mt-3" disabled={loading} style={{ borderRadius: "10px", padding: "9px 22px" }}>
-                {loading ? "Creating..." : "Create & Send Set-Password Link"}
+                {loading ? "Creating..." : "Create Account Directly"}
               </button>
             </form>}
 
@@ -274,6 +286,17 @@ function Organizers() {
                     <BsClipboard />
                   </button>
                 </div>
+              </div>
+            )}
+            {createdCredentials && (
+              <div className="alert alert-warning mt-3 mb-0">
+                <strong>Login details — shown after creation</strong>
+                <div className="mt-2">Email: {createdCredentials.email}</div>
+                <div>Temporary password: {createdCredentials.password}</div>
+                <button type="button" className="btn btn-sm btn-dark mt-2" onClick={async () => {
+                  await navigator.clipboard.writeText(buildLoginDetails(createdCredentials.email, createdCredentials.password));
+                  setMessage("Login details copied.");
+                }}>Copy Login Details</button>
               </div>
             )}
           </div>

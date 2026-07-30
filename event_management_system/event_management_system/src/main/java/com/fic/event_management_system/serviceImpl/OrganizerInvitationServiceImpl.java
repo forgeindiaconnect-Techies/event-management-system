@@ -234,6 +234,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
                 || request.getLastName() == null || request.getLastName().isBlank()) {
             throw new RuntimeException("Organizer first name and last name are required");
         }
+        validateTemporaryPassword(request.getPassword());
         String normalizedEmail = request.getEmail().trim().toLowerCase();
         if (userRepository.findByEmail(normalizedEmail).isPresent()) {
             throw new RuntimeException("A user already exists with this email");
@@ -257,15 +258,13 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         organizer.setLastName(request.getLastName().trim());
         organizer.setEmail(normalizedEmail);
         organizer.setPhoneNumber(request.getPhoneNumber());
-        // A random placeholder prevents login until the recipient sets a password from the email link.
-        organizer.setPassword(UUID.randomUUID().toString());
+        organizer.setPassword(request.getPassword());
         organizer.setRole(organizerRole);
         organizer.setPortal(portal);
-        organizer.setActive(false);
-        organizer.setPasswordSetupRequired(true);
+        organizer.setActive(true);
+        organizer.setPasswordSetupRequired(false);
 
         User savedUser = userRepository.save(organizer);
-        accountActivationService.sendPasswordSetupLink(savedUser);
 
         notificationService.createNotification(
                 invitedBy,
@@ -280,6 +279,17 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         );
 
         return savedUser;
+    }
+
+    private void validateTemporaryPassword(String password) {
+        if (password == null || password.length() < 8
+                || !password.matches(".*[A-Z].*")
+                || !password.matches(".*[a-z].*")
+                || !password.matches(".*\\d.*")) {
+            throw new RuntimeException(
+                    "Temporary password must be at least 8 characters and include uppercase, lowercase and a number"
+            );
+        }
     }
 
     @Override

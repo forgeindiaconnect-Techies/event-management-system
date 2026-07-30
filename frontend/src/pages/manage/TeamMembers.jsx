@@ -13,6 +13,7 @@ import {
   FaUsers
 } from "react-icons/fa";
 import api from "../../api/axiosConfig";
+import { buildLoginDetails, generateTemporaryPassword } from "../../utils/temporaryCredentials";
 
 const teamRoles = ["Staff", "VOLUNTEER", "COORDINATOR", "SPEAKER", "JUDGE", "TRAINER", "CHIEF_GUEST"];
 
@@ -21,7 +22,8 @@ const emptyInvite = {
   roleName: "Staff",
   firstName: "",
   lastName: "",
-  phoneNumber: ""
+  phoneNumber: "",
+  password: ""
 };
 
 function TeamMembers() {
@@ -37,6 +39,7 @@ function TeamMembers() {
   const [addMode, setAddMode] = useState("email");
   const [inviteForm, setInviteForm] = useState(emptyInvite);
   const [submitting, setSubmitting] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
 
   useEffect(() => {
     loadTeamData();
@@ -131,8 +134,10 @@ function TeamMembers() {
           firstName: inviteForm.firstName.trim(),
           lastName: inviteForm.lastName.trim(),
           phoneNumber: inviteForm.phoneNumber.trim()
+          ,password: inviteForm.password
         });
-        setMessage("Team member created and assigned. A one-hour set-password link was sent to their email.");
+        setCreatedCredentials({ email: inviteForm.email.trim(), password: inviteForm.password });
+        setMessage("Team member created and assigned. Copy and share the login details privately.");
       }
 
       setInviteForm(emptyInvite);
@@ -221,10 +226,12 @@ function TeamMembers() {
               {addMode === "manual" && (
                 <div className="team-form-grid">
                   <label>Phone Number *<input value={inviteForm.phoneNumber} onChange={(e) => updateInvite("phoneNumber", e.target.value)} required /></label>
-                  <div className="team-password-notice">
-                    <strong>Password setup</strong>
-                    <span>A secure link is sent to the member's email. It expires after one hour and lets them choose their own password.</span>
-                  </div>
+                  <label>Temporary Password *
+                    <span className="input-group">
+                      <input value={inviteForm.password} onChange={(e) => updateInvite("password", e.target.value)} minLength="8" required />
+                      <button type="button" className="btn btn-outline-secondary" onClick={() => updateInvite("password", generateTemporaryPassword())}>Generate</button>
+                    </span>
+                  </label>
                 </div>
               )}
 
@@ -238,6 +245,17 @@ function TeamMembers() {
               </div>
             </form>
           </div>
+          {createdCredentials && (
+            <div className="alert alert-warning m-3 mt-0">
+              <strong>Login details — shown after creation</strong>
+              <div>Email: {createdCredentials.email}</div>
+              <div>Temporary password: {createdCredentials.password}</div>
+              <button type="button" className="btn btn-sm btn-dark mt-2" onClick={async () => {
+                await navigator.clipboard.writeText(buildLoginDetails(createdCredentials.email, createdCredentials.password));
+                setMessage("Login details copied.");
+              }}>Copy Login Details</button>
+            </div>
+          )}
         </section>
       )}
 

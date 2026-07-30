@@ -295,6 +295,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
                 || request.getLastName() == null || request.getLastName().isBlank()) {
             throw new RuntimeException("First name and last name are required");
         }
+        validateTemporaryPassword(request.getPassword());
         Event event = request.getEventId() == null ? null
                 : tenantSecurityService.getEventFromLoggedInPortal(request.getEventId());
         Portal portal = event != null ? event.getPortal() : portalRepository.findById(request.getPortalId())
@@ -315,16 +316,14 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         user.setLastName(request.getLastName().trim());
         user.setEmail(email);
         user.setPhoneNumber(request.getPhoneNumber());
-        // A secure random placeholder prevents login until the recipient sets a password from their email link.
-        user.setPassword(UUID.randomUUID().toString());
+        user.setPassword(request.getPassword());
         user.setRole(role);
         // Every manually created account belongs to the portal that created it.
         // Event-specific access is still controlled by EventAssignment.
         user.setPortal(portal);
-        user.setActive(false);
-        user.setPasswordSetupRequired(true);
+        user.setActive(true);
+        user.setPasswordSetupRequired(false);
         user = userRepository.save(user);
-        accountActivationService.sendPasswordSetupLink(user);
 
         User createdBy = tenantSecurityService.getLoggedInUser();
         notificationService.createNotification(
@@ -365,6 +364,17 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
             createEventAssignment(assignmentSource, user);
         }
         return user;
+    }
+
+    private void validateTemporaryPassword(String password) {
+        if (password == null || password.length() < 8
+                || !password.matches(".*[A-Z].*")
+                || !password.matches(".*[a-z].*")
+                || !password.matches(".*\\d.*")) {
+            throw new RuntimeException(
+                    "Temporary password must be at least 8 characters and include uppercase, lowercase and a number"
+            );
+        }
     }
 
     @Override

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import OrganizerLayout from "../layouts/OrganizerLayout";
 import api from "../api/axiosConfig";
 import "../styles/Admin.css";
+import { buildLoginDetails, generateTemporaryPassword } from "../utils/temporaryCredentials";
 import {
   BsPersonPlus,
   BsEnvelope,
@@ -28,7 +29,8 @@ function OrganizerInviteStaff() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
   const [addMode, setAddMode] = useState("email");
-  const [manualData, setManualData] = useState({ firstName: "", lastName: "", phoneNumber: "" });
+  const [manualData, setManualData] = useState({ firstName: "", lastName: "", phoneNumber: "", password: "" });
+  const [createdCredentials, setCreatedCredentials] = useState(null);
 
   const roles = [
     "Staff",
@@ -157,10 +159,11 @@ function OrganizerInviteStaff() {
         invitedById: Number(localStorage.getItem("userId")),
         eventId: selectedEvent ? Number(selectedEvent.id) : null,
       });
-      setMessage("User created and assigned. A one-hour set-password link was sent to their email.");
+      setCreatedCredentials({ email: formData.email.trim(), password: manualData.password });
+      setMessage("User created and assigned. Copy and share the login details privately.");
       setMessageType("success");
       setFormData({ email: "", roleName: "Staff", eventId: "" });
-      setManualData({ firstName: "", lastName: "", phoneNumber: "" });
+      setManualData({ firstName: "", lastName: "", phoneNumber: "", password: "" });
       refreshHistory();
     } catch (error) {
       setMessage(error.response?.data?.message || "Failed to create the user.");
@@ -350,12 +353,25 @@ function OrganizerInviteStaff() {
 
               {addMode === "manual" && <div className="row g-3 mb-3">
                 <div className="col-md-6"><label className="form-label fw-semibold">Phone Number</label><input className="form-control" style={{ height: "48px" }} value={manualData.phoneNumber} onChange={(e) => setManualData({ ...manualData, phoneNumber: e.target.value })} required /></div>
-                <div className="col-md-6 d-flex align-items-end">
-                  <div className="alert alert-info w-100 mb-0 py-2 small">
-                    The member will receive a secure set-password link by email. The link expires after one hour.
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Temporary Password</label>
+                  <div className="input-group">
+                    <input className="form-control" value={manualData.password} onChange={(e) => setManualData({ ...manualData, password: e.target.value })} minLength="8" required />
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setManualData({ ...manualData, password: generateTemporaryPassword() })}>Generate</button>
                   </div>
                 </div>
               </div>}
+              {createdCredentials && (
+                <div className="alert alert-warning">
+                  <strong>Login details — shown after creation</strong>
+                  <div>Email: {createdCredentials.email}</div>
+                  <div>Temporary password: {createdCredentials.password}</div>
+                  <button type="button" className="btn btn-sm btn-dark mt-2" onClick={async () => {
+                    await navigator.clipboard.writeText(buildLoginDetails(createdCredentials.email, createdCredentials.password));
+                    setMessage("Login details copied.");
+                  }}>Copy Login Details</button>
+                </div>
+              )}
 
               <div className="mb-4">
                 <label className="form-label fw-semibold">Select Role</label>

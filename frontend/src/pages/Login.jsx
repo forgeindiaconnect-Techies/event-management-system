@@ -246,31 +246,14 @@ function Login() {
                 >
                   Login <BsArrowRight />
                 </button>
-              </form>
 
-              <hr className="my-4" />
-
-              <div
-                className="p-3"
-                style={{
-                  background: "#f8fafc",
-                  borderRadius: "18px",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <h6 className="fw-bold mb-2">New to FIC BackRooms?</h6>
-                <p className="text-muted mb-3" style={{ fontSize: "14px" }}>
-                  Create a portal for your organization and start managing events.
+                <p className="text-center text-muted mt-4 mb-0">
+                  New user?{" "}
+                  <Link to="/create-portal" className="fw-semibold text-primary text-decoration-none">
+                    Sign up
+                  </Link>
                 </p>
-
-                <Link
-                  to="/create-portal"
-                  className="btn btn-outline-primary w-100"
-                  style={{ borderRadius: "12px" }}
-                >
-                  Create Portal
-                </Link>
-              </div>
+              </form>
             </div>
           </div>
         </div>

@@ -17,37 +17,57 @@ import ficLogo from "../assets/images/fic-logo.png";
 
 const LOCATION_OPTIONS = {
   India: [
-    ["Bengaluru", "Asia/Kolkata"],
-    ["Chennai", "Asia/Kolkata"],
-    ["Hyderabad", "Asia/Kolkata"],
-    ["Mumbai", "Asia/Kolkata"],
-    ["New Delhi", "Asia/Kolkata"],
-    ["Kolkata", "Asia/Kolkata"],
-    ["Pune", "Asia/Kolkata"],
+    ["Karnataka", "Asia/Kolkata"],
+    ["Tamil Nadu", "Asia/Kolkata"],
+    ["Telangana", "Asia/Kolkata"],
+    ["Maharashtra", "Asia/Kolkata"],
+    ["Delhi", "Asia/Kolkata"],
+    ["Kerala", "Asia/Kolkata"],
+    ["Andhra Pradesh", "Asia/Kolkata"],
+    ["Gujarat", "Asia/Kolkata"],
+    ["West Bengal", "Asia/Kolkata"],
+    ["Rajasthan", "Asia/Kolkata"],
+    ["Uttar Pradesh", "Asia/Kolkata"],
+    ["Punjab", "Asia/Kolkata"],
+    ["Odisha", "Asia/Kolkata"],
   ],
-  "United Arab Emirates": [["Dubai", "Asia/Dubai"], ["Abu Dhabi", "Asia/Dubai"]],
+  "United Arab Emirates": [
+    ["Dubai", "Asia/Dubai"],
+    ["Abu Dhabi", "Asia/Dubai"],
+    ["Sharjah", "Asia/Dubai"],
+  ],
   Singapore: [["Singapore", "Asia/Singapore"]],
-  "United Kingdom": [["London", "Europe/London"], ["Manchester", "Europe/London"]],
+  "United Kingdom": [
+    ["England", "Europe/London"],
+    ["Scotland", "Europe/London"],
+    ["Wales", "Europe/London"],
+    ["Northern Ireland", "Europe/London"],
+  ],
   "United States": [
-    ["New York City", "America/New_York"],
-    ["Chicago", "America/Chicago"],
-    ["Denver", "America/Denver"],
-    ["San Francisco", "America/Los_Angeles"],
-    ["Los Angeles", "America/Los_Angeles"],
+    ["New York", "America/New_York"],
+    ["Florida", "America/New_York"],
+    ["Texas", "America/Chicago"],
+    ["Illinois", "America/Chicago"],
+    ["Colorado", "America/Denver"],
+    ["California", "America/Los_Angeles"],
+    ["Washington", "America/Los_Angeles"],
   ],
   Canada: [
-    ["Toronto", "America/Toronto"],
-    ["Vancouver", "America/Vancouver"],
+    ["Ontario", "America/Toronto"],
+    ["Quebec", "America/Toronto"],
+    ["Alberta", "America/Edmonton"],
+    ["British Columbia", "America/Vancouver"],
   ],
   Australia: [
-    ["Sydney", "Australia/Sydney"],
-    ["Melbourne", "Australia/Melbourne"],
-    ["Perth", "Australia/Perth"],
+    ["New South Wales", "Australia/Sydney"],
+    ["Victoria", "Australia/Melbourne"],
+    ["Queensland", "Australia/Brisbane"],
+    ["Western Australia", "Australia/Perth"],
   ],
-  Germany: [["Berlin", "Europe/Berlin"], ["Frankfurt", "Europe/Berlin"]],
-  France: [["Paris", "Europe/Paris"]],
-  Japan: [["Tokyo", "Asia/Tokyo"]],
-  "Saudi Arabia": [["Riyadh", "Asia/Riyadh"], ["Jeddah", "Asia/Riyadh"]],
+  Germany: [["Berlin", "Europe/Berlin"], ["Bavaria", "Europe/Berlin"], ["Hesse", "Europe/Berlin"]],
+  France: [["Île-de-France", "Europe/Paris"], ["Provence", "Europe/Paris"]],
+  Japan: [["Tokyo", "Asia/Tokyo"], ["Osaka", "Asia/Tokyo"]],
+  "Saudi Arabia": [["Riyadh Province", "Asia/Riyadh"], ["Makkah Province", "Asia/Riyadh"]],
   Qatar: [["Doha", "Asia/Qatar"]],
 };
 
@@ -88,6 +108,7 @@ function CreatePortal() {
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [location, setLocation] = useState({ country: "", city: "" });
+  const [phoneCountry, setPhoneCountry] = useState("");
   const [phoneDigits, setPhoneDigits] = useState("");
 
   const handleChange = (e) => {
@@ -109,19 +130,15 @@ function CreatePortal() {
       : "";
 
     setLocation(nextLocation);
-    if (field === "country") {
-      setPhoneDigits("");
-    }
     setForm((current) => ({
       ...current,
       organizationLocation: completeLocation,
       timeZone: selectedCity?.[1] || browserTimeZone,
-      phoneNumber: field === "country" ? "" : current.phoneNumber,
     }));
   };
 
   const handlePhoneChange = (event) => {
-    const phoneRule = COUNTRY_PHONE_RULES[location.country];
+    const phoneRule = COUNTRY_PHONE_RULES[phoneCountry];
     if (!phoneRule) return;
 
     const digits = event.target.value.replace(/\D/g, "").slice(0, phoneRule.max);
@@ -130,6 +147,12 @@ function CreatePortal() {
       ...current,
       phoneNumber: digits ? `${phoneRule.code}${digits}` : "",
     }));
+  };
+
+  const handlePhoneCountryChange = (event) => {
+    setPhoneCountry(event.target.value);
+    setPhoneDigits("");
+    setForm((current) => ({ ...current, phoneNumber: "" }));
   };
 
   const handleSubmit = async (e) => {
@@ -316,7 +339,7 @@ function CreatePortal() {
                           disabled={!location.country}
                           required
                         >
-                          <option value="">Select major city</option>
+                          <option value="">Select state/region</option>
                           {(LOCATION_OPTIONS[location.country] || []).map(
                             ([city]) => <option key={city} value={city}>{city}</option>
                           )}
@@ -381,39 +404,51 @@ function CreatePortal() {
                   <div className="col-md-6">
                     <label className="form-label fw-semibold">Phone Number</label>
                     <div className="input-group">
-                      <span className="input-group-text fw-semibold">
-                        {COUNTRY_PHONE_RULES[location.country]?.code || "+—"}
-                      </span>
+                      <select
+                        className="form-select fw-semibold"
+                        style={{ maxWidth: "155px" }}
+                        value={phoneCountry}
+                        onChange={handlePhoneCountryChange}
+                        aria-label="Phone country code"
+                        required
+                      >
+                        <option value="">Country code</option>
+                        {Object.entries(COUNTRY_PHONE_RULES).map(([country, rule]) => (
+                          <option key={country} value={country}>
+                            {rule.code} {country}
+                          </option>
+                        ))}
+                      </select>
                       <input
                         className="form-control"
                         type="tel"
                         inputMode="numeric"
                         placeholder={
-                          COUNTRY_PHONE_RULES[location.country]?.example ||
-                          "Select location first"
+                          COUNTRY_PHONE_RULES[phoneCountry]?.example ||
+                          "Select country code"
                         }
                         value={phoneDigits}
                         onChange={handlePhoneChange}
-                        minLength={COUNTRY_PHONE_RULES[location.country]?.min}
-                        maxLength={COUNTRY_PHONE_RULES[location.country]?.max}
+                        minLength={COUNTRY_PHONE_RULES[phoneCountry]?.min}
+                        maxLength={COUNTRY_PHONE_RULES[phoneCountry]?.max}
                         pattern={
-                          location.country
-                            ? `\\d{${COUNTRY_PHONE_RULES[location.country].min},${COUNTRY_PHONE_RULES[location.country].max}}`
+                          phoneCountry
+                            ? `\\d{${COUNTRY_PHONE_RULES[phoneCountry].min},${COUNTRY_PHONE_RULES[phoneCountry].max}}`
                             : undefined
                         }
-                        disabled={!location.country}
+                        disabled={!phoneCountry}
                         required
                       />
                     </div>
                     <small className="text-muted">
-                      {location.country
-                        ? `${COUNTRY_PHONE_RULES[location.country].min}${
-                            COUNTRY_PHONE_RULES[location.country].min !==
-                            COUNTRY_PHONE_RULES[location.country].max
-                              ? `–${COUNTRY_PHONE_RULES[location.country].max}`
+                      {phoneCountry
+                        ? `${COUNTRY_PHONE_RULES[phoneCountry].min}${
+                            COUNTRY_PHONE_RULES[phoneCountry].min !==
+                            COUNTRY_PHONE_RULES[phoneCountry].max
+                              ? `–${COUNTRY_PHONE_RULES[phoneCountry].max}`
                               : ""
-                          } digits required for ${location.country}.`
-                        : "Select the organization country to set the calling code."}
+                          } digits required for ${phoneCountry}.`
+                        : "Choose the owner's phone country independently from the portal location."}
                     </small>
                   </div>
 

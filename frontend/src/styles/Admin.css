@@ -2058,6 +2058,27 @@
     transform 0.2s ease;
 }
 
+.create-portal-form-card input.form-control,
+.create-portal-form-card select.form-select,
+.create-portal-form-card .input-group > .form-control,
+.create-portal-form-card .input-group > .form-select,
+.portal-location-trigger {
+  height: 48px;
+  min-height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.create-portal-form-card .input-group {
+  height: 48px;
+  align-items: stretch;
+}
+
+.create-portal-form-card .input-group > .form-control,
+.create-portal-form-card .input-group > .form-select {
+  margin: 0;
+}
+
 .create-portal-form-card .form-control:focus,
 .create-portal-form-card .form-select:focus {
   transform: translateY(-1px);

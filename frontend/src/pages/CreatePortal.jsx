@@ -9,6 +9,7 @@ import {
   BsEnvelope,
   BsPhone,
   BsShieldCheck,
+  BsTags,
   BsArrowRight,
 } from "react-icons/bs";
 import { Eye, EyeOff } from "lucide-react";
@@ -129,6 +130,12 @@ function CreatePortal() {
                   icon={<BsPerson />}
                   title="Owner account"
                   text="The first user becomes the portal admin."
+                />
+                <InfoBox
+                  delay="0.3s"
+                  icon={<BsTags />}
+                  title="Why choose a category?"
+                  text="It identifies your workspace as College, Corporate, Public or All, keeping portals organized for the right type of events."
                 />
               </div>
             </div>

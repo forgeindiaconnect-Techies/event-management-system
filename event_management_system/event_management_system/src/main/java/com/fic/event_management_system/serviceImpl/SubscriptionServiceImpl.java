@@ -21,6 +21,8 @@ import com.fic.event_management_system.service.EmailService;
 import com.fic.event_management_system.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
@@ -130,7 +132,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription = subscriptionRepository.save(subscription);
 
-        notifySubscriptionOwner(
+        scheduleSubscriptionOwnerNotification(
                 subscription,
                 NotificationType.TRIAL_ACTIVATED,
                 "Free trial activated",
@@ -139,6 +141,43 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         );
 
         return subscription;
+    }
+
+    private void scheduleSubscriptionOwnerNotification(
+            PortalSubscription subscription,
+            NotificationType type,
+            String title,
+            String message,
+            String deduplicationKey) {
+
+        Runnable notificationWork = () -> {
+            try {
+                notifySubscriptionOwner(
+                        subscription,
+                        type,
+                        title,
+                        message,
+                        deduplicationKey
+                );
+            } catch (RuntimeException ignored) {
+                // Subscription activation must remain successful even if a
+                // notification or queued email cannot be created.
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            notificationWork.run();
+                        }
+                    }
+            );
+            return;
+        }
+
+        notificationWork.run();
     }
 
     @Override

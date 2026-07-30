@@ -110,11 +110,72 @@ function CreatePortal() {
   const [location, setLocation] = useState({ country: "", city: "" });
   const [phoneCountry, setPhoneCountry] = useState("");
   const [phoneDigits, setPhoneDigits] = useState("");
+  const [emailCheck, setEmailCheck] = useState({
+    checking: false,
+    checkedEmail: "",
+    available: null,
+    message: "",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     setForm({ ...form, [name]: value });
+  };
+
+  const handleOwnerEmailChange = (event) => {
+    const value = event.target.value;
+    setForm((current) => ({ ...current, email: value }));
+    setEmailCheck({
+      checking: false,
+      checkedEmail: "",
+      available: null,
+      message: "",
+    });
+  };
+
+  const checkOwnerEmail = async () => {
+    const normalizedEmail = form.email.trim().toLowerCase();
+    const validFormat = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail);
+
+    if (!validFormat) {
+      setEmailCheck({
+        checking: false,
+        checkedEmail: normalizedEmail,
+        available: false,
+        message: "Enter a valid email address.",
+      });
+      return false;
+    }
+
+    setEmailCheck((current) => ({
+      ...current,
+      checking: true,
+      message: "Checking email...",
+    }));
+
+    try {
+      const response = await api.get("/auth/portal-owner-email-availability", {
+        params: { email: normalizedEmail },
+      });
+      const available = Boolean(response.data?.available);
+      setEmailCheck({
+        checking: false,
+        checkedEmail: normalizedEmail,
+        available,
+        message: response.data?.message ||
+          (available ? "Email is available." : "This email is already registered."),
+      });
+      return available;
+    } catch {
+      setEmailCheck({
+        checking: false,
+        checkedEmail: normalizedEmail,
+        available: false,
+        message: "Unable to verify this email. Please try again.",
+      });
+      return false;
+    }
   };
 
   const handleLocationChange = (field, value) => {
@@ -160,6 +221,18 @@ function CreatePortal() {
 
     if (!location.country || !location.city) {
       setMessage("Please select the organization country and state/region.");
+      return;
+    }
+
+    const normalizedEmail = form.email.trim().toLowerCase();
+    const emailAvailable =
+      emailCheck.checkedEmail === normalizedEmail &&
+      emailCheck.available === true
+        ? true
+        : await checkOwnerEmail();
+
+    if (!emailAvailable) {
+      setMessage("Use a valid email address that is not already registered.");
       return;
     }
 
@@ -388,14 +461,34 @@ function CreatePortal() {
                   <div className="col-md-6">
                     <label className="form-label fw-semibold">Email</label>
                     <input
-                      className="form-control"
+                      className={`form-control ${
+                        emailCheck.available === false
+                          ? "is-invalid"
+                          : emailCheck.available === true
+                            ? "is-valid"
+                            : ""
+                      }`}
                       type="email"
                       name="email"
                       placeholder="Enter your email address"
                       value={form.email}
-                      onChange={handleChange}
+                      onChange={handleOwnerEmailChange}
+                      onBlur={checkOwnerEmail}
                       required
                     />
+                    {emailCheck.message && (
+                      <small
+                        className={
+                          emailCheck.available === true
+                            ? "text-success"
+                            : emailCheck.available === false
+                              ? "text-danger"
+                              : "text-muted"
+                        }
+                      >
+                        {emailCheck.message}
+                      </small>
+                    )}
                   </div>
 
                   <div className="col-md-6">

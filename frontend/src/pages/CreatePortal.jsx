@@ -437,16 +437,6 @@ function CreatePortal() {
                         required
                       />
                     </div>
-                    <small className="text-muted">
-                      {phoneCountry
-                        ? `${COUNTRY_PHONE_RULES[phoneCountry].min}${
-                            COUNTRY_PHONE_RULES[phoneCountry].min !==
-                            COUNTRY_PHONE_RULES[phoneCountry].max
-                              ? `–${COUNTRY_PHONE_RULES[phoneCountry].max}`
-                              : ""
-                          } digits required for ${phoneCountry}.`
-                        : "Choose the owner's phone country independently from the portal location."}
-                    </small>
                   </div>
 
                   <div className="col-md-6">

@@ -15,18 +15,32 @@ import {
 import { Eye, EyeOff, MapPin, Clock3 } from "lucide-react";
 import ficLogo from "../assets/images/fic-logo.png";
 
-const LOCATION_TIMEZONES = [
-  ["Bengaluru, Karnataka, India", "Asia/Kolkata"],
-  ["Chennai, Tamil Nadu, India", "Asia/Kolkata"],
-  ["Hyderabad, Telangana, India", "Asia/Kolkata"],
-  ["Mumbai, Maharashtra, India", "Asia/Kolkata"],
-  ["New Delhi, India", "Asia/Kolkata"],
-  ["Dubai, United Arab Emirates", "Asia/Dubai"],
-  ["Singapore", "Asia/Singapore"],
-  ["London, United Kingdom", "Europe/London"],
-  ["New York, United States", "America/New_York"],
-  ["San Francisco, United States", "America/Los_Angeles"],
-];
+const LOCATION_OPTIONS = {
+  India: {
+    Karnataka: [["Bengaluru", "Asia/Kolkata"], ["Mysuru", "Asia/Kolkata"]],
+    "Tamil Nadu": [["Chennai", "Asia/Kolkata"], ["Coimbatore", "Asia/Kolkata"]],
+    Telangana: [["Hyderabad", "Asia/Kolkata"]],
+    Maharashtra: [["Mumbai", "Asia/Kolkata"], ["Pune", "Asia/Kolkata"]],
+    Delhi: [["New Delhi", "Asia/Kolkata"]],
+  },
+  "United Arab Emirates": {
+    Dubai: [["Dubai", "Asia/Dubai"]],
+    "Abu Dhabi": [["Abu Dhabi", "Asia/Dubai"]],
+  },
+  Singapore: {
+    Singapore: [["Singapore", "Asia/Singapore"]],
+  },
+  "United Kingdom": {
+    England: [["London", "Europe/London"], ["Manchester", "Europe/London"]],
+  },
+  "United States": {
+    "New York": [["New York City", "America/New_York"]],
+    California: [
+      ["San Francisco", "America/Los_Angeles"],
+      ["Los Angeles", "America/Los_Angeles"],
+    ],
+  },
+};
 
 const browserTimeZone =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
@@ -49,23 +63,33 @@ function CreatePortal() {
 
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [location, setLocation] = useState({ country: "", region: "", city: "" });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "organizationLocation") {
-      const matchedLocation = LOCATION_TIMEZONES.find(
-        ([location]) => location.toLowerCase() === value.trim().toLowerCase()
-      );
-      setForm({
-        ...form,
-        organizationLocation: value,
-        timeZone: matchedLocation?.[1] || browserTimeZone,
-      });
-      return;
-    }
-
     setForm({ ...form, [name]: value });
+  };
+
+  const handleLocationChange = (field, value) => {
+    const nextLocation = {
+      country: field === "country" ? value : location.country,
+      region: field === "country" ? "" : field === "region" ? value : location.region,
+      city: field === "city" ? value : "",
+    };
+
+    const selectedCity = LOCATION_OPTIONS[nextLocation.country]?.[nextLocation.region]
+      ?.find(([city]) => city === nextLocation.city);
+    const completeLocation = selectedCity
+      ? `${nextLocation.city}, ${nextLocation.region}, ${nextLocation.country}`
+      : "";
+
+    setLocation(nextLocation);
+    setForm((current) => ({
+      ...current,
+      organizationLocation: completeLocation,
+      timeZone: selectedCity?.[1] || browserTimeZone,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -230,30 +254,56 @@ function CreatePortal() {
                     <label className="form-label fw-semibold">
                       Organization Location
                     </label>
-                    <div className="position-relative">
-                      <MapPin
-                        className="position-absolute text-muted"
-                        size={18}
-                        style={{ left: 14, top: "50%", transform: "translateY(-50%)" }}
-                      />
-                      <input
-                        className="form-control ps-5"
-                        name="organizationLocation"
-                        list="organization-location-options"
-                        placeholder="Enter your city, state and country"
-                        value={form.organizationLocation}
-                        onChange={handleChange}
-                        required
-                      />
-                      <datalist id="organization-location-options">
-                        {LOCATION_TIMEZONES.map(([location]) => (
-                          <option key={location} value={location} />
-                        ))}
-                      </datalist>
+                    <div className="row g-2">
+                      <div className="col-md-4">
+                        <select
+                          className="form-select"
+                          value={location.country}
+                          onChange={(event) => handleLocationChange("country", event.target.value)}
+                          required
+                        >
+                          <option value="">Select country</option>
+                          {Object.keys(LOCATION_OPTIONS).map((country) => (
+                            <option key={country} value={country}>{country}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-4">
+                        <select
+                          className="form-select"
+                          value={location.region}
+                          onChange={(event) => handleLocationChange("region", event.target.value)}
+                          disabled={!location.country}
+                          required
+                        >
+                          <option value="">Select state/region</option>
+                          {Object.keys(LOCATION_OPTIONS[location.country] || {}).map((region) => (
+                            <option key={region} value={region}>{region}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-4">
+                        <select
+                          className="form-select"
+                          value={location.city}
+                          onChange={(event) => handleLocationChange("city", event.target.value)}
+                          disabled={!location.region}
+                          required
+                        >
+                          <option value="">Select city</option>
+                          {(LOCATION_OPTIONS[location.country]?.[location.region] || []).map(
+                            ([city]) => <option key={city} value={city}>{city}</option>
+                          )}
+                        </select>
+                      </div>
                     </div>
                     <small className="d-flex align-items-center gap-2 text-muted mt-2">
-                      <Clock3 size={15} />
-                      Time zone: <strong>{form.timeZone}</strong>
+                      {form.organizationLocation ? <MapPin size={15} /> : <Clock3 size={15} />}
+                      {form.organizationLocation ? (
+                        <><span>{form.organizationLocation}</span> · Time zone: <strong>{form.timeZone}</strong></>
+                      ) : (
+                        "Select the country, state/region and city to detect the time zone."
+                      )}
                     </small>
                   </div>
                 </div>

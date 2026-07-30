@@ -10,6 +10,7 @@ import {
   BsPeople,
   BsArrowClockwise,
   BsPersonVcard,
+  BsTrash,
 } from "react-icons/bs";
 
 function Organizers() {
@@ -95,6 +96,28 @@ function Organizers() {
 
     await navigator.clipboard.writeText(inviteLink);
     setMessage("Invitation link copied.");
+  };
+
+  const deleteOrganizer = async (organizer) => {
+    const name = `${organizer.firstName || ""} ${organizer.lastName || ""}`.trim()
+      || organizer.email
+      || "this organizer";
+    const confirmed = window.confirm(
+      `Delete ${name}? Their portal access and active event assignments will be removed.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/users/${organizer.id}`);
+      setMessage("Organizer deleted successfully.");
+      await fetchOrganizers();
+    } catch (error) {
+      setMessage(
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to delete the organizer."
+      );
+    }
   };
 
   const handleManualChange = (e) => {
@@ -225,8 +248,8 @@ function Organizers() {
               >
                 {loading ? "Sending..." : "Send Invitation"}
               </button>
-            </form> : <form onSubmit={handleManualAdd}>
-              <div className="row g-3">
+            </form> : <form className="organizer-manual-form" onSubmit={handleManualAdd}>
+              <div className="row g-3 align-items-start">
                 <div className="col-md-6">
                   <label className="form-label">First Name <span className="text-danger">*</span></label>
                   <input className="form-control" name="firstName" value={manualForm.firstName} onChange={handleManualChange} required />
@@ -238,7 +261,9 @@ function Organizers() {
                 <div className="col-12">
                   <label className="form-label">Login Email <span className="text-danger">*</span></label>
                   <input className="form-control" type="email" name="email" value={manualForm.email} onChange={handleManualChange} placeholder="organizer@example.com" required />
-                  <small className="text-muted">A secure set-password link will be sent to this email. It expires in one hour.</small>
+                  <small className="organizer-field-help text-muted">
+                    The organizer will use this email and the temporary password below to sign in.
+                  </small>
                 </div>
                 <div className="col-md-6">
                   <label className="form-label">Phone Number <span className="text-danger">*</span></label>
@@ -250,7 +275,9 @@ function Organizers() {
                     <input className="form-control" name="password" value={manualForm.password} onChange={handleManualChange} minLength="8" required />
                     <button type="button" className="btn btn-outline-secondary" onClick={() => setManualForm((current) => ({ ...current, password: generateTemporaryPassword() }))}>Generate</button>
                   </div>
-                  <small className="text-muted">Use at least 8 characters with uppercase, lowercase and a number.</small>
+                  <small className="organizer-field-help text-muted">
+                    Use at least 8 characters with uppercase, lowercase and a number.
+                  </small>
                 </div>
               </div>
               <button className="btn btn-primary mt-3" disabled={loading} style={{ borderRadius: "10px", padding: "9px 22px" }}>
@@ -356,6 +383,7 @@ function Organizers() {
                   <th style={{ fontSize: "15px" }}>Email</th>
                   <th style={{ fontSize: "15px" }}>Phone</th>
                   <th style={{ fontSize: "15px" }}>Status</th>
+                  <th style={{ fontSize: "15px" }}>Actions</th>
                 </tr>
               </thead>
 
@@ -377,6 +405,16 @@ function Organizers() {
                       >
                         {organizer.active ? "Active" : "Inactive"}
                       </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                        onClick={() => deleteOrganizer(organizer)}
+                        title="Delete organizer"
+                      >
+                        <BsTrash /> Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

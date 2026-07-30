@@ -2186,6 +2186,39 @@
   color: #315fd6;
 }
 
+.organizer-manual-form .form-label {
+  margin-bottom: 7px;
+}
+
+.organizer-manual-form input.form-control,
+.organizer-manual-form .input-group,
+.organizer-manual-form .input-group > input.form-control,
+.organizer-manual-form .input-group > .btn {
+  height: 46px;
+  min-height: 46px;
+}
+
+.organizer-manual-form .input-group {
+  align-items: stretch;
+}
+
+.organizer-manual-form .input-group > input.form-control {
+  min-width: 0;
+}
+
+.organizer-manual-form .input-group > .btn {
+  display: inline-flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.organizer-field-help {
+  display: block;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .create-portal-intro,
   .create-portal-intro::after,

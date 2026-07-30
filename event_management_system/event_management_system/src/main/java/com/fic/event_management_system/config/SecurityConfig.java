@@ -100,6 +100,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/events/*/operations/**").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
                         .requestMatchers(HttpMethod.POST, "/api/events").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
                         .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyAuthority("PORTAL_ADMIN", "ORGANIZER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasAuthority("PORTAL_ADMIN")
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/reports/**").authenticated()
                         .requestMatchers("/api/portal/**").authenticated()

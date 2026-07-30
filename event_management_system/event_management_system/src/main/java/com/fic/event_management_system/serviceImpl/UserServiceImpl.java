@@ -2,6 +2,8 @@ package com.fic.event_management_system.serviceImpl;
 
 import com.fic.event_management_system.entity.User;
 import com.fic.event_management_system.enums.RoleName;
+import com.fic.event_management_system.entity.EventAssignment;
+import com.fic.event_management_system.repository.EventAssignmentRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.security.TenantSecurityService;
 import com.fic.event_management_system.service.UserService;
@@ -18,17 +20,20 @@ public class UserServiceImpl implements UserService {
     private final TenantSecurityService tenantSecurityService;
     private final SubscriptionLimitService subscriptionLimitService;
     private final PasswordEncoder passwordEncoder;
+    private final EventAssignmentRepository eventAssignmentRepository;
 
     public UserServiceImpl(
             UserRepository userRepository,
             TenantSecurityService tenantSecurityService,
             SubscriptionLimitService subscriptionLimitService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            EventAssignmentRepository eventAssignmentRepository) {
 
         this.userRepository = userRepository;
         this.tenantSecurityService = tenantSecurityService;
         this.subscriptionLimitService = subscriptionLimitService;
         this.passwordEncoder = passwordEncoder;
+        this.eventAssignmentRepository = eventAssignmentRepository;
     }
 
     @Override
@@ -102,7 +107,7 @@ public class UserServiceImpl implements UserService {
     public List<User> getOrganizersByPortal(Long portalId) {
         tenantSecurityService.requireSamePortal(portalId);
 
-        return userRepository.findByPortalIdAndRole_RoleName(
+        return userRepository.findByPortalIdAndRole_RoleNameAndActiveTrue(
                 tenantSecurityService.getLoggedInPortalId(),
                 RoleName.ORGANIZER
         );
@@ -116,7 +121,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deletePortalUser(Long userId) {
-        tenantSecurityService.requirePortalAdminOrOrganizer();
+        if (!tenantSecurityService.isPortalAdmin()) {
+            throw new RuntimeException("Only the portal admin can delete portal users");
+        }
 
         User loggedInUser = tenantSecurityService.getLoggedInUser();
         User user = tenantSecurityService.getUserFromLoggedInPortal(userId);
@@ -129,6 +136,11 @@ public class UserServiceImpl implements UserService {
                 && user.getRole().getRoleName() == RoleName.PORTAL_ADMIN) {
             throw new RuntimeException("Portal admin accounts cannot be deleted here");
         }
+
+        List<EventAssignment> activeAssignments =
+                eventAssignmentRepository.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId());
+        activeAssignments.forEach(assignment -> assignment.setActive(false));
+        eventAssignmentRepository.saveAll(activeAssignments);
 
         String originalEmail = user.getEmail() == null ? "user" : user.getEmail();
         user.setFirstName("Deleted");

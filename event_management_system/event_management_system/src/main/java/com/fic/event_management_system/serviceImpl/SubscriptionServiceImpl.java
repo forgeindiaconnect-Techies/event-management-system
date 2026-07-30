@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -34,8 +33,7 @@ import java.util.Comparator;
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
 
-    @Value("${subscription.trial-days:30}")
-    private int trialDays = 30;
+    private static final int TRIAL_DAYS = 2;
 
     private static final List<SubscriptionStatus> USABLE_STATUSES =
             List.of(
@@ -128,7 +126,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.setTrial(true);
         subscription.setAutoRenew(false);
         subscription.setStartDate(startDate);
-        subscription.setEndDate(startDate.plusDays(trialDays));
+        subscription.setEndDate(startDate.plusDays(TRIAL_DAYS));
 
         subscription = subscriptionRepository.save(subscription);
 
@@ -227,6 +225,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         PortalSubscription subscription = current.get();
+        normalizeTrialDuration(subscription);
 
         if (subscription.getEndDate().isBefore(LocalDateTime.now())) {
             if (subscription.getNextPlan() != null) {
@@ -248,6 +247,23 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         return Optional.of(subscription);
+    }
+
+    private void normalizeTrialDuration(PortalSubscription subscription) {
+        if (subscription.getStatus() != SubscriptionStatus.TRIAL
+                || !Boolean.TRUE.equals(subscription.getTrial())
+                || subscription.getStartDate() == null) {
+            return;
+        }
+
+        LocalDateTime allowedEndDate =
+                subscription.getStartDate().plusDays(TRIAL_DAYS);
+
+        if (subscription.getEndDate() == null
+                || subscription.getEndDate().isAfter(allowedEndDate)) {
+            subscription.setEndDate(allowedEndDate);
+            subscriptionRepository.save(subscription);
+        }
     }
 
     @Override

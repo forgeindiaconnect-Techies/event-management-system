@@ -7,7 +7,6 @@ import {
   BsMic,
   BsBriefcase,
   BsMegaphone,
-  BsChatDots,
   BsFolder,
 } from "react-icons/bs";
 
@@ -57,11 +56,6 @@ function ManageSidebar({ onScrollEndChange }) {
       label: "Promote",
       icon: <BsMegaphone size={16} />,
       path: `/events/${id}/manage/promote`
-    },
-    {
-      label: "Engagement",
-      icon: <BsChatDots size={16} />,
-      path: `/events/${id}/manage/engagement`
     },
     {
       label: "Event Library",

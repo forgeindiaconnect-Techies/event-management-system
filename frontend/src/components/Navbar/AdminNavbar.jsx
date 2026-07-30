@@ -472,6 +472,15 @@ function getPlanAction(subscription) {
     };
   }
 
+  if (status === "TRIAL" || subscription?.trial) {
+    const daysRemaining = Math.max(0, Number(subscription?.daysRemaining || 0));
+    return {
+      label: `Trial · ${daysRemaining} ${daysRemaining === 1 ? "day" : "days"} left`,
+      tone: "trial",
+      title: `Your free trial is active until ${formatSubscriptionDate(subscription?.endDate)}.`,
+    };
+  }
+
   if (subscription.nextPlanCode || subscription.planCode === "ENTERPRISE") {
     return {
       label: "Manage Plan",
@@ -485,6 +494,18 @@ function getPlanAction(subscription) {
     tone: "upgrade",
     title: "Compare plans and upgrade your subscription",
   };
+}
+
+function formatSubscriptionDate(value) {
+  if (!value) return "the trial expiry date";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "the trial expiry date"
+    : date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
 }
 
 function ProfileAvatar({ profile, size = 42 }) {

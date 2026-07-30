@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import {
   FaCalendarCheck,
-  FaChevronRight,
   FaMicrophone,
   FaShieldAlt,
   FaUserCog,
@@ -18,28 +17,46 @@ function TeamRoles() {
       role: "Event Owner",
       permission: "Full event control",
       type: "Default Role",
-      path: "event-owner",
       icon: <FaShieldAlt />,
       description: "Controls event ownership, publishing, deletion and high-level settings.",
-      privileges: ["Publish event", "Archive event", "Manage ownership", "View all reports"]
+      privileges: [
+        "Full event access",
+        "Publish and archive the event",
+        "Manage event ownership and team",
+        "Manage registrations and attendance",
+        "Manage agenda, speakers and sponsors",
+        "View revenue and all reports",
+        "Configure event settings",
+        "Delete the event"
+      ]
     },
     {
       role: "Event Organizer",
       permission: "Event management",
       type: "Default Role",
-      path: "event-organizer",
       icon: <FaUserTie />,
       description: "Manages event setup, team, agenda, registrations, reports and communication.",
-      privileges: ["Edit event info", "Invite team", "Manage registrations", "View revenue"]
+      privileges: [
+        "Edit event information",
+        "Invite and manage the event team",
+        "Manage agenda, sessions and speakers",
+        "Manage sponsors and event library",
+        "Manage registrations and attendance",
+        "View event reports and revenue"
+      ]
     },
     {
       role: "Event Staff",
       permission: "Event-day operations",
       type: "Default Role",
-      path: "event-staff",
       icon: <FaUsers />,
       description: "Handles attendee support, check-in, ticket verification and assigned duties.",
-      privileges: ["Check in attendees", "Verify tickets", "View assigned events", "Update attendance"]
+      privileges: [
+        "View assigned events",
+        "Check in attendees",
+        "Verify attendee tickets",
+        "Manage assigned attendance duties"
+      ]
     },
     {
       role: "Coordinator",
@@ -122,19 +139,6 @@ function TeamRoles() {
                 ))}
               </ul>
 
-              {role.path ? (
-                <button
-                  type="button"
-                  className="role-view-btn"
-                  onClick={() => navigate(`/events/${id}/manage/team/roles/${role.path}`)}
-                >
-                  View Privileges <FaChevronRight />
-                </button>
-              ) : (
-                <button type="button" className="role-view-btn muted" disabled>
-                  Privileges Preview
-                </button>
-              )}
             </article>
           ))}
         </div>

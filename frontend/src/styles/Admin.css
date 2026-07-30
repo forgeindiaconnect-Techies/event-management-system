@@ -3098,6 +3098,12 @@ textarea:focus {
   color: #d1fae5;
 }
 
+.admin-navbar-plan-button.trial {
+  border-color: #fde68a;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fffdf4;
+}
+
 .subscription-page {
   max-width: 1480px;
   margin: 0 auto;

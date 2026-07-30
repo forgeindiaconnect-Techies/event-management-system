@@ -1,9 +1,9 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import ChooseAccess from "./pages/ChooseAccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
-import CreateEvent from "./pages/CreateEvent";
 import AdminEvents from "./pages/AdminEvents";
 import Organizers from "./pages/Organizers";
 import Attendees from "./pages/Attendees";
@@ -21,20 +21,15 @@ import OrganizerTickets from "./pages/OrganizerTickets";
 import OrganizerInviteStaff from "./pages/OrganizerInviteStaff";
 import AcceptRoleInvitation from "./pages/AcceptRoleInvitation";
 import OrganizerTeamAssignment from "./pages/OrganizerTeamAssignment";
-import EventDashboard from "./pages/EventDashboard";
 
 import ManageLayout from "./layouts/ManageLayout";
 import EventInfo from "./pages/EventInfo";
 import TeamMembers from "./pages/manage/TeamMembers";
 import TeamRoles from "./pages/manage/TeamRoles";
-import EventOwnerPrivileges from "./pages/manage/EventOwnerPrivileges";
-import EventOrganizerPrivileges from "./pages/manage/EventOrganizerPrivileges";
-import EventStaffPrivileges from "./pages/manage/EventStaffPrivileges";
 import Agenda from "./pages/manage/Agenda";
 import Speakers from "./pages/manage/Speakers";
 import Sponsors from "./pages/manage/Sponsors";
 import Promote from "./pages/manage/Promote";
-import Engagement from "./pages/manage/Engagement";
 import EventLibrary from "./pages/manage/EventLibrary";
 
 import RegistrationLayout from "./layouts/RegistrationLayout";
@@ -57,19 +52,14 @@ import AbstractTopics from "./pages/Abstracts/AbstractTopics";
 import AbstractForms from "./pages/Abstracts/AbstractForms";
 
 import ReportsLayout from "./layouts/ReportsLayout";
-import ReportsOverview from "./pages/Reports/ReportsOverview";
-import RevenueReport from "./pages/Reports/RevenueReport";
 
 import EventDayLayout from "./layouts/EventDayLayout";
 import CheckIn from "./pages/EventDay/CheckIn";
 import EventAttendance from "./pages/EventDay/EventAttendance";
 import Announcements from "./pages/EventDay/Announcements";
 import OperationsLayout from "./layouts/OperationsLayout";
-import OperationsWorkspace from "./pages/operations/OperationsWorkspace";
 
-import PublicDashboard from "./pages/public/PublicDashboard";
 import PublicEventDetails from "./pages/public/PublicEventDetails";
-import PublicRegistrationForm from "./pages/public/PublicRegistrationForm";
 import PublicWelcome from "./pages/public/PublicWelcome";
 import FindMyTicket from "./pages/public/FindMyTicket";
 
@@ -107,13 +97,21 @@ import MentorDashboard from "./pages/Mentor/MentorDashboard";
 import MentorTeams from "./pages/Mentor/MentorTeams";
 import MentorSchedule from "./pages/Mentor/MentorSchedule";
 import PublicTicket from "./pages/public/PublicTicket";
-import PublicPayment from "./pages/public/PublicPayment";
-import SuperAdminDashboard from "./pages/SuperAdmin/SuperAdminDashboard";
-import AdminSubscription from "./pages/AdminSubscription";
-import SubscriptionPayment from "./pages/SubscriptionPayment";
 import MobileSelectEnhancer from "./components/MobileSelectEnhancer";
 import HorizontalMenuArrows from "./components/HorizontalMenuArrows";
 import TourCenter from "./pages/Help/TourCenter";
+
+const CreateEvent = lazy(() => import("./pages/CreateEvent"));
+const EventDashboard = lazy(() => import("./pages/EventDashboard"));
+const ReportsOverview = lazy(() => import("./pages/Reports/ReportsOverview"));
+const RevenueReport = lazy(() => import("./pages/Reports/RevenueReport"));
+const OperationsWorkspace = lazy(() => import("./pages/operations/OperationsWorkspace"));
+const PublicDashboard = lazy(() => import("./pages/public/PublicDashboard"));
+const PublicRegistrationForm = lazy(() => import("./pages/public/PublicRegistrationForm"));
+const PublicPayment = lazy(() => import("./pages/public/PublicPayment"));
+const SuperAdminDashboard = lazy(() => import("./pages/SuperAdmin/SuperAdminDashboard"));
+const AdminSubscription = lazy(() => import("./pages/AdminSubscription"));
+const SubscriptionPayment = lazy(() => import("./pages/SubscriptionPayment"));
 
 
 function App() {
@@ -121,6 +119,7 @@ function App() {
     <BrowserRouter>
       <MobileSelectEnhancer />
       <HorizontalMenuArrows />
+      <Suspense fallback={<RouteLoader />}>
       <Routes>
       
 {/* Landing */}
@@ -176,15 +175,11 @@ function App() {
           <Route index element={<EventInfo />} />
           <Route path="event-info" element={<EventInfo />} />
           <Route path="team" element={<TeamMembers />} />
-          <Route path="team/owner-privileges" element={<EventOwnerPrivileges />} />
-          <Route path="team/organizer-privileges" element={<EventOrganizerPrivileges />} />
-          <Route path="team/staff-privileges" element={<EventStaffPrivileges />} />
           <Route path="team/roles" element={<TeamRoles />} />
           <Route path="agenda" element={<Agenda />} />
           <Route path="speakers" element={<Speakers />} />
           <Route path="sponsors" element={<Sponsors />} />
           <Route path="promote" element={<Promote />} />
-          <Route path="engagement" element={<Engagement />} />
           <Route path="library" element={<EventLibrary />} />
         </Route>
 
@@ -309,7 +304,26 @@ function App() {
 <Route path="/super-admin/settings" element={<SuperAdminDashboard section="settings" />} />
 
       </Routes>
+      </Suspense>
     </BrowserRouter>
+  );
+}
+
+function RouteLoader() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        minHeight: "45vh",
+        display: "grid",
+        placeItems: "center",
+        color: "#5548d9",
+        fontWeight: 700
+      }}
+    >
+      Loading workspace...
+    </div>
   );
 }
 

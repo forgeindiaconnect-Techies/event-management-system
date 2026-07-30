@@ -115,12 +115,15 @@ public class SubscriptionDetailsResponse {
         response.endDate = subscription.getEndDate();
 
         if (subscription.getEndDate() != null) {
-            long remaining = Duration.between(
+            long remainingHours = Duration.between(
                     LocalDateTime.now(),
                     subscription.getEndDate()
-            ).toDays();
+            ).toHours();
 
-            response.daysRemaining = Math.max(remaining, 0);
+            response.daysRemaining = Math.max(
+                    (remainingHours + 23) / 24,
+                    0
+            );
         }
 
         return response;

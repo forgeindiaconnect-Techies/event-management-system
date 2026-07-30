@@ -22,6 +22,7 @@ function Organizers() {
   const [loading, setLoading] = useState(false);
   const [organizers, setOrganizers] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [listMode, setListMode] = useState("invitations");
   const [addMode, setAddMode] = useState("email");
   const [createdCredentials, setCreatedCredentials] = useState(null);
   const [manualForm, setManualForm] = useState({
@@ -416,147 +417,93 @@ function Organizers() {
         </div>
       </div>
 
-      <div className="row g-4 mt-0">
-        <div className="col-xl-6">
-      <div className="admin-bento-card h-100">
-        <div className="admin-section-header d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
-              Organizer Invitations
-            </h2>
-            <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
-              Invitations sent from this portal and their current status.
-            </p>
-          </div>
+      <div className="admin-bento-card mt-4">
+        <div className="admin-mode-tabs d-flex gap-2 p-1 rounded-3 mb-4" style={{ background: "#f1f3f8" }}>
+          <button
+            type="button"
+            className={`btn flex-fill ${listMode === "invitations" ? "btn-primary" : "btn-light"}`}
+            onClick={() => setListMode("invitations")}
+          >
+            Organizer Invitations ({invitations.length})
+          </button>
+          <button
+            type="button"
+            className={`btn flex-fill ${listMode === "organizers" ? "btn-primary" : "btn-light"}`}
+            onClick={() => setListMode("organizers")}
+          >
+            Current Organizers ({organizers.length})
+          </button>
         </div>
 
-        {invitations.length === 0 ? (
-          <div className="text-center py-4 text-muted">
-            No organizer invitations sent yet.
-          </div>
+        {listMode === "invitations" ? (
+          <>
+            <div className="admin-section-header mb-3">
+              <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>Organizer Invitations</h2>
+              <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
+                Invitations sent from this portal and their current status.
+              </p>
+            </div>
+            {invitations.length === 0 ? (
+              <div className="text-center py-4 text-muted">No organizer invitations sent yet.</div>
+            ) : (
+              <div className="table-responsive" style={{ maxHeight: "380px", overflow: "auto" }}>
+                <table className="table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Recipient</th><th>Invited By</th><th>Sent</th><th>Expires</th><th>Status</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invitations.map((invitation) => (
+                      <tr key={invitation.id}>
+                        <td className="fw-semibold">{invitation.email}</td>
+                        <td>{invitation.invitedByName || "Portal Admin"}</td>
+                        <td>{formatInvitationDate(invitation.createdAt)}</td>
+                        <td>{formatInvitationDate(invitation.expiryDate)}</td>
+                        <td><span className={`badge ${invitationStatusClass(invitation.status)}`}>{String(invitation.status || "PENDING").replaceAll("_", " ")}</span></td>
+                        <td>
+                          <div className="d-flex flex-wrap gap-2">
+                            {invitation.status === "PENDING" && <button type="button" className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1" onClick={() => rejectOrganizerInvitation(invitation)}><BsXCircle /> Reject</button>}
+                            <button type="button" className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" onClick={() => deleteOrganizerInvitation(invitation)}><BsTrash /> Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="table-responsive" style={{ maxHeight: "360px", overflow: "auto" }}>
-            <table className="table align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Recipient</th>
-                  <th>Invited By</th>
-                  <th>Sent</th>
-                  <th>Expires</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invitations.map((invitation) => (
-                  <tr key={invitation.id}>
-                    <td className="fw-semibold">{invitation.email}</td>
-                    <td>{invitation.invitedByName || "Portal Admin"}</td>
-                    <td>{formatInvitationDate(invitation.createdAt)}</td>
-                    <td>{formatInvitationDate(invitation.expiryDate)}</td>
-                    <td>
-                      <span className={`badge ${invitationStatusClass(invitation.status)}`}>
-                        {String(invitation.status || "PENDING").replaceAll("_", " ")}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="d-flex flex-wrap gap-2">
-                        {invitation.status === "PENDING" && (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1"
-                            onClick={() => rejectOrganizerInvitation(invitation)}
-                          >
-                            <BsXCircle /> Reject
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                          onClick={() => deleteOrganizerInvitation(invitation)}
-                        >
-                          <BsTrash /> Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="admin-section-header mb-3">
+              <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>Current Organizers</h2>
+              <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
+                Organizers who accepted invitation and joined this portal.
+              </p>
+            </div>
+            {organizers.length === 0 ? (
+              <div className="text-center py-4 text-muted">No organizers found yet.</div>
+            ) : (
+              <div className="table-responsive" style={{ maxHeight: "380px", overflow: "auto" }}>
+                <table className="table align-middle mb-0">
+                  <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {organizers.map((organizer) => (
+                      <tr key={organizer.id}>
+                        <td>{organizer.firstName} {organizer.lastName}</td>
+                        <td>{organizer.email}</td>
+                        <td>{organizer.phoneNumber || "Not added"}</td>
+                        <td><span className={`badge ${organizer.active ? "bg-success" : "bg-secondary"}`}>{organizer.active ? "Active" : "Inactive"}</span></td>
+                        <td><button type="button" className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" onClick={() => deleteOrganizer(organizer)} title="Delete organizer"><BsTrash /> Delete</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
-      </div>
-        </div>
-
-        <div className="col-xl-6">
-      <div className="admin-bento-card h-100">
-        <div className="admin-section-header d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
-              Current Organizers
-            </h2>
-            <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
-              Organizers who accepted invitation and joined this portal.
-            </p>
-          </div>
-        </div>
-
-        {organizers.length === 0 ? (
-          <div className="text-center py-4">
-            <p className="text-muted mb-0" style={{ fontSize: "16px" }}>
-              No organizers found yet.
-            </p>
-          </div>
-        ) : (
-          <div className="table-responsive" style={{ maxHeight: "360px", overflow: "auto" }}>
-            <table className="table align-middle mb-0">
-              <thead>
-                <tr>
-                  <th style={{ fontSize: "15px" }}>Name</th>
-                  <th style={{ fontSize: "15px" }}>Email</th>
-                  <th style={{ fontSize: "15px" }}>Phone</th>
-                  <th style={{ fontSize: "15px" }}>Status</th>
-                  <th style={{ fontSize: "15px" }}>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {organizers.map((organizer) => (
-                  <tr key={organizer.id}>
-                    <td style={{ fontSize: "15px" }}>
-                      {organizer.firstName} {organizer.lastName}
-                    </td>
-                    <td style={{ fontSize: "15px" }}>{organizer.email}</td>
-                    <td style={{ fontSize: "15px" }}>
-                      {organizer.phoneNumber || "Not added"}
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          organizer.active ? "bg-success" : "bg-secondary"
-                        }`}
-                      >
-                        {organizer.active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                        onClick={() => deleteOrganizer(organizer)}
-                        title="Delete organizer"
-                      >
-                        <BsTrash /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-        </div>
       </div>
     </AdminLayout>
   );

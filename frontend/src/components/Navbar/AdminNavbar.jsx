@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import HelpMenu from "../Help/HelpMenu";
 import { clearAssistantSession } from "../../utils/assistantSession";
+import { formatIndiaDateTime } from "../../utils/dateTime";
 import {
   BsBox,
   BsBuilding,
@@ -717,12 +718,9 @@ export function NotificationBell() {
 }
 
 function formatNotificationDate(value) {
-  if (!value) return "";
-  const timestamp = String(value);
-  const hasTimeZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp);
-  const date = new Date(hasTimeZone ? timestamp : `${timestamp}Z`);
-  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString([], {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+  return formatIndiaDateTime(value, {
+    year: undefined,
+    second: undefined,
   });
 }
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { clearAssistantSession } from "../../utils/assistantSession";
+import { formatIndiaDateTime } from "../../utils/dateTime";
 import {
   BsBarChart,
   BsBox,
@@ -529,9 +530,7 @@ function friendlyEmailFailure(reason) {
 }
 
 function formatEmailDeliveryDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("en-IN");
+  return formatIndiaDateTime(value);
 }
 
 function SuperAdminSubscriptions({ money, onPlatformChange }) {

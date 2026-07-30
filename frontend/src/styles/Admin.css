@@ -1982,6 +1982,111 @@
   }
 }
 
+.create-portal-navbar-logo {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  object-fit: contain;
+}
+
+.create-portal-intro {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(125deg, #0f172a, #1e3a8a, #5731c7, #7c3aed);
+  background-size: 220% 220%;
+  animation: loginGradientFlow 12s ease-in-out infinite;
+}
+
+.create-portal-intro::after {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  right: -105px;
+  bottom: -90px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  content: "";
+  pointer-events: none;
+  animation: loginOrbFloat 7s ease-in-out infinite reverse;
+}
+
+.create-portal-intro > * {
+  position: relative;
+  z-index: 1;
+}
+
+.create-portal-info-card {
+  transform: translateY(12px);
+  opacity: 0;
+  animation: loginFeatureReveal 0.65s ease forwards;
+  animation-delay: var(--info-delay);
+  transition: transform 0.25s ease, background-color 0.25s ease,
+    border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.create-portal-info-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.36) !important;
+  box-shadow: 0 16px 30px rgba(7, 13, 48, 0.2);
+}
+
+.create-portal-info-icon {
+  display: inline-flex;
+  transition: transform 0.25s ease;
+}
+
+.create-portal-info-card:hover .create-portal-info-icon {
+  transform: translateY(-2px) scale(1.08);
+}
+
+.create-portal-form-card {
+  transition: transform 0.28s ease, box-shadow 0.28s ease,
+    border-color 0.28s ease;
+}
+
+.create-portal-form-card:hover {
+  transform: translateY(-3px);
+  border-color: #d9e3f5 !important;
+  box-shadow: 0 20px 45px rgba(30, 58, 138, 0.11) !important;
+}
+
+.create-portal-form-card .form-control,
+.create-portal-form-card .form-select {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.create-portal-form-card .form-control:focus,
+.create-portal-form-card .form-select:focus {
+  transform: translateY(-1px);
+  border-color: #6b63e8;
+  box-shadow: 0 0 0 4px rgba(107, 99, 232, 0.12);
+}
+
+.create-portal-submit {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.create-portal-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(33, 109, 243, 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-portal-intro,
+  .create-portal-intro::after,
+  .create-portal-info-card {
+    animation: none;
+  }
+
+  .create-portal-info-card {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 @media (max-width: 380px) {
   .login-brand {
     max-width: 88px;

@@ -12,6 +12,7 @@ import {
   BsArrowRight,
 } from "react-icons/bs";
 import { Eye, EyeOff } from "lucide-react";
+import ficLogo from "../assets/images/fic-logo.png";
 
 function CreatePortal() {
   const navigate = useNavigate();
@@ -73,8 +74,10 @@ function CreatePortal() {
         style={{ height: "66px", background: "#12085c", color: "#fff" }}
       >
         <Link to="/" className="text-white text-decoration-none d-flex align-items-center gap-2">
-          <BsBox size={30} />
-          <span className="create-portal-brand fw-bold" style={{ fontSize: "24px" }}>BackRooms</span>
+          <img className="create-portal-navbar-logo" src={ficLogo} alt="FIC BackRooms logo" />
+          <span className="create-portal-brand fw-bold" style={{ fontSize: "24px" }}>
+            FIC BackRooms
+          </span>
         </Link>
 
         <Link to="/login" className="btn btn-light public-user-btn">
@@ -89,7 +92,6 @@ function CreatePortal() {
               className="create-portal-intro p-4 h-100"
               style={{
                 borderRadius: "28px",
-                background: "linear-gradient(135deg,#0f172a,#1e3a8a,#7c3aed)",
                 color: "#fff",
               }}
             >
@@ -117,11 +119,13 @@ function CreatePortal() {
 
               <div className="mt-4 d-grid gap-3">
                 <InfoBox
+                  delay="0.1s"
                   icon={<BsShieldCheck />}
                   title="Secure workspace"
                   text="Every portal has its own users, events and role access."
                 />
                 <InfoBox
+                  delay="0.2s"
                   icon={<BsPerson />}
                   title="Owner account"
                   text="The first user becomes the portal admin."
@@ -133,7 +137,7 @@ function CreatePortal() {
           <div className="create-portal-form-column col-lg-8">
             <div
               className="create-portal-form-card bg-white shadow-sm p-4"
-              style={{ borderRadius: "28px" }}
+              style={{ borderRadius: "28px", border: "1px solid #e8ecf4" }}
             >
               <h2 className="fw-bold mb-2" style={{ fontSize: "28px" }}>
                 Portal Details
@@ -288,17 +292,18 @@ function CreatePortal() {
   );
 }
 
-function InfoBox({ icon, title, text }) {
+function InfoBox({ icon, title, text, delay = "0s" }) {
   return (
     <div
-      className="p-3"
+      className="create-portal-info-card p-3"
       style={{
+        "--info-delay": delay,
         borderRadius: "18px",
         background: "rgba(255,255,255,.12)",
         border: "1px solid rgba(255,255,255,.18)",
       }}
     >
-      <div style={{ fontSize: "24px" }}>{icon}</div>
+      <div className="create-portal-info-icon" style={{ fontSize: "24px" }}>{icon}</div>
       <h6 className="fw-bold mt-2 mb-1">{title}</h6>
       <p className="mb-0" style={{ color: "#dbeafe", fontSize: "14px" }}>
         {text}

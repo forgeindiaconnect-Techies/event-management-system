@@ -496,7 +496,23 @@ function emailStatusClass(status) {
 
 function friendlyEmailFailure(reason) {
   if (!reason) return "—";
-  const value = String(reason).toLowerCase();
+  const original = String(reason);
+  const value = original.toLowerCase();
+  if (value.includes("brevo_api_key is required")) {
+    return "BREVO_API_KEY is missing in the Render environment.";
+  }
+  if (value.includes("brevo_sender_email is required")) {
+    return "BREVO_SENDER_EMAIL is missing in the Render environment.";
+  }
+  if (value.includes("brevo api returned http 401") || value.includes("brevo api returned http 403")) {
+    return "Brevo rejected the API key. Create a valid API key and update BREVO_API_KEY in Render.";
+  }
+  if (value.includes("brevo api returned http 400")) {
+    return `Brevo rejected the email request: ${original}`;
+  }
+  if (value.includes("brevo api returned")) {
+    return original;
+  }
   if (value.includes("mailconnectexception") || value.includes("couldn't connect") || value.includes("connection failed")) {
     return "Unable to connect to the mail server.";
   }

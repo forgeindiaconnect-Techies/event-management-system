@@ -3,6 +3,7 @@ package com.fic.event_management_system.repository;
 import com.fic.event_management_system.entity.OrganizerInvitation;
 import com.fic.event_management_system.enums.InvitationStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface OrganizerInvitationRepository extends JpaRepository<OrganizerInvitation, Long> {
 	
 	Optional<OrganizerInvitation> findByToken(String token);
+
+	List<OrganizerInvitation> findByPortalIdOrderByCreatedAtDesc(Long portalId);
 	
 	boolean existsByEmailAndPortalIdAndStatus(
 	        String email,

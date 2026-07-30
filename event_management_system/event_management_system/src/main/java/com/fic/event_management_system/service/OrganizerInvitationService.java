@@ -19,9 +19,15 @@ public interface OrganizerInvitationService {
 
     List<OrganizerInvitation> getAllInvitations();
 
+    List<OrganizerInvitation> getInvitationsForPortal(Long portalId);
+
     User acceptInvitation(String token, AcceptInvitationRequest request);
 
     User addOrganizerManually(AcceptInvitationRequest request);
 
     String rejectInvitation(String token);
+
+    OrganizerInvitation rejectInvitationById(Long invitationId);
+
+    void deleteInvitation(Long invitationId);
 }

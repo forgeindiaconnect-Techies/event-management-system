@@ -1,10 +1,17 @@
 package com.fic.event_management_system.serviceImpl;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,17 +37,36 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
     private final EmailDeliveryRepository emailDeliveryRepository;
     private final NotificationService notificationService;
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
 
     @Value("${spring.mail.username:}")
     private String fromEmail;
 
+    @Value("${email.provider:smtp}")
+    private String emailProvider;
+
+    @Value("${brevo.api-key:}")
+    private String brevoApiKey;
+
+    @Value("${brevo.sender-email:}")
+    private String brevoSenderEmail;
+
+    @Value("${brevo.sender-name:FIC BackRooms}")
+    private String brevoSenderName;
+
     public EmailServiceImpl(
             JavaMailSender mailSender,
             EmailDeliveryRepository emailDeliveryRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            ObjectMapper objectMapper) {
         this.mailSender = mailSender;
         this.emailDeliveryRepository = emailDeliveryRepository;
         this.notificationService = notificationService;
+        this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(15))
+                .build();
     }
 
     /**
@@ -176,17 +202,7 @@ public class EmailServiceImpl implements EmailService {
         emailDeliveryRepository.save(delivery);
 
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-
-            if (fromEmail != null && !fromEmail.isBlank()) {
-                message.setFrom(fromEmail);
-            }
-
-            message.setTo(delivery.getRecipientEmail());
-            message.setSubject(delivery.getSubject());
-            message.setText(delivery.getBody());
-
-            mailSender.send(message);
+            deliverEmail(delivery);
 
             delivery.setStatus(EmailDeliveryStatus.SENT);
             delivery.setSentAt(LocalDateTime.now());
@@ -220,6 +236,99 @@ public class EmailServiceImpl implements EmailService {
         }
 
         emailDeliveryRepository.save(delivery);
+    }
+
+    private void deliverEmail(EmailDelivery delivery) throws Exception {
+        if ("brevo".equalsIgnoreCase(emailProvider == null ? "" : emailProvider.trim())) {
+            sendThroughBrevo(delivery);
+            return;
+        }
+
+        sendThroughSmtp(delivery);
+    }
+
+    private void sendThroughSmtp(EmailDelivery delivery) {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        if (fromEmail != null && !fromEmail.isBlank()) {
+            message.setFrom(fromEmail);
+        }
+
+        message.setTo(delivery.getRecipientEmail());
+        message.setSubject(delivery.getSubject());
+        message.setText(delivery.getBody());
+
+        mailSender.send(message);
+    }
+
+    private void sendThroughBrevo(EmailDelivery delivery) throws Exception {
+        requireBrevoSetting(brevoApiKey, "BREVO_API_KEY");
+        requireBrevoSetting(brevoSenderEmail, "BREVO_SENDER_EMAIL");
+
+        Map<String, Object> payload = Map.of(
+                "sender", Map.of(
+                        "name", normalizeSenderName(),
+                        "email", brevoSenderEmail.trim()
+                ),
+                "to", List.of(Map.of("email", delivery.getRecipientEmail())),
+                "subject", delivery.getSubject(),
+                "textContent", delivery.getBody()
+        );
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                .timeout(Duration.ofSeconds(30))
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .header("api-key", brevoApiKey.trim())
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        objectMapper.writeValueAsString(payload),
+                        StandardCharsets.UTF_8
+                ))
+                .build();
+
+        HttpResponse<String> response;
+        try {
+            response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw exception;
+        }
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException(
+                    "Brevo API returned HTTP " + response.statusCode()
+                            + ": " + normalizeBrevoError(response.body())
+            );
+        }
+    }
+
+    private void requireBrevoSetting(String value, String environmentName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    environmentName + " is required when EMAIL_PROVIDER=brevo"
+            );
+        }
+    }
+
+    private String normalizeSenderName() {
+        return brevoSenderName == null || brevoSenderName.isBlank()
+                ? "FIC BackRooms"
+                : brevoSenderName.trim();
+    }
+
+    private String normalizeBrevoError(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "No response body";
+        }
+
+        String normalized = responseBody.replaceAll("\\s+", " ").trim();
+        return normalized.length() > 700
+                ? normalized.substring(0, 700)
+                : normalized;
     }
 
     @Override

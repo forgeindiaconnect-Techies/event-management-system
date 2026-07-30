@@ -11,6 +11,7 @@ import {
   BsArrowClockwise,
   BsPersonVcard,
   BsTrash,
+  BsXCircle,
 } from "react-icons/bs";
 
 function Organizers() {
@@ -19,6 +20,7 @@ function Organizers() {
   const [inviteLink, setInviteLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [organizers, setOrganizers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [addMode, setAddMode] = useState("email");
   const [createdCredentials, setCreatedCredentials] = useState(null);
   const [manualForm, setManualForm] = useState({
@@ -30,8 +32,12 @@ function Organizers() {
   });
 
   useEffect(() => {
-    fetchOrganizers();
+    refreshOrganizerData();
   }, []);
+
+  const refreshOrganizerData = async () => {
+    await Promise.all([fetchOrganizers(), fetchInvitations()]);
+  };
 
   const fetchOrganizers = async () => {
     const portalId = localStorage.getItem("portalId");
@@ -78,7 +84,7 @@ function Organizers() {
       setInviteLink(link);
       setEmail("");
 
-      fetchOrganizers();
+      await refreshOrganizerData();
     } catch (error) {
       console.log(error);
       setMessage(
@@ -96,6 +102,19 @@ function Organizers() {
 
     await navigator.clipboard.writeText(inviteLink);
     setMessage("Invitation link copied.");
+  };
+
+  const fetchInvitations = async () => {
+    const portalId = localStorage.getItem("portalId");
+    if (!portalId) return;
+
+    try {
+      const response = await api.get(`/invitations/portal/${portalId}`);
+      setInvitations(response.data || []);
+    } catch (error) {
+      console.log(error);
+      setMessage("Unable to load organizer invitations.");
+    }
   };
 
   const deleteOrganizer = async (organizer) => {
@@ -116,6 +135,40 @@ function Organizers() {
         error.response?.data?.message ||
         error.response?.data ||
         "Unable to delete the organizer."
+      );
+    }
+  };
+
+  const rejectOrganizerInvitation = async (invitation) => {
+    if (!window.confirm(`Reject the invitation sent to ${invitation.email}?`)) return;
+
+    try {
+      await api.post(`/invitations/${invitation.id}/reject`);
+      setMessage("Organizer invitation rejected.");
+      await fetchInvitations();
+    } catch (error) {
+      setMessage(
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to reject the invitation."
+      );
+    }
+  };
+
+  const deleteOrganizerInvitation = async (invitation) => {
+    if (!window.confirm(
+      `Delete the invitation record for ${invitation.email}? This does not delete an organizer account.`
+    )) return;
+
+    try {
+      await api.delete(`/invitations/${invitation.id}`);
+      setMessage("Organizer invitation deleted.");
+      await fetchInvitations();
+    } catch (error) {
+      setMessage(
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to delete the invitation."
       );
     }
   };
@@ -152,7 +205,7 @@ function Organizers() {
       setCreatedCredentials({ email: manualForm.email.trim(), password: manualForm.password });
       setMessage("Organizer account created. Copy and share the login details privately.");
       setManualForm({ firstName: "", lastName: "", email: "", phoneNumber: "", password: "" });
-      fetchOrganizers();
+      await refreshOrganizerData();
     } catch (error) {
       console.log(error);
       setMessage(error.response?.data?.message || "Unable to create organizer account.");
@@ -175,7 +228,7 @@ function Organizers() {
 
         <button
           className="btn btn-outline-primary d-flex align-items-center gap-2"
-          onClick={fetchOrganizers}
+          onClick={refreshOrganizerData}
           style={{ borderRadius: "10px", fontSize: "16px" }}
         >
           <BsArrowClockwise /> Refresh
@@ -360,6 +413,75 @@ function Organizers() {
         <div className="admin-section-header d-flex justify-content-between align-items-center mb-3">
           <div>
             <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
+              Organizer Invitations
+            </h2>
+            <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
+              Invitations sent from this portal and their current status.
+            </p>
+          </div>
+        </div>
+
+        {invitations.length === 0 ? (
+          <div className="text-center py-4 text-muted">
+            No organizer invitations sent yet.
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Recipient</th>
+                  <th>Invited By</th>
+                  <th>Sent</th>
+                  <th>Expires</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.map((invitation) => (
+                  <tr key={invitation.id}>
+                    <td className="fw-semibold">{invitation.email}</td>
+                    <td>{invitation.invitedByName || "Portal Admin"}</td>
+                    <td>{formatInvitationDate(invitation.createdAt)}</td>
+                    <td>{formatInvitationDate(invitation.expiryDate)}</td>
+                    <td>
+                      <span className={`badge ${invitationStatusClass(invitation.status)}`}>
+                        {String(invitation.status || "PENDING").replaceAll("_", " ")}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="d-flex flex-wrap gap-2">
+                        {invitation.status === "PENDING" && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1"
+                            onClick={() => rejectOrganizerInvitation(invitation)}
+                          >
+                            <BsXCircle /> Reject
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                          onClick={() => deleteOrganizerInvitation(invitation)}
+                        >
+                          <BsTrash /> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="admin-bento-card mt-4">
+        <div className="admin-section-header d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h2 className="fw-bold mb-1" style={{ fontSize: "22px" }}>
               Current Organizers
             </h2>
             <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
@@ -425,6 +547,19 @@ function Organizers() {
       </div>
     </AdminLayout>
   );
+}
+
+function formatInvitationDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function invitationStatusClass(status) {
+  if (status === "ACCEPTED") return "bg-success";
+  if (status === "REJECTED") return "bg-danger";
+  if (status === "EXPIRED") return "bg-secondary";
+  return "bg-warning text-dark";
 }
 
 export default Organizers;

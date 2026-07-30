@@ -1,13 +1,13 @@
 package com.fic.event_management_system.controller;
 import com.fic.event_management_system.dto.InviteOrganizerRequest;
 import com.fic.event_management_system.dto.AcceptInvitationRequest;
-import com.fic.event_management_system.dto.InviteOrganizerRequest;
 import com.fic.event_management_system.entity.OrganizerInvitation;
 import com.fic.event_management_system.entity.User;
 import com.fic.event_management_system.service.OrganizerInvitationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/invitations")
@@ -31,6 +31,24 @@ public class OrganizerInvitationController {
         return invitationService.getAllInvitations();
     }
 
+    @GetMapping("/portal/{portalId}")
+    public List<Map<String, Object>> getPortalInvitations(@PathVariable Long portalId) {
+        return invitationService.getInvitationsForPortal(portalId)
+                .stream()
+                .map(invitation -> Map.<String, Object>of(
+                        "id", invitation.getId(),
+                        "email", invitation.getEmail(),
+                        "status", invitation.getStatus(),
+                        "createdAt", invitation.getCreatedAt(),
+                        "expiryDate", invitation.getExpiryDate(),
+                        "invitedByName", invitation.getInvitedBy() == null
+                                ? "Portal Admin"
+                                : (invitation.getInvitedBy().getFirstName() + " "
+                                        + invitation.getInvitedBy().getLastName()).trim()
+                ))
+                .toList();
+    }
+
     @GetMapping("/token/{token}")
     public OrganizerInvitation getInvitationByToken(@PathVariable String token) {
         return invitationService.getInvitationByToken(token);
@@ -52,5 +70,15 @@ public class OrganizerInvitationController {
     @PostMapping("/reject/{token}")
     public String rejectInvitation(@PathVariable String token) {
         return invitationService.rejectInvitation(token);
+    }
+
+    @PostMapping("/{invitationId}/reject")
+    public OrganizerInvitation rejectInvitationById(@PathVariable Long invitationId) {
+        return invitationService.rejectInvitationById(invitationId);
+    }
+
+    @DeleteMapping("/{invitationId}")
+    public void deleteInvitation(@PathVariable Long invitationId) {
+        invitationService.deleteInvitation(invitationId);
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import com.fic.event_management_system.service.EmailService;
 import com.fic.event_management_system.service.NotificationService;
 import com.fic.event_management_system.service.AccountActivationService;
+import com.fic.event_management_system.security.TenantSecurityService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,6 +38,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final AccountActivationService accountActivationService;
+    private final TenantSecurityService tenantSecurityService;
 
     public OrganizerInvitationServiceImpl(
             OrganizerInvitationRepository invitationRepository,
@@ -45,7 +47,8 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
             PortalRepository portalRepository,
             EmailService emailService,
             NotificationService notificationService,
-            AccountActivationService accountActivationService) {
+            AccountActivationService accountActivationService,
+            TenantSecurityService tenantSecurityService) {
 
         this.invitationRepository = invitationRepository;
         this.userRepository = userRepository;
@@ -54,6 +57,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         this.emailService = emailService;
         this.notificationService = notificationService;
         this.accountActivationService = accountActivationService;
+        this.tenantSecurityService = tenantSecurityService;
     }
 
     @Override
@@ -61,9 +65,14 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
 
     	Portal portal = portalRepository.findById(request.getPortalId())
     	        .orElseThrow(() -> new RuntimeException("Portal not found"));
+        tenantSecurityService.requireSamePortal(portal.getId());
 
     	User invitedBy = userRepository.findById(request.getInvitedById())
     	        .orElseThrow(() -> new RuntimeException("Invited by user not found"));
+        if (invitedBy.getPortal() == null
+                || !portal.getId().equals(invitedBy.getPortal().getId())) {
+            throw new RuntimeException("Inviting administrator does not belong to this portal");
+        }
 
     	if (invitationRepository.existsByEmailAndPortalIdAndStatus(
     	        request.getEmail(),
@@ -158,6 +167,12 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
     @Override
     public List<OrganizerInvitation> getAllInvitations() {
         return invitationRepository.findAll();
+    }
+
+    @Override
+    public List<OrganizerInvitation> getInvitationsForPortal(Long portalId) {
+        tenantSecurityService.requireSamePortal(portalId);
+        return invitationRepository.findByPortalIdOrderByCreatedAtDesc(portalId);
     }
 
     @Override
@@ -331,5 +346,30 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         );
 
         return "Invitation rejected successfully";
+    }
+
+    @Override
+    public OrganizerInvitation rejectInvitationById(Long invitationId) {
+        OrganizerInvitation invitation = getInvitationForLoggedInPortal(invitationId);
+
+        if (invitation.getStatus() != InvitationStatus.PENDING) {
+            throw new RuntimeException("Only pending invitations can be rejected");
+        }
+
+        invitation.setStatus(InvitationStatus.REJECTED);
+        return invitationRepository.save(invitation);
+    }
+
+    @Override
+    public void deleteInvitation(Long invitationId) {
+        OrganizerInvitation invitation = getInvitationForLoggedInPortal(invitationId);
+        invitationRepository.delete(invitation);
+    }
+
+    private OrganizerInvitation getInvitationForLoggedInPortal(Long invitationId) {
+        OrganizerInvitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new RuntimeException("Organizer invitation not found"));
+        tenantSecurityService.requireSamePortal(invitation.getPortal().getId());
+        return invitation;
     }
 }

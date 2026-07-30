@@ -125,8 +125,6 @@ function Login() {
               className="login-intro h-100 p-5"
               style={{
                 borderRadius: "28px",
-                background:
-                  "linear-gradient(135deg,#0f172a,#1e3a8a,#7c3aed)",
                 color: "#fff",
               }}
             >
@@ -148,6 +146,7 @@ function Login() {
               <div className="row g-3">
                 <div className="col-md-6">
                   <BentoInfoCard
+                    delay="0.08s"
                     icon={<BsCalendarEvent />}
                     title="Event Operations"
                     text="Create, manage and monitor events easily."
@@ -156,6 +155,7 @@ function Login() {
 
                 <div className="col-md-6">
                   <BentoInfoCard
+                    delay="0.16s"
                     icon={<BsPeople />}
                     title="Role Dashboards"
                     text="Organizer, Staff, Coordinator, Volunteer and more."
@@ -164,6 +164,7 @@ function Login() {
 
                 <div className="col-md-12">
                   <BentoInfoCard
+                    delay="0.24s"
                     icon={<BsShieldCheck />}
                     title="Secure Access"
                     text="Users are redirected automatically based on their assigned role."
@@ -367,18 +368,21 @@ function formatRole(role) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function BentoInfoCard({ icon, title, text }) {
+function BentoInfoCard({ icon, title, text, delay = "0s" }) {
   return (
     <div
-      className="h-100 p-4"
+      className="login-feature-card h-100 p-4"
       style={{
+        "--feature-delay": delay,
         borderRadius: "22px",
         background: "rgba(255,255,255,0.12)",
         border: "1px solid rgba(255,255,255,0.18)",
         backdropFilter: "blur(12px)",
       }}
     >
-      <div style={{ fontSize: "28px", marginBottom: "14px" }}>{icon}</div>
+      <div className="login-feature-icon" style={{ fontSize: "28px", marginBottom: "14px" }}>
+        {icon}
+      </div>
       <h5 className="fw-bold">{title}</h5>
       <p className="mb-0" style={{ color: "#dbeafe", fontSize: "15px" }}>
         {text}

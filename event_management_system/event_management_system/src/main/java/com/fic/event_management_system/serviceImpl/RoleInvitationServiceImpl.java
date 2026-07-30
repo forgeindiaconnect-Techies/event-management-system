@@ -155,7 +155,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         invitation.setRoleName(request.getRoleName());
         invitation.setToken(UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
-        invitation.setExpiryDate(LocalDateTime.now().plusDays(7));
+        invitation.setExpiryDate(LocalDateTime.now().plusDays(2));
         invitation.setEventId(event != null ? event.getId() : null);
         invitation.setEventName(request.getEventName());
         invitation.setEventDescription(request.getEventDescription());
@@ -276,7 +276,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         body.append("Accept your invitation here:\n")
                 .append(link)
                 .append("\n\n")
-                .append("This invitation expires in 7 days.");
+                .append("This invitation expires in 2 days.");
 
         return body.toString();
     }

@@ -86,7 +86,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
 
         invitation.setToken(UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
-        invitation.setExpiryDate(LocalDateTime.now().plusDays(7));
+        invitation.setExpiryDate(LocalDateTime.now().plusDays(2));
 
         OrganizerInvitation savedInvitation = invitationRepository.save(invitation);
 
@@ -105,7 +105,7 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
                 " as an Organizer.\n\n" +
                 "Use the link below to accept the invitation and create your organizer account:\n\n" +
                 invitationLink +
-                "\n\nThis invitation expires in 7 days.\n\n" +
+                "\n\nThis invitation expires in 2 days.\n\n" +
                 "If you were not expecting this invitation, you can ignore this email.\n\n" +
                 "Regards,\n" + portalName;
 

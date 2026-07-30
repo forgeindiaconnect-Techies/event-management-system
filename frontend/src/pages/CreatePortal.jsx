@@ -16,30 +16,39 @@ import { Eye, EyeOff, MapPin, Clock3 } from "lucide-react";
 import ficLogo from "../assets/images/fic-logo.png";
 
 const LOCATION_OPTIONS = {
-  India: {
-    Karnataka: [["Bengaluru", "Asia/Kolkata"], ["Mysuru", "Asia/Kolkata"]],
-    "Tamil Nadu": [["Chennai", "Asia/Kolkata"], ["Coimbatore", "Asia/Kolkata"]],
-    Telangana: [["Hyderabad", "Asia/Kolkata"]],
-    Maharashtra: [["Mumbai", "Asia/Kolkata"], ["Pune", "Asia/Kolkata"]],
-    Delhi: [["New Delhi", "Asia/Kolkata"]],
-  },
-  "United Arab Emirates": {
-    Dubai: [["Dubai", "Asia/Dubai"]],
-    "Abu Dhabi": [["Abu Dhabi", "Asia/Dubai"]],
-  },
-  Singapore: {
-    Singapore: [["Singapore", "Asia/Singapore"]],
-  },
-  "United Kingdom": {
-    England: [["London", "Europe/London"], ["Manchester", "Europe/London"]],
-  },
-  "United States": {
-    "New York": [["New York City", "America/New_York"]],
-    California: [
-      ["San Francisco", "America/Los_Angeles"],
-      ["Los Angeles", "America/Los_Angeles"],
-    ],
-  },
+  India: [
+    ["Bengaluru", "Asia/Kolkata"],
+    ["Chennai", "Asia/Kolkata"],
+    ["Hyderabad", "Asia/Kolkata"],
+    ["Mumbai", "Asia/Kolkata"],
+    ["New Delhi", "Asia/Kolkata"],
+    ["Kolkata", "Asia/Kolkata"],
+    ["Pune", "Asia/Kolkata"],
+  ],
+  "United Arab Emirates": [["Dubai", "Asia/Dubai"], ["Abu Dhabi", "Asia/Dubai"]],
+  Singapore: [["Singapore", "Asia/Singapore"]],
+  "United Kingdom": [["London", "Europe/London"], ["Manchester", "Europe/London"]],
+  "United States": [
+    ["New York City", "America/New_York"],
+    ["Chicago", "America/Chicago"],
+    ["Denver", "America/Denver"],
+    ["San Francisco", "America/Los_Angeles"],
+    ["Los Angeles", "America/Los_Angeles"],
+  ],
+  Canada: [
+    ["Toronto", "America/Toronto"],
+    ["Vancouver", "America/Vancouver"],
+  ],
+  Australia: [
+    ["Sydney", "Australia/Sydney"],
+    ["Melbourne", "Australia/Melbourne"],
+    ["Perth", "Australia/Perth"],
+  ],
+  Germany: [["Berlin", "Europe/Berlin"], ["Frankfurt", "Europe/Berlin"]],
+  France: [["Paris", "Europe/Paris"]],
+  Japan: [["Tokyo", "Asia/Tokyo"]],
+  "Saudi Arabia": [["Riyadh", "Asia/Riyadh"], ["Jeddah", "Asia/Riyadh"]],
+  Qatar: [["Doha", "Asia/Qatar"]],
 };
 
 const browserTimeZone =
@@ -63,7 +72,7 @@ function CreatePortal() {
 
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [location, setLocation] = useState({ country: "", region: "", city: "" });
+  const [location, setLocation] = useState({ country: "", city: "" });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,14 +83,13 @@ function CreatePortal() {
   const handleLocationChange = (field, value) => {
     const nextLocation = {
       country: field === "country" ? value : location.country,
-      region: field === "country" ? "" : field === "region" ? value : location.region,
       city: field === "city" ? value : "",
     };
 
-    const selectedCity = LOCATION_OPTIONS[nextLocation.country]?.[nextLocation.region]
+    const selectedCity = LOCATION_OPTIONS[nextLocation.country]
       ?.find(([city]) => city === nextLocation.city);
     const completeLocation = selectedCity
-      ? `${nextLocation.city}, ${nextLocation.region}, ${nextLocation.country}`
+      ? `${nextLocation.city}, ${nextLocation.country}`
       : "";
 
     setLocation(nextLocation);
@@ -255,7 +263,7 @@ function CreatePortal() {
                       Organization Location
                     </label>
                     <div className="row g-2">
-                      <div className="col-md-4">
+                      <div className="col-md-6">
                         <select
                           className="form-select"
                           value={location.country}
@@ -268,30 +276,16 @@ function CreatePortal() {
                           ))}
                         </select>
                       </div>
-                      <div className="col-md-4">
-                        <select
-                          className="form-select"
-                          value={location.region}
-                          onChange={(event) => handleLocationChange("region", event.target.value)}
-                          disabled={!location.country}
-                          required
-                        >
-                          <option value="">Select state/region</option>
-                          {Object.keys(LOCATION_OPTIONS[location.country] || {}).map((region) => (
-                            <option key={region} value={region}>{region}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6">
                         <select
                           className="form-select"
                           value={location.city}
                           onChange={(event) => handleLocationChange("city", event.target.value)}
-                          disabled={!location.region}
+                          disabled={!location.country}
                           required
                         >
-                          <option value="">Select city</option>
-                          {(LOCATION_OPTIONS[location.country]?.[location.region] || []).map(
+                          <option value="">Select major city</option>
+                          {(LOCATION_OPTIONS[location.country] || []).map(
                             ([city]) => <option key={city} value={city}>{city}</option>
                           )}
                         </select>
@@ -302,7 +296,7 @@ function CreatePortal() {
                       {form.organizationLocation ? (
                         <><span>{form.organizationLocation}</span> · Time zone: <strong>{form.timeZone}</strong></>
                       ) : (
-                        "Select the country, state/region and city to detect the time zone."
+                        "Used only to determine the correct timezone for schedules and notifications."
                       )}
                     </small>
                   </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axiosConfig";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 import ficLogo from "../assets/images/fic-logo.png";
 import { clearAssistantSession } from "../utils/assistantSession";
 import {
@@ -173,17 +173,33 @@ function Login() {
             </div>
           </div>
 
-          <div className="login-form-column col-lg-5">
+          <div className="login-form-column col-lg-5 d-flex align-items-center">
             <div
-              className="login-form-card bg-white shadow-sm h-100 p-4"
-              style={{ borderRadius: "28px" }}
+              className="login-form-card bg-white shadow-sm w-100 p-4 p-lg-5"
+              style={{
+                borderRadius: "28px",
+                border: "1px solid #e8ecf4",
+              }}
             >
+              <div
+                className="d-inline-flex align-items-center justify-content-center mb-3"
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "15px",
+                  color: "#216df3",
+                  background: "#eef4ff",
+                }}
+              >
+                <LockKeyhole size={23} strokeWidth={2.2} />
+              </div>
+
               <div className="mb-4">
                 <h2 className="fw-bold mb-2" style={{ fontSize: "30px" }}>
-                  Login
+                  Welcome back
                 </h2>
                 <p className="text-muted mb-0">
-                  Access your dashboard using your registered email and password.
+                  Sign in with your registered account to continue to your dashboard.
                 </p>
               </div>
 
@@ -250,9 +266,20 @@ function Login() {
                 <p className="text-center text-muted mt-4 mb-0">
                   New user?{" "}
                   <Link to="/create-portal" className="fw-semibold text-primary text-decoration-none">
-                    Sign up
+                    Create a portal
                   </Link>
                 </p>
+
+                <div
+                  className="d-flex align-items-center justify-content-center gap-2 mt-4 pt-3 text-muted"
+                  style={{
+                    borderTop: "1px solid #edf0f5",
+                    fontSize: "13px",
+                  }}
+                >
+                  <ShieldCheck size={16} color="#24845b" />
+                  Secure role-based access
+                </div>
               </form>
             </div>
           </div>

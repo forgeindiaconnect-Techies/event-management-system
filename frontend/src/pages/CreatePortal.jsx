@@ -51,6 +51,21 @@ const LOCATION_OPTIONS = {
   Qatar: [["Doha", "Asia/Qatar"]],
 };
 
+const COUNTRY_PHONE_RULES = {
+  India: { code: "+91", min: 10, max: 10, example: "9876543210" },
+  "United Arab Emirates": { code: "+971", min: 9, max: 9, example: "501234567" },
+  Singapore: { code: "+65", min: 8, max: 8, example: "81234567" },
+  "United Kingdom": { code: "+44", min: 10, max: 10, example: "7700900123" },
+  "United States": { code: "+1", min: 10, max: 10, example: "2025550123" },
+  Canada: { code: "+1", min: 10, max: 10, example: "4165550123" },
+  Australia: { code: "+61", min: 9, max: 9, example: "412345678" },
+  Germany: { code: "+49", min: 10, max: 11, example: "15123456789" },
+  France: { code: "+33", min: 9, max: 9, example: "612345678" },
+  Japan: { code: "+81", min: 10, max: 10, example: "9012345678" },
+  "Saudi Arabia": { code: "+966", min: 9, max: 9, example: "512345678" },
+  Qatar: { code: "+974", min: 8, max: 8, example: "33123456" },
+};
+
 const browserTimeZone =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
 
@@ -73,6 +88,7 @@ function CreatePortal() {
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [location, setLocation] = useState({ country: "", city: "" });
+  const [phoneDigits, setPhoneDigits] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -93,10 +109,26 @@ function CreatePortal() {
       : "";
 
     setLocation(nextLocation);
+    if (field === "country") {
+      setPhoneDigits("");
+    }
     setForm((current) => ({
       ...current,
       organizationLocation: completeLocation,
       timeZone: selectedCity?.[1] || browserTimeZone,
+      phoneNumber: field === "country" ? "" : current.phoneNumber,
+    }));
+  };
+
+  const handlePhoneChange = (event) => {
+    const phoneRule = COUNTRY_PHONE_RULES[location.country];
+    if (!phoneRule) return;
+
+    const digits = event.target.value.replace(/\D/g, "").slice(0, phoneRule.max);
+    setPhoneDigits(digits);
+    setForm((current) => ({
+      ...current,
+      phoneNumber: digits ? `${phoneRule.code}${digits}` : "",
     }));
   };
 
@@ -348,13 +380,41 @@ function CreatePortal() {
 
                   <div className="col-md-6">
                     <label className="form-label fw-semibold">Phone Number</label>
-                    <input
-                      className="form-control"
-                      name="phoneNumber"
-                      placeholder="Enter your phone number"
-                      value={form.phoneNumber}
-                      onChange={handleChange}
-                    />
+                    <div className="input-group">
+                      <span className="input-group-text fw-semibold">
+                        {COUNTRY_PHONE_RULES[location.country]?.code || "+—"}
+                      </span>
+                      <input
+                        className="form-control"
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder={
+                          COUNTRY_PHONE_RULES[location.country]?.example ||
+                          "Select location first"
+                        }
+                        value={phoneDigits}
+                        onChange={handlePhoneChange}
+                        minLength={COUNTRY_PHONE_RULES[location.country]?.min}
+                        maxLength={COUNTRY_PHONE_RULES[location.country]?.max}
+                        pattern={
+                          location.country
+                            ? `\\d{${COUNTRY_PHONE_RULES[location.country].min},${COUNTRY_PHONE_RULES[location.country].max}}`
+                            : undefined
+                        }
+                        disabled={!location.country}
+                        required
+                      />
+                    </div>
+                    <small className="text-muted">
+                      {location.country
+                        ? `${COUNTRY_PHONE_RULES[location.country].min}${
+                            COUNTRY_PHONE_RULES[location.country].min !==
+                            COUNTRY_PHONE_RULES[location.country].max
+                              ? `–${COUNTRY_PHONE_RULES[location.country].max}`
+                              : ""
+                          } digits required for ${location.country}.`
+                        : "Select the organization country to set the calling code."}
+                    </small>
                   </div>
 
                   <div className="col-md-6">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useRef } from "react";
 import {
   FaCheckCircle,
   FaEnvelope,
@@ -40,6 +41,7 @@ function TeamMembers() {
   const [inviteForm, setInviteForm] = useState(emptyInvite);
   const [submitting, setSubmitting] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState(null);
+  const submissionRef = useRef(false);
 
   useEffect(() => {
     loadTeamData();
@@ -107,6 +109,8 @@ function TeamMembers() {
 
   const submitMember = async (submitEvent) => {
     submitEvent.preventDefault();
+    if (submissionRef.current) return;
+    submissionRef.current = true;
     setSubmitting(true);
     setMessage("");
 
@@ -146,6 +150,7 @@ function TeamMembers() {
     } catch (error) {
       setMessage(error.response?.data?.message || error.response?.data || "Unable to add the team member.");
     } finally {
+      submissionRef.current = false;
       setSubmitting(false);
     }
   };

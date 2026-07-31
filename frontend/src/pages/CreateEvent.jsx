@@ -1,5 +1,6 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
 import api from "../api/axiosConfig";
 import "../styles/Admin.css";
 
@@ -12,6 +13,8 @@ const [categorySearch, setCategorySearch] = useState("");
 const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 const [customCategory, setCustomCategory] = useState("");
 const [bannerWarning, setBannerWarning] = useState("");
+const [submitting, setSubmitting] = useState(false);
+const submittingRef = useRef(false);
 
   const [event, setEvent] = useState({
     eventName: "",
@@ -112,7 +115,13 @@ const [bannerWarning, setBannerWarning] = useState("");
       return;
     }
 
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+
     if (!(await checkBannerUrl())) {
+      submittingRef.current = false;
+      setSubmitting(false);
       return;
     }
 
@@ -132,6 +141,9 @@ const [bannerWarning, setBannerWarning] = useState("");
     } catch (error) {
       console.log("Create event failed:", error.response?.data || error);
       alert(error.response?.data?.message || error.response?.data?.error || "Failed to create event");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -531,8 +543,8 @@ const filteredCategoryGroups = categoryGroups
               Cancel
             </button>
 
-            <button type="submit" className="btn btn-primary px-4">
-              Create
+            <button type="submit" className="btn btn-primary px-4" disabled={submitting}>
+              {submitting ? "Creating..." : "Create"}
             </button>
           </div>
         </form>

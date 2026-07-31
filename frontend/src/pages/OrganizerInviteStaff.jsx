@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import OrganizerLayout from "../layouts/OrganizerLayout";
+import { useRef } from "react";
 import api from "../api/axiosConfig";
 import "../styles/Admin.css";
 import { buildLoginDetails, generateTemporaryPassword } from "../utils/temporaryCredentials";
@@ -31,6 +32,7 @@ function OrganizerInviteStaff() {
   const [addMode, setAddMode] = useState("email");
   const [manualData, setManualData] = useState({ firstName: "", lastName: "", phoneNumber: "", password: "" });
   const [createdCredentials, setCreatedCredentials] = useState(null);
+  const submissionRef = useRef(false);
 
   const roles = [
     "Staff",
@@ -100,7 +102,9 @@ function OrganizerInviteStaff() {
 
   const handleInvite = async (e) => {
     e.preventDefault();
+    if (submissionRef.current) return;
 
+    submissionRef.current = true;
     setLoading(true);
     setMessage("");
 
@@ -142,12 +146,15 @@ function OrganizerInviteStaff() {
       setMessageType("danger");
     }
 
+    submissionRef.current = false;
     setLoading(false);
   };
 
   const handleSubmit = async (e) => {
     if (addMode === "email") return handleInvite(e);
     e.preventDefault();
+    if (submissionRef.current) return;
+    submissionRef.current = true;
     setLoading(true);
     setMessage("");
     try {
@@ -169,6 +176,7 @@ function OrganizerInviteStaff() {
       setMessage(error.response?.data?.message || "Failed to create the user.");
       setMessageType("danger");
     } finally {
+      submissionRef.current = false;
       setLoading(false);
     }
   };

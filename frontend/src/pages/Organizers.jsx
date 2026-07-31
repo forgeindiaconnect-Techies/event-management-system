@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
+import { useRef } from "react";
 import "../styles/Admin.css";
 import api from "../api/axiosConfig";
 import { buildLoginDetails, generateTemporaryPassword } from "../utils/temporaryCredentials";
@@ -25,6 +26,7 @@ function Organizers() {
   const [listMode, setListMode] = useState("invitations");
   const [addMode, setAddMode] = useState("email");
   const [createdCredentials, setCreatedCredentials] = useState(null);
+  const submissionRef = useRef(false);
   const [manualForm, setManualForm] = useState({
     firstName: "",
     lastName: "",
@@ -66,6 +68,7 @@ function Organizers() {
 
   const handleInvite = async (e) => {
     e.preventDefault();
+    if (submissionRef.current) return;
 
     const portalId = localStorage.getItem("portalId");
     const invitedById = localStorage.getItem("userId");
@@ -75,6 +78,7 @@ function Organizers() {
       return;
     }
 
+    submissionRef.current = true;
     try {
       setLoading(true);
       setMessage("");
@@ -101,6 +105,7 @@ function Organizers() {
       );
       setInviteLink("");
     } finally {
+      submissionRef.current = false;
       setLoading(false);
     }
   };
@@ -188,6 +193,7 @@ function Organizers() {
 
   const handleManualAdd = async (e) => {
     e.preventDefault();
+    if (submissionRef.current) return;
     const portalId = localStorage.getItem("portalId");
     const invitedById = localStorage.getItem("userId");
 
@@ -202,6 +208,7 @@ function Organizers() {
     }
 
     try {
+      submissionRef.current = true;
       setLoading(true);
       setMessage("");
       setInviteLink("");
@@ -218,6 +225,7 @@ function Organizers() {
       console.log(error);
       setMessage(error.response?.data?.message || "Unable to create organizer account.");
     } finally {
+      submissionRef.current = false;
       setLoading(false);
     }
   };

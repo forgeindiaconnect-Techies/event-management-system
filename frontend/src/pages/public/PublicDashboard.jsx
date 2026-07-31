@@ -301,8 +301,11 @@ function PublicDashboard() {
   }, [events, search, location, activeCategory]);
 
   const featuredEvent = filteredEvents[0];
-  const upcomingEvents = filteredEvents.slice(0, 10);
-  const popularEvents = filteredEvents.slice(0, 8);
+  const registrationOpenEvents = filteredEvents.filter(
+    (event) => !isWithinRegistrationClosingWindow(event.registrationDeadline)
+  );
+  const upcomingEvents = registrationOpenEvents.slice(0, 10);
+  const popularEvents = registrationOpenEvents.slice(0, 8);
   const allEvents = filteredEvents;
 
   return (
@@ -1168,3 +1171,20 @@ function formatDate(date) {
 }
 
 export default PublicDashboard;
+
+function isWithinRegistrationClosingWindow(registrationDeadline) {
+  if (!registrationDeadline) {
+    return false;
+  }
+
+  const deadline = new Date(registrationDeadline);
+  if (Number.isNaN(deadline.getTime())) {
+    return false;
+  }
+
+  const oneDayBeforeDeadline = new Date(
+    deadline.getTime() - 24 * 60 * 60 * 1000
+  );
+
+  return new Date() >= oneDayBeforeDeadline;
+}

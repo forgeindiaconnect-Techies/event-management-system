@@ -216,6 +216,11 @@
       e.preventDefault();
       setMessage("");
 
+      if (isRegistrationClosed(event?.registrationDeadline)) {
+        setMessage("Registration is closed for this event.");
+        return;
+      }
+
       if (!validateContactDetails()) {
         setMessage("Please correct the highlighted contact details before continuing.");
         return;
@@ -270,6 +275,7 @@
     }
 
     const banner = event.bannerUrl || getDefaultBanner(event.eventType);
+    const registrationClosed = isRegistrationClosed(event.registrationDeadline);
     const participantAllowed = event.allowParticipantRegistration !== false;
     const audienceAllowed = event.allowAudienceRegistration !== false;
     const availableRegistrationTypes = [
@@ -350,7 +356,16 @@
         <main className="public-flow-main container py-4">
           <div className="row g-4">
             <div className="col-lg-8">
-              <form onSubmit={handleSubmit}>
+              {registrationClosed && (
+                <div className="alert alert-danger rounded-4 shadow-sm mb-4" role="alert">
+                  <strong>Registration is closed for this event.</strong>
+                  <div className="mt-1">
+                    The organizer's registration deadline has passed, so new registrations are no longer accepted.
+                  </div>
+                </div>
+              )}
+              <form onSubmit={handleSubmit} aria-disabled={registrationClosed}>
+                <fieldset disabled={registrationClosed} style={{ border: 0, margin: 0, padding: 0 }}>
                 <div className="bg-white rounded-4 shadow-sm p-4 mb-4">
                   <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
                     <div>
@@ -565,6 +580,7 @@
                     : "Submit Registration"}{" "}
                   <BsArrowRight className="ms-2" />
                 </button>
+                </fieldset>
               </form>
             </div>
 
@@ -766,3 +782,12 @@
   }
 
   export default PublicRegistrationForm;
+
+  function isRegistrationClosed(registrationDeadline) {
+    if (!registrationDeadline) {
+      return false;
+    }
+
+    const deadline = new Date(registrationDeadline);
+    return !Number.isNaN(deadline.getTime()) && new Date() >= deadline;
+  }

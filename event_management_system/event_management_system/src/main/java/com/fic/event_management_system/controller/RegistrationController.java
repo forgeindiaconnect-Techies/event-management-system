@@ -6,9 +6,12 @@ import com.fic.event_management_system.entity.Registration;
 import com.fic.event_management_system.service.RegistrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/registrations")
@@ -109,14 +112,23 @@ public class RegistrationController {
     }
     
     @PostMapping("/public/event/{eventId}")
-    public Registration publicRegister(
+    public ResponseEntity<?> publicRegister(
             @PathVariable Long eventId,
             @RequestBody PublicRegistrationRequest request) {
         try {
-            return registrationService.publicRegister(eventId, request);
+            return ResponseEntity.ok(
+                    registrationService.publicRegister(eventId, request)
+            );
         } catch (RuntimeException exception) {
             LOGGER.error("Public registration failed for event {}", eventId, exception);
-            throw exception;
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "message",
+                            exception.getMessage() == null
+                                    ? "Unable to submit registration"
+                                    : exception.getMessage()
+                    ));
         }
     }
 }

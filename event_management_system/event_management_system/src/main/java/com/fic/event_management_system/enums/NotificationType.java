@@ -39,3 +39,4 @@ public enum NotificationType {
     EMAIL_DELIVERY_FAILED,
     SYSTEM_ALERT
 }
+

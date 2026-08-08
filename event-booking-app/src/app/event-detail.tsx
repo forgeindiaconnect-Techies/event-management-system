@@ -14,6 +14,8 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import { useWishlist } from '../context/WishlistContext';
+import { useTheme } from '../context/ThemeContext';
 
 const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
 
@@ -42,26 +44,28 @@ function isRegistrationClosed(deadline: string | null) {
 }
 
 function InfoRow({ icon, label, value }: { icon: any; label: string; value: string }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoIconWrap}>
-        <Ionicons name={icon} size={16} color="#7c3aed" />
+        <Ionicons name={icon} size={16} color={colors.primary} />
       </View>
       <View style={styles.infoText}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
+        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: colors.text }]}>{value}</Text>
       </View>
     </View>
   );
 }
 
 function DetailTile({ icon, label, value }: { icon: any; label: string; value: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.detailTile}>
-      <Ionicons name={icon} size={18} color="#7c3aed" />
+    <View style={[styles.detailTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Ionicons name={icon} size={18} color={colors.primary} />
       <View style={{ marginTop: 8 }}>
-        <Text style={styles.detailTileLabel}>{label}</Text>
-        <Text style={styles.detailTileValue}>{value || 'Not added'}</Text>
+        <Text style={[styles.detailTileLabel, { color: colors.textMuted }]}>{label}</Text>
+        <Text style={[styles.detailTileValue, { color: colors.text }]}>{value || 'Not added'}</Text>
       </View>
     </View>
   );
@@ -69,6 +73,8 @@ function DetailTile({ icon, label, value }: { icon: any; label: string; value: s
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { likedEvents, toggleLike } = useWishlist();
+  const { colors } = useTheme();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
@@ -84,20 +90,20 @@ export default function EventDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#6b3ce4" />
-        <Text style={{ color: '#6b7280', marginTop: 12 }}>Loading event...</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.textMuted, marginTop: 12 }}>Loading event...</Text>
       </SafeAreaView>
     );
   }
 
   if (!event) {
     return (
-      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Ionicons name="alert-circle-outline" size={48} color="#d1d5db" />
-        <Text style={{ color: '#374151', fontSize: 18, fontWeight: '700', marginTop: 12 }}>Event not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtnCenter}>
-          <Text style={{ color: '#6b3ce4', fontWeight: '700' }}>Go Back</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 12 }}>Event not found</Text>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backBtnCenter, { backgroundColor: colors.surface }]}>
+          <Text style={{ color: colors.primary, fontWeight: '700' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -111,7 +117,7 @@ export default function EventDetailScreen() {
   const regClosed = isRegistrationClosed(event.registrationDeadline);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <ScrollView showsVerticalScrollIndicator={false}>
 
@@ -171,14 +177,14 @@ export default function EventDetailScreen() {
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabsRow}>
+        <View style={[styles.tabsRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              style={[styles.tab, activeTab === tab && styles.tabActive, activeTab !== tab && { borderBottomColor: colors.border }]}
               onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+              <Text style={[styles.tabText, { color: colors.textMuted }, activeTab === tab && styles.tabTextActive, activeTab === tab && { color: colors.primary }]}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -188,8 +194,8 @@ export default function EventDetailScreen() {
           {/* OVERVIEW TAB */}
           {activeTab === 'Overview' && (
             <>
-              <Text style={styles.sectionTitle}>About this Event</Text>
-              <Text style={styles.aboutText}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>About this Event</Text>
+              <Text style={[styles.aboutText, { color: colors.textMuted }]}>
                 {event.description || 'No description provided for this event.'}
               </Text>
 
@@ -219,7 +225,7 @@ export default function EventDetailScreen() {
           {/* DETAILS TAB */}
           {activeTab === 'Details' && (
             <>
-              <Text style={styles.sectionTitle}>Event Details</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Event Details</Text>
               <View style={styles.detailsGrid}>
                 <DetailTile icon="pricetag-outline" label="Category" value={event.eventType} />
                 <DetailTile icon="globe-outline" label="Mode" value={formatMode(event.eventMode)} />
@@ -246,10 +252,22 @@ export default function EventDetailScreen() {
           )}
 
           {/* BOOKING CARD */}
-          <View style={styles.bookingCard}>
-            <Text style={styles.bookingEyebrow}>REGISTRATION</Text>
-            <Text style={styles.bookingPrice}>{price}</Text>
-            <Text style={styles.bookingPerAttendee}>per attendee</Text>
+          <View style={[styles.bookingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.bookingEyebrow, { color: colors.textMuted }]}>REGISTRATION</Text>
+            <View style={styles.bookingRow}>
+              <View>
+                <Text style={[styles.bookingPrice, { color: colors.text }]}>{price}</Text>
+                <Text style={[styles.bookingPerAttendee, { color: colors.textMuted }]}>per attendee</Text>
+              </View>
+              <View style={styles.bottomActions}>
+                <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => toggleLike(id as string)}>
+                  <Ionicons name={likedEvents.has(id as string) ? "heart" : "heart-outline"} size={22} color={likedEvents.has(id as string) ? "#ef4444" : colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                  <Ionicons name="share-outline" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <InfoRow icon="calendar-outline" label="Starts" value={formatDate(event.startDateTime)} />
             <InfoRow icon="time-outline" label="Ends" value={formatDate(event.endDateTime)} />
@@ -272,12 +290,8 @@ export default function EventDetailScreen() {
               </View>
             ) : (
               <TouchableOpacity
-                style={styles.registerBtn}
-                onPress={() => {
-                  // Navigate to registration — open the public registration URL for now
-                  const url = `https://event-management-system-y9fa.onrender.com/public/events/${event.id}/register`;
-                  Linking.openURL(url);
-                }}
+                style={[styles.registerBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push({ pathname: '/register', params: { id: event.id } })}
               >
                 <Text style={styles.registerBtnText}>Register Now</Text>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
@@ -285,8 +299,8 @@ export default function EventDetailScreen() {
             )}
 
             <View style={styles.ticketNote}>
-              <Ionicons name="ticket-outline" size={14} color="#7c3aed" />
-              <Text style={styles.ticketNoteText}>Ticket is generated after successful registration.</Text>
+              <Ionicons name="ticket-outline" size={14} color={colors.primary} />
+              <Text style={[styles.ticketNoteText, { color: colors.textMuted }]}>Ticket is generated after successful registration.</Text>
             </View>
           </View>
         </View>
@@ -488,7 +502,25 @@ const styles = StyleSheet.create({
   bookingPerAttendee: {
     fontSize: 13,
     color: '#9ca3af',
+  },
+  bookingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  bottomActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoRow: {
     flexDirection: 'row',

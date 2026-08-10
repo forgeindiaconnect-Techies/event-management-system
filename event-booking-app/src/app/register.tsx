@@ -133,11 +133,10 @@ export default function RegisterScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert(
-          'Success!',
-          'Your registration was successful. You will receive an email shortly.',
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
+        router.push({
+          pathname: '/payment',
+          params: { eventId: id, registrationId: data.id }
+        });
       } else {
         Alert.alert('Registration Failed', data.message || 'Unable to register at this time.');
       }

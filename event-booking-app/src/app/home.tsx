@@ -15,6 +15,7 @@ import {
   Platform,
   ImageBackground,
   Dimensions,
+  Modal,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useWishlist } from '../context/WishlistContext';
@@ -46,6 +47,11 @@ export default function LandingScreen() {
   const [activeCategory, setActiveCategory] = useState('All Events');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBanner, setActiveBanner] = useState(0);
+
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [filterMaxPrice, setFilterMaxPrice] = useState('');
+  const [filterDate, setFilterDate] = useState('All');
+  const [filterPlace, setFilterPlace] = useState('');
 
   const BANNERS = [
     {
@@ -125,7 +131,7 @@ export default function LandingScreen() {
   })), [events]);
 
   const currentCategory = CATEGORIES.find(c => c.label === activeCategory) ?? CATEGORIES[0];
-  const isSearchActive = activeCategory !== 'All Events' || searchQuery.trim().length > 0;
+  const isSearchActive = activeCategory !== 'All Events' || searchQuery.trim().length > 0 || filterMaxPrice !== '' || filterDate !== 'All' || filterPlace.trim().length > 0;
 
   let filteredEvents = parsedEvents;
   if (isSearchActive) {
@@ -137,6 +143,30 @@ export default function LandingScreen() {
         e.location.toLowerCase().includes(q) ||
         e.eventType.toLowerCase().includes(q)
       );
+    }
+    if (filterPlace.trim()) {
+      const p = filterPlace.toLowerCase();
+      filteredEvents = filteredEvents.filter(e => e.location.toLowerCase().includes(p));
+    }
+    if (filterMaxPrice) {
+      const max = parseInt(filterMaxPrice);
+      if (!isNaN(max)) {
+        filteredEvents = filteredEvents.filter(e => {
+          if (e.price === 'Free') return true;
+          const priceVal = parseInt(e.price.replace(/\D/g, ''));
+          return priceVal <= max;
+        });
+      }
+    }
+    if (filterDate !== 'All') {
+      const nowTime = Date.now();
+      if (filterDate === 'Today') {
+        const endOfDay = nowTime + 86400000;
+        filteredEvents = filteredEvents.filter(e => e.startDateTimeRaw >= nowTime && e.startDateTimeRaw <= endOfDay);
+      } else if (filterDate === 'This Week') {
+        const endOfWeek = nowTime + 7 * 86400000;
+        filteredEvents = filteredEvents.filter(e => e.startDateTimeRaw >= nowTime && e.startDateTimeRaw <= endOfWeek);
+      }
     }
   }
 
@@ -192,7 +222,7 @@ export default function LandingScreen() {
             onChangeText={setSearchQuery}
           />
         </View>
-        <TouchableOpacity style={[styles.filterBtn, { backgroundColor: colors.surface }]}>
+        <TouchableOpacity style={[styles.filterBtn, { backgroundColor: colors.surface }]} onPress={() => setFilterVisible(true)}>
           <Ionicons name="options-outline" size={24} color={colors.icon} />
         </TouchableOpacity>
       </View>
@@ -395,21 +425,21 @@ export default function LandingScreen() {
                       <Ionicons name={likedEvents.has(event.id) ? "heart" : "heart-outline"} size={16} color={likedEvents.has(event.id) ? "#FF0000" : "#FFF"} />
                     </TouchableOpacity>
                     
-                    <View style={styles.trendingInfoBox}>
-                      <Text style={styles.trendingTitle} numberOfLines={2}>{event.title}</Text>
+                    <View style={[styles.trendingInfoBox, { backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' }]}>
+                      <Text style={[styles.trendingTitle, { color: colors.text }]} numberOfLines={2}>{event.title}</Text>
                       <View style={styles.trendingDetailsRow}>
                         <View style={styles.trendingDetailItem}>
-                          <Ionicons name="calendar-outline" size={14} color="#837C8D" />
-                          <Text style={styles.trendingDetailText}>{event.date}</Text>
+                          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                          <Text style={[styles.trendingDetailText, { color: colors.textMuted }]}>{event.date}</Text>
                         </View>
                         <View style={[styles.trendingDetailItem, { flex: 1 }]}>
-                          <Ionicons name="location-outline" size={14} color="#837C8D" />
-                          <Text style={[styles.trendingDetailText, { flexShrink: 1 }]} numberOfLines={1}>{event.location}</Text>
+                          <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                          <Text style={[styles.trendingDetailText, { color: colors.textMuted, flexShrink: 1 }]} numberOfLines={1}>{event.location}</Text>
                         </View>
                       </View>
                       
                       <View style={styles.trendingActionRow}>
-                        <Text style={styles.trendingPrice} numberOfLines={1}>{event.price}</Text>
+                        <Text style={[styles.trendingPrice, { color: colors.text }]} numberOfLines={1}>{event.price}</Text>
                         <TouchableOpacity 
                           style={styles.bookNowBtn}
                           onPress={() => router.push({ pathname: '/event-detail', params: { id: event.id } })}
@@ -478,6 +508,70 @@ export default function LandingScreen() {
           <Text style={[styles.navText, { color: colors.text }]}>My Tickets</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={filterVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
+              <TouchableOpacity onPress={() => setFilterVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView>
+              <Text style={[styles.filterLabel, { color: colors.text }]}>Maximum Price (₹)</Text>
+              <TextInput
+                style={[styles.filterInput, { color: colors.text, borderColor: colors.border }]}
+                placeholder="Enter max price (e.g. 500)"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numeric"
+                value={filterMaxPrice}
+                onChangeText={setFilterMaxPrice}
+              />
+
+              <Text style={[styles.filterLabel, { color: colors.text }]}>Date</Text>
+              <View style={styles.filterChipRow}>
+                {['All', 'Today', 'This Week'].map(dateOpt => (
+                  <TouchableOpacity
+                    key={dateOpt}
+                    style={[
+                      styles.filterChip,
+                      { borderColor: colors.border },
+                      filterDate === dateOpt && { backgroundColor: colors.primary, borderColor: colors.primary }
+                    ]}
+                    onPress={() => setFilterDate(dateOpt)}
+                  >
+                    <Text style={{ color: filterDate === dateOpt ? '#FFF' : colors.text }}>{dateOpt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[styles.filterLabel, { color: colors.text }]}>Place / Venue</Text>
+              <TextInput
+                style={[styles.filterInput, { color: colors.text, borderColor: colors.border }]}
+                placeholder="Enter city or venue"
+                placeholderTextColor={colors.textMuted}
+                value={filterPlace}
+                onChangeText={setFilterPlace}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={[styles.clearFiltersBtn, { borderColor: colors.primary }]} onPress={() => {
+                setFilterMaxPrice('');
+                setFilterDate('All');
+                setFilterPlace('');
+              }}>
+                <Text style={{ color: colors.primary }}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.applyFiltersBtn, { backgroundColor: colors.primary }]} onPress={() => setFilterVisible(false)}>
+                <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </SafeAreaView>
   );
@@ -911,5 +1005,69 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#2C2636',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginTop: 16,
+  },
+  filterInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+  },
+  filterChipRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    marginTop: 32,
+    gap: 16,
+    marginBottom: 32,
+  },
+  clearFiltersBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  applyFiltersBtn: {
+    flex: 2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
   },
 });

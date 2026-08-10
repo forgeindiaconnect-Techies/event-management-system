@@ -485,8 +485,9 @@ html {
 
 .hero-image {
   width: 100%;
-  max-height: 360px;
+  height: 360px;
   object-fit: cover;
+  object-position: center 80%;
   border-radius: 48px;
   border: none;
   transition: transform 0.45s ease, filter 0.45s ease;

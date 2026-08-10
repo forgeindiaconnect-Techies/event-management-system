@@ -14,26 +14,44 @@ function AdminEvents() {
   const [selectedOrganizerId, setSelectedOrganizerId] = useState("");
   const [assigning, setAssigning] = useState(false);
 
+  const [hasSubscription, setHasSubscription] = useState(true);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchEvents();
     fetchOrganizers();
+    fetchSubscription();
   }, []);
 
+  const fetchSubscription = async () => {
+    try {
+      const res = await api.get("/subscriptions/current");
+      const sub = res.data;
+      const isValid = Boolean(
+        sub &&
+        !["EXPIRED", "CANCELLED"].includes(String(sub.status || "").toUpperCase()) &&
+        Number(sub.daysRemaining ?? 1) > 0
+      );
+      setHasSubscription(isValid);
+    } catch (e) {
+      setHasSubscription(false);
+    }
+  };
+
   const fetchEvents = async () => {
-  try {
-    const portalId = localStorage.getItem("portalId");
+    try {
+      const portalId = localStorage.getItem("portalId");
 
-    const response = await api.get(`/events/portal/${portalId}`);
+      const response = await api.get(`/events/portal/${portalId}`);
 
-    setEvents(response.data || []);
-    setMessage("");
-  } catch (error) {
-    console.log(error);
-    setMessage("Unable to load events.");
-  }
-};
+      setEvents(response.data || []);
+      setMessage("");
+    } catch (error) {
+      console.log(error);
+      setMessage("Unable to load events.");
+    }
+  };
 
   const fetchOrganizers = async () => {
     try {
@@ -98,11 +116,13 @@ function AdminEvents() {
     });
   };
 
-  {message && (
-  <div className="alert alert-danger">
-    {message}
-  </div>
-)}
+  {
+    message && (
+      <div className="alert alert-danger">
+        {message}
+      </div>
+    )
+  }
 
   const filterEvents = () => {
     const now = new Date();
@@ -148,9 +168,13 @@ function AdminEvents() {
         </div>
 
         <button
-          className="btn btn-primary"
+          className={`btn ${hasSubscription ? "btn-primary" : "btn-secondary opacity-50"}`}
           style={{ fontSize: "16px", borderRadius: "10px", padding: "8px 18px" }}
-          onClick={() => navigate("/create-event")}
+          onClick={() => {
+            if (hasSubscription) navigate("/create-event");
+          }}
+          disabled={!hasSubscription}
+          title={!hasSubscription ? "Renew your subscription to create an event" : ""}
         >
           + Create Event
         </button>

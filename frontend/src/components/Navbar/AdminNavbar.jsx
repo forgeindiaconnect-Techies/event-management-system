@@ -155,6 +155,12 @@ function AdminNavbar() {
   const portalCode = portalDetails.portalCode || "N/A";
   const planAction = getPlanAction(subscription);
 
+  const hasSubscription = Boolean(
+    subscription &&
+    !["EXPIRED", "CANCELLED"].includes(String(subscription.status || "").toUpperCase()) &&
+    Number(subscription.daysRemaining ?? 1) > 0
+  );
+
   return (
     <>
       <nav
@@ -196,13 +202,17 @@ function AdminNavbar() {
 
           <button
             data-tour="admin-create"
-            className="btn btn-light fw-semibold"
+            className={`btn fw-semibold ${hasSubscription ? "btn-light" : "btn-secondary opacity-50"}`}
             style={{
               borderRadius: "12px",
               fontSize: "12px",
               padding: "6px 12px",
             }}
-            onClick={() => navigate("/create-event")}
+            onClick={() => {
+              if (hasSubscription) navigate("/create-event");
+            }}
+            disabled={!hasSubscription}
+            title={!hasSubscription ? "Renew your subscription to create an event" : ""}
           >
             Create Event
           </button>

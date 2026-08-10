@@ -468,7 +468,7 @@ html {
 /* ================= Hero Image ================= */
 
 .hero-image-card {
-  border-radius: 24px;
+  border-radius: 48px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 8px 25px rgba(190, 141, 200, 0.08);
@@ -485,9 +485,9 @@ html {
 
 .hero-image {
   width: 100%;
-  max-height: 480px;
+  max-height: 360px;
   object-fit: cover;
-  border-radius: 24px;
+  border-radius: 48px;
   border: none;
   transition: transform 0.45s ease, filter 0.45s ease;
 }

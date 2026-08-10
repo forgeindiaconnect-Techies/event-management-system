@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import heroImage from "../assets/images/hero-event.jpg";
+import heroImage from "../assets/images/landing_hero.png";
 import logo from "../assets/images/fic-logo.png";
 import api from "../api/axiosConfig";
 import UserProfileMenu from "../components/Public/UserProfileMenu";

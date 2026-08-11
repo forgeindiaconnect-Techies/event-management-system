@@ -14,6 +14,8 @@ import {
   BsStars,
   BsArrowDown,
   BsArrowUp,
+  BsPauseFill,
+  BsPlayFill,
 } from "react-icons/bs";
 
 function LandingPage() {
@@ -21,6 +23,8 @@ function LandingPage() {
   const [guideOpen, setGuideOpen] = useState(false);
   const guideButtonRef = useRef(null);
   const guideMenuRef = useRef(null);
+  const videoRef = useRef(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [isAtPageBottom, setIsAtPageBottom] = useState(false);
   const showLandingProfile = Boolean(
     localStorage.getItem("token") || localStorage.getItem("email")
@@ -47,6 +51,17 @@ function LandingPage() {
     organizers: 0,
     reliability: "Live",
   });
+
+  const toggleVideoPlay = () => {
+    if (videoRef.current) {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsVideoPlaying(!isVideoPlaying);
+    }
+  };
 
   useEffect(() => {
     const revealItems = document.querySelectorAll(".landing-reveal");
@@ -293,6 +308,7 @@ function LandingPage() {
 
       <section className="landing-hero">
         <video 
+          ref={videoRef}
           className="landing-hero-video-bg" 
           src={bgVideo} 
           autoPlay 
@@ -300,6 +316,14 @@ function LandingPage() {
           muted 
           playsInline 
         />
+
+        <button 
+          onClick={toggleVideoPlay} 
+          className="landing-video-control-btn"
+          aria-label={isVideoPlaying ? "Pause background video" : "Play background video"}
+        >
+          {isVideoPlaying ? <BsPauseFill /> : <BsPlayFill />}
+        </button>
 
         <div className="container-fluid px-5 position-relative">
           <div className="row align-items-center landing-hero-content">

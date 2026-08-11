@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../context/ThemeContext';
 
 const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
@@ -54,6 +55,19 @@ export default function TicketScreen() {
         } catch (ticketErr) {
           console.log('Error fetching specific ticket details', ticketErr);
         }
+
+        // Save to SecureStore
+        try {
+          const savedTicketsStr = await SecureStore.getItemAsync('my_tickets');
+          let savedTickets = savedTicketsStr ? JSON.parse(savedTicketsStr) : [];
+          if (!savedTickets.includes(registrationId)) {
+            savedTickets.push(registrationId);
+            await SecureStore.setItemAsync('my_tickets', JSON.stringify(savedTickets));
+          }
+        } catch (storeErr) {
+          console.log('Error saving ticket to local storage', storeErr);
+        }
+        
       } catch (err) {
         console.log('Failed to fetch ticket details', err);
         Alert.alert('Error', 'Unable to load ticket details.');

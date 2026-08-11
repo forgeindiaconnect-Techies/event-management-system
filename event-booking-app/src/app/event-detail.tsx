@@ -102,7 +102,7 @@ export default function EventDetailScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 12 }}>Event not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.backBtnCenter, { backgroundColor: colors.surface }]}>
+        <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/home'); } }} style={[styles.backBtnCenter, { backgroundColor: colors.surface }]}>
           <Text style={{ color: colors.primary, fontWeight: '700' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -131,7 +131,7 @@ export default function EventDetailScreen() {
           <View style={styles.heroOverlay} />
 
           {/* Back button */}
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/home'); } }}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
 

@@ -44,7 +44,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/home'); } }} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={24} color="#111827" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSkip}>

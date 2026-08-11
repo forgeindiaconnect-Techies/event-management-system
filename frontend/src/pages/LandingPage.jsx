@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import heroImage from "../assets/images/landing_hero.png";
 import logo from "../assets/images/fic-logo.png";
+import bgVideo from "../assets/videos/landing-bg.mp4";
 import api from "../api/axiosConfig";
 import UserProfileMenu from "../components/Public/UserProfileMenu";
 import "../styles/LandingPage.css";
@@ -291,11 +292,18 @@ function LandingPage() {
       </nav>
 
       <section className="landing-hero">
+        <video 
+          className="landing-hero-video-bg" 
+          src={bgVideo} 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+        />
         <div className="landing-hero-glow" />
 
         <div className="container-fluid px-5 position-relative">
           <div className="row align-items-center landing-hero-content">
-            <div className="col-md-6">
               <div className="landing-eyebrow">
                 <BsStars /> The Complete Event Management Workspace
               </div>

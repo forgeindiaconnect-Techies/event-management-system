@@ -15,6 +15,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
 
@@ -133,6 +134,11 @@ export default function RegisterScreen() {
       const data = await response.json();
 
       if (response.ok) {
+        try {
+          await SecureStore.setItemAsync('user_name', `${firstName} ${lastName}`.trim());
+        } catch (e) {
+          console.log('Failed to save user name');
+        }
         router.push({
           pathname: '/payment',
           params: { eventId: id, registrationId: data.id }

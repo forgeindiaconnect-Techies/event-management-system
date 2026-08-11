@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -20,6 +20,7 @@ import {
 import * as Location from 'expo-location';
 import { useWishlist } from '../context/WishlistContext';
 import { useTheme } from '../context/ThemeContext';
+import * as SecureStore from 'expo-secure-store';
 
 // Exactly matching the webapp's EVENT_CATEGORIES
 const CATEGORIES = [
@@ -78,6 +79,17 @@ export default function LandingScreen() {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<string>('Locating...');
   const [userCity, setUserCity] = useState<string>('');
+  const [userName, setUserName] = useState<string>('Guest');
+
+  useFocusEffect(
+    useCallback(() => {
+      SecureStore.getItemAsync('user_name').then(name => {
+        if (name) {
+          setUserName(name);
+        }
+      }).catch(err => console.log('Failed to load user name', err));
+    }, [])
+  );
 
   useEffect(() => {
     (async () => {
@@ -192,7 +204,7 @@ export default function LandingScreen() {
             style={styles.profileImg} 
           />
           <View>
-            <Text style={[styles.userName, { color: colors.text }]}>Naveen Kumar</Text>
+            <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={colors.textMuted} />
               <Text style={[styles.locationText, { color: colors.textMuted }]}>{userCity || 'Bengaluru'}</Text>
@@ -503,7 +515,7 @@ export default function LandingScreen() {
           <Ionicons name="heart-outline" size={24} color={colors.text} />
           <Text style={[styles.navText, { color: colors.text }]}>Wishlist</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/my-tickets')}>
           <Ionicons name="ticket-outline" size={24} color={colors.text} />
           <Text style={[styles.navText, { color: colors.text }]}>My Tickets</Text>
         </TouchableOpacity>

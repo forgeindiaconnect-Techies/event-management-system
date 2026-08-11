@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,8 +19,10 @@ export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
 
-  const handleContinue = () => {
-    // In the future, data saving logic can be added here
+  const handleContinue = async () => {
+    if (name) {
+      await SecureStore.setItemAsync('user_name', name);
+    }
     router.replace('/home');
   };
 

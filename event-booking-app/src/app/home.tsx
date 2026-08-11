@@ -176,6 +176,8 @@ export default function LandingScreen() {
   const [userLocation, setUserLocation] = useState<string>("Locating...");
   const [userCity, setUserCity] = useState<string>("");
   const [userName, setUserName] = useState<string>("Guest");
+  const [userEmail, setUserEmail] = useState<string>("Not provided");
+  const [userPhone, setUserPhone] = useState<string>("Not provided");
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   useFocusEffect(
@@ -187,6 +189,22 @@ export default function LandingScreen() {
           }
         })
         .catch((err) => console.log("Failed to load user name", err));
+        
+      SecureStore.getItemAsync("user_email")
+        .then((email) => {
+          if (email) {
+            setUserEmail(email);
+          }
+        })
+        .catch((err) => console.log("Failed to load user email", err));
+        
+      SecureStore.getItemAsync("user_phone")
+        .then((phone) => {
+          if (phone) {
+            setUserPhone(phone);
+          }
+        })
+        .catch((err) => console.log("Failed to load user phone", err));
     }, []),
   );
 
@@ -1130,8 +1148,15 @@ export default function LandingScreen() {
             <Text style={[styles.popupName, { color: colors.text }]}>
               {userName}
             </Text>
-            <Text style={[styles.popupLocation, { color: colors.textMuted }]}>
+            <Text style={[styles.popupLocation, { color: colors.textMuted, marginBottom: 8 }]}>
               {userCity || "Bengaluru"}
+            </Text>
+            
+            <Text style={{ color: colors.text, fontSize: 13, marginBottom: 4 }}>
+              {userPhone}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 16 }}>
+              {userEmail}
             </Text>
 
             <View style={styles.popupDivider} />

@@ -136,8 +136,10 @@ export default function RegisterScreen() {
       if (response.ok) {
         try {
           await SecureStore.setItemAsync('user_name', `${firstName} ${lastName}`.trim());
+          if (email) await SecureStore.setItemAsync('user_email', email);
+          if (phoneNumber) await SecureStore.setItemAsync('user_phone', phoneNumber);
         } catch (e) {
-          console.log('Failed to save user name');
+          console.log('Failed to save user details');
         }
         router.push({
           pathname: '/payment',

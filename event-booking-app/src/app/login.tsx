@@ -20,9 +20,10 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
 
   const handleContinue = async () => {
-    if (name) {
-      await SecureStore.setItemAsync('user_name', name);
-    }
+    if (name) await SecureStore.setItemAsync('user_name', name);
+    if (phoneNumber) await SecureStore.setItemAsync('user_phone', phoneNumber);
+    if (email) await SecureStore.setItemAsync('user_email', email);
+    
     router.replace('/home');
   };
 

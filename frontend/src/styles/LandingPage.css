@@ -83,8 +83,8 @@ html {
 }
 
 .landing-explore-link:hover {
-  background: rgba(124, 58, 237, 0.52) !important;
-  color: #ffffff !important;
+  background: rgba(124, 58, 237, 0.1) !important;
+  color: #7c3aed !important;
   box-shadow: 0 7px 17px rgba(124, 58, 237, 0.2);
 }
 
@@ -222,8 +222,8 @@ html {
 }
 
 .landing-nav-link:hover {
-  color: #111827;
-  background: rgba(124, 58, 237, 0.2);
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
   transform: translateY(-2px);
 }
 

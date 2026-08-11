@@ -311,7 +311,7 @@ function LandingPage() {
 
               <h1 className="landing-hero-title">
                 Everything Behind a <br />
-                <span className="landing-hero-cursive">successful</span> event.
+                <span className="landing-hero-cursive">successful event.</span>
               </h1>
 
               <p className="landing-hero-text">

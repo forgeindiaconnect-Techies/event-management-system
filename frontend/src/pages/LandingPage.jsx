@@ -304,6 +304,7 @@ function LandingPage() {
 
         <div className="container-fluid px-5 position-relative">
           <div className="row align-items-center landing-hero-content">
+            <div className="col-md-6">
               <div className="landing-eyebrow">
                 <BsStars /> The Complete Event Management Workspace
               </div>

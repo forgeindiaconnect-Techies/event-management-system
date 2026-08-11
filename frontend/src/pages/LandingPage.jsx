@@ -300,7 +300,6 @@ function LandingPage() {
           muted 
           playsInline 
         />
-        <div className="landing-hero-glow" />
 
         <div className="container-fluid px-5 position-relative">
           <div className="row align-items-center landing-hero-content">

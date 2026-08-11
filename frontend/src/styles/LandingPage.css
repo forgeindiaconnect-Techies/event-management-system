@@ -171,12 +171,7 @@ html {
 }
 
 .landing-hero {
-  background: linear-gradient(
-    90deg,
-    #050713 0%,
-    rgba(5, 7, 19, 0.96) 35%,
-    rgba(88, 28, 135, 0.55) 100%
-  );
+  background: transparent;
   color: #ffffff;
   min-height: 540px;
   position: relative;
@@ -1836,7 +1831,7 @@ html {
   height: 100%;
   object-fit: cover;
   z-index: 0;
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .landing-hero .container-fluid {

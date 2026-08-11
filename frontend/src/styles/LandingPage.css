@@ -1843,3 +1843,14 @@ html {
 .landing-hero-glow {
   z-index: 1;
 }
+
+
+
+.landing-hero-cursive {
+  font-family: 'Caveat', cursive;
+  font-size: 1.3em;
+  font-weight: 600;
+  color: #a855f7;
+  text-transform: lowercase;
+}
+

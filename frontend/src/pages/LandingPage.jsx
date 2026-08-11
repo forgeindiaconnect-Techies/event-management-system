@@ -345,12 +345,6 @@ function LandingPage() {
                 ))}
               </div>
             </div>
-
-            <div className="col-md-6 landing-hero-image-column">
-              <div className="hero-image-card">
-                <img src={heroImage} alt="Event management workspace" className="hero-image" />
-              </div>
-            </div>
           </div>
         </div>
       </section>

@@ -80,6 +80,7 @@ export default function LandingScreen() {
   const [userLocation, setUserLocation] = useState<string>('Locating...');
   const [userCity, setUserCity] = useState<string>('');
   const [userName, setUserName] = useState<string>('Guest');
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -198,7 +199,7 @@ export default function LandingScreen() {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
+        <TouchableOpacity style={styles.headerLeft} onPress={() => setProfileModalVisible(true)}>
           <Image 
             source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop' }} 
             style={styles.profileImg} 
@@ -210,7 +211,7 @@ export default function LandingScreen() {
               <Text style={[styles.locationText, { color: colors.textMuted }]}>{userCity || 'Bengaluru'}</Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity style={[styles.notificationBtn, { backgroundColor: colors.surface }]} onPress={toggleTheme}>
             <Ionicons name={isDarkMode ? "sunny" : "moon"} size={20} color={colors.icon} />
@@ -1082,4 +1083,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
   },
+  profilePopup: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    width: 250,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  popupImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+  },
+  popupName: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  popupLocation: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  popupDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    width: '100%',
+    marginBottom: 16,
+  },
+  popupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff1f2',
+    borderRadius: 8,
+  },
+  popupLogoutText: {
+    color: '#e11d48',
+    fontSize: 16,
+    fontWeight: '600',
+  }
 });

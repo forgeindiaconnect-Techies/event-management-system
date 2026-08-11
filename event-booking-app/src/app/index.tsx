@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { 
   StyleSheet, 
   Text, 
@@ -27,6 +28,19 @@ const scale = width / FIGMA_WIDTH;
 export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    SecureStore.getItemAsync('user_name').then(name => {
+      if (name) {
+        router.replace('/home');
+      } else {
+        setCheckingAuth(false);
+      }
+    }).catch(() => {
+      setCheckingAuth(false);
+    });
+  }, []);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -45,6 +59,10 @@ export default function OnboardingScreen() {
   const handleSkip = () => {
     router.push('/login');
   };
+
+  if (checkingAuth) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <View style={styles.container}>

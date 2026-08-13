@@ -15,6 +15,7 @@ import com.fic.event_management_system.enums.InvitationStatus;
 import com.fic.event_management_system.enums.RoleName;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.lang.NonNull;
 
 @Service
 public class SubscriptionLimitService {
@@ -141,7 +142,7 @@ public class SubscriptionLimitService {
         );
     }
 
-    public void assertCanRegister(Long eventId) {
+    public void assertCanRegister(@NonNull Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() ->
                         new RuntimeException("Event not found")
@@ -173,7 +174,7 @@ public class SubscriptionLimitService {
         );
     }
 
-    public void assertCanCreateTicketClass(Long eventId) {
+    public void assertCanCreateTicketClass(@NonNull Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() ->
                         new RuntimeException("Event not found")
@@ -253,7 +254,7 @@ public class SubscriptionLimitService {
         checkLimit(invitations, limit, "staff invitations");
     }
 
-    public void assertCanInviteSpeaker(Long eventId) {
+    public void assertCanInviteSpeaker(@NonNull Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
         SubscriptionPlan plan = requireActivePlan(event.getPortal().getId());
@@ -273,7 +274,7 @@ public class SubscriptionLimitService {
         checkLimit(invitations, limit, "speakers for this event");
     }
 
-    public void assertCanCreateExhibitor(Long eventId) {
+    public void assertCanCreateExhibitor(@NonNull Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
         SubscriptionPlan plan = requireActivePlan(event.getPortal().getId());
@@ -290,7 +291,7 @@ public class SubscriptionLimitService {
         );
     }
 
-    public void assertCanCreateCustomField(Long eventId) {
+    public void assertCanCreateCustomField(@NonNull Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
         SubscriptionPlan plan = requireActivePlan(event.getPortal().getId());

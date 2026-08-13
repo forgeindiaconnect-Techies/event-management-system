@@ -58,6 +58,7 @@ class EventManagementSystemApplicationTests {
 
 }
 
+@SuppressWarnings("null")
 class SubscriptionServiceUnitTests {
 
 	@Test
@@ -119,15 +120,26 @@ class SubscriptionServiceUnitTests {
 				mock(EmailService.class)
 		);
 
+		SubscriptionPlan mockPlan = new SubscriptionPlan();
+		mockPlan.setDisplayName("Mock Plan");
+
+		User mockAdmin = new User();
+		Portal mockPortal = new Portal();
+		mockPortal.setAdmin(mockAdmin);
+
 		PortalSubscription trial = new PortalSubscription();
 		trial.setStatus(SubscriptionStatus.TRIAL);
 		trial.setAutoRenew(false);
 		trial.setEndDate(LocalDateTime.now().minusDays(1));
+		trial.setPlan(mockPlan);
+		trial.setPortal(mockPortal);
 
 		PortalSubscription active = new PortalSubscription();
 		active.setStatus(SubscriptionStatus.ACTIVE);
 		active.setAutoRenew(true);
 		active.setEndDate(LocalDateTime.now().minusHours(1));
+		active.setPlan(mockPlan);
+		active.setPortal(mockPortal);
 
 		when(subscriptionRepository.findByStatusInAndEndDateBefore(
 				any(),
@@ -275,6 +287,7 @@ class SubscriptionServiceUnitTests {
 	}
 }
 
+@SuppressWarnings("null")
 class DevelopmentSubscriptionPaymentServiceUnitTests {
 
 	@Test
@@ -514,6 +527,7 @@ class DevelopmentSubscriptionPaymentServiceUnitTests {
 	}
 }
 
+@SuppressWarnings("null")
 class SuperAdminPlanManagementUnitTests {
 
 	@Test

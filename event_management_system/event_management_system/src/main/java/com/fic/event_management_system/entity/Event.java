@@ -62,6 +62,8 @@ public class Event {
 
     private Boolean allowAudienceRegistration = true;
 
+    private Boolean assignSeats = false;
+
     @ManyToOne
     @JoinColumn(name = "portal_id", nullable = false)
     private Portal portal;
@@ -276,5 +278,12 @@ public class Event {
 		this.allowAudienceRegistration = allowAudienceRegistration;
 	}
 
+	public Boolean getAssignSeats() {
+		return assignSeats;
+	}
+
+	public void setAssignSeats(Boolean assignSeats) {
+		this.assignSeats = assignSeats;
+	}
     
 }

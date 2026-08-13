@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.fic.event_management_system.service.EmailService;
 import com.fic.event_management_system.service.NotificationService;
-import com.fic.event_management_system.service.AccountActivationService;
 import com.fic.event_management_system.security.TenantSecurityService;
 
 import java.time.LocalDateTime;
@@ -26,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@SuppressWarnings("null")
 public class OrganizerInvitationServiceImpl implements OrganizerInvitationService {
 
     @Value("${frontend.url}")
@@ -37,7 +37,6 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
     private final PortalRepository portalRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
-    private final AccountActivationService accountActivationService;
     private final TenantSecurityService tenantSecurityService;
 
     public OrganizerInvitationServiceImpl(
@@ -47,7 +46,6 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
             PortalRepository portalRepository,
             EmailService emailService,
             NotificationService notificationService,
-            AccountActivationService accountActivationService,
             TenantSecurityService tenantSecurityService) {
 
         this.invitationRepository = invitationRepository;
@@ -56,7 +54,6 @@ public class OrganizerInvitationServiceImpl implements OrganizerInvitationServic
         this.portalRepository = portalRepository;
         this.emailService = emailService;
         this.notificationService = notificationService;
-        this.accountActivationService = accountActivationService;
         this.tenantSecurityService = tenantSecurityService;
     }
 

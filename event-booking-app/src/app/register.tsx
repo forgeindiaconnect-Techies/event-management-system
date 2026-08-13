@@ -210,11 +210,21 @@ export default function RegisterScreen() {
                     onPress={() => setSelectedTicketId(ticket.id)}
                   >
                     <View style={styles.ticketHeader}>
-                      <Text style={[styles.ticketName, { color: colors.text }]}>{ticket.name}</Text>
+                      <Text style={[styles.ticketName, { color: colors.text }]}>
+                        {ticket.name}
+                        {ticket.assignSeats && (
+                          <Text style={{ fontSize: 12, color: colors.primary, fontWeight: 'bold' }}>  (Assigned Seating)</Text>
+                        )}
+                      </Text>
                       <Text style={[styles.ticketPrice, { color: colors.primary }]}>
                         {ticket.price && ticket.price > 0 ? `₹${ticket.price}` : 'Free'}
                       </Text>
                     </View>
+                    {ticket.seats > 0 && (
+                      <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2, fontWeight: '600' }}>
+                        {Math.max(0, ticket.seats - (ticket.sold || 0))} seats remaining
+                      </Text>
+                    )}
                     {ticket.description && (
                       <Text style={[styles.ticketDesc, { color: colors.textMuted }]}>{ticket.description}</Text>
                     )}

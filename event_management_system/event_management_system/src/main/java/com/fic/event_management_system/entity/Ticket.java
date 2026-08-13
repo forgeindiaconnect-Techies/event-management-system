@@ -37,6 +37,8 @@ public class Ticket {
 
     private String qrMode = "PER_TICKET";
 
+    private String seatIdentifier;
+
     @PrePersist
     public void onCreate() {
         issueDate = LocalDateTime.now();
@@ -122,5 +124,12 @@ public class Ticket {
 		this.qrMode = qrMode;
 	}
 
+	public String getSeatIdentifier() {
+		return seatIdentifier;
+	}
+
+	public void setSeatIdentifier(String seatIdentifier) {
+		this.seatIdentifier = seatIdentifier;
+	}
     
 }

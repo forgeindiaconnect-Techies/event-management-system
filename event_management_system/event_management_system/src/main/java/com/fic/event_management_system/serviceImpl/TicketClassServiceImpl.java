@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+
 import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.TicketClass;
 import com.fic.event_management_system.repository.TicketClassRepository;
@@ -11,6 +12,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class TicketClassServiceImpl implements TicketClassService {
 
     private final TicketClassRepository ticketClassRepository;

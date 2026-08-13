@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@SuppressWarnings("null")
 public class CoordinatorAssignmentServiceImpl implements CoordinatorAssignmentService {
 
     private final CoordinatorAssignmentRepository coordinatorAssignmentRepository;

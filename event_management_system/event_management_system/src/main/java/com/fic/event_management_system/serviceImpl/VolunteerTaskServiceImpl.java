@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@SuppressWarnings("null")
 public class VolunteerTaskServiceImpl implements VolunteerTaskService {
 
     private final VolunteerTaskRepository volunteerTaskRepository;

@@ -101,7 +101,7 @@ export default function ChooseAccessScreen() {
           <ActivityIndicator size="large" color="#5b3cc4" style={{ marginTop: 40 }} />
         ) : accesses.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Ionicons name="person-badge-outline" size={48} color="#9b9aab" />
+            <Ionicons name="id-card-outline" size={48} color="#9b9aab" />
             <Text style={styles.emptyTitle}>No access found</Text>
             <Text style={styles.emptyText}>You haven't been assigned to any other roles or events.</Text>
           </View>
@@ -110,7 +110,7 @@ export default function ChooseAccessScreen() {
             {accesses.map((access, i) => (
               <TouchableOpacity key={i} style={styles.card} onPress={() => openAccess(access)}>
                 <View style={styles.iconBox}>
-                  <Ionicons name={access.eventId ? "calendar-outline" : "person-badge-outline"} size={22} color="#5b3cc4" />
+                  <Ionicons name={access.eventId ? "calendar-outline" : "id-card-outline"} size={22} color="#5b3cc4" />
                 </View>
                 <View style={styles.cardContent}>
                   <Text style={styles.roleLabel}>{formatRole(access.role)}</Text>

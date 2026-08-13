@@ -43,7 +43,7 @@ export default function ProfileScreen() {
             fetch(`https://event-management-system-y9fa.onrender.com/api/users/organizers/portal/${session.portalId}`, { headers })
           ]);
           
-          let allUsers = [];
+          let allUsers: any[] = [];
           if (usersRes.ok) allUsers = allUsers.concat(await usersRes.json());
           if (orgsRes.ok) allUsers = allUsers.concat(await orgsRes.json());
           

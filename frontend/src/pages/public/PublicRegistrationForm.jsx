@@ -515,7 +515,14 @@
                             >
                               <div className="d-flex justify-content-between gap-3">
                                 <div>
-                                  <div className="fw-bold">{ticketClass.name}</div>
+                                  <div className="fw-bold">
+                                    {ticketClass.name}
+                                    {ticketClass.assignSeats && (
+                                      <span className="badge bg-primary ms-2" style={{ fontSize: "0.7em" }}>
+                                        Assigned Seating
+                                      </span>
+                                    )}
+                                  </div>
                                   <small className="text-muted">{ticketClass.description || "Event access pass"}</small>
                                 </div>
                                 <div className="fw-bold text-primary">

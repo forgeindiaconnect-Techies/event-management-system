@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@SuppressWarnings("null")
 public class RegistrationServiceImpl implements RegistrationService {
 
     private final RegistrationRepository registrationRepository;
@@ -617,15 +618,41 @@ public class RegistrationServiceImpl implements RegistrationService {
                 registration.getRegistrationType()
         );
 
+        TicketClass ticketClass = registration.getTicketClass();
+        Event event = registration.getEvent();
+        
+        int currentSold;
+        boolean assignSeats;
+        String className;
+        
+        if (ticketClass != null) {
+            currentSold = ticketClass.getSold() != null ? ticketClass.getSold() : 0;
+            assignSeats = Boolean.TRUE.equals(ticketClass.getAssignSeats());
+            className = ticketClass.getName() != null ? ticketClass.getName().replaceAll("\\s+", "") : "Seat";
+        } else {
+            int capacity = event.getCapacity() != null ? event.getCapacity() : 0;
+            int available = event.getAvailableSeats() != null ? event.getAvailableSeats() : 0;
+            currentSold = capacity - available;
+            assignSeats = Boolean.TRUE.equals(event.getAssignSeats());
+            className = "Seat";
+        }
+
         if ("PER_ORDER".equals(qrMode)) {
             Ticket ticket = createTicket(registration, quantity, qrMode, "ORDER");
+            if (assignSeats) {
+                ticket.setSeatIdentifier(className + "-" + (currentSold + 1));
+            }
             incrementTicketClassSold(registration.getTicketClass(), quantity);
             return List.of(ticketRepository.save(ticket));
         }
 
         List<Ticket> tickets = new java.util.ArrayList<>();
         for (int index = 1; index <= quantity; index++) {
-            tickets.add(ticketRepository.save(createTicket(registration, 1, qrMode, String.valueOf(index))));
+            Ticket ticket = createTicket(registration, 1, qrMode, String.valueOf(index));
+            if (assignSeats) {
+                ticket.setSeatIdentifier(className + "-" + (currentSold + index));
+            }
+            tickets.add(ticketRepository.save(ticket));
         }
         incrementTicketClassSold(registration.getTicketClass(), quantity);
         return tickets;

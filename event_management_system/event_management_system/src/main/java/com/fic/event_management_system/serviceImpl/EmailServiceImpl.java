@@ -24,6 +24,7 @@ import com.fic.event_management_system.entity.EmailDelivery;
 import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.Portal;
 import com.fic.event_management_system.entity.User;
+
 import com.fic.event_management_system.enums.EmailDeliveryStatus;
 import com.fic.event_management_system.enums.NotificationType;
 import com.fic.event_management_system.repository.EmailDeliveryRepository;
@@ -32,6 +33,7 @@ import com.fic.event_management_system.service.NotificationService;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;

@@ -49,6 +49,7 @@ import com.fic.event_management_system.service.NotificationService;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class EventOperationsServiceImpl implements EventOperationsService {
 
     private final OperationalTaskRepository taskRepository;

@@ -45,6 +45,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@SuppressWarnings("null")
 public class SuperAdminServiceImpl implements SuperAdminService {
 
     private final PortalRepository portalRepository;
@@ -1087,23 +1088,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private BigDecimal calculateRevenue(List<Registration> registrations) {
         return registrations.stream()
                 .filter(registration -> registration.getPaymentStatus() == PaymentStatus.PAID)
-                .map(Registration::getTotalAmount)
-                .filter(amount -> amount != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private BigDecimal calculateMonthlyRevenue(List<Registration> registrations) {
-        LocalDate today = LocalDate.now();
-        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
-        LocalDateTime nextMonthStart = monthStart.plusMonths(1);
-
-        return registrations.stream()
-                .filter(registration -> registration.getPaymentStatus() == PaymentStatus.PAID)
-                .filter(registration -> registration.getPaymentDate() != null)
-                .filter(registration ->
-                        !registration.getPaymentDate().isBefore(monthStart)
-                                && registration.getPaymentDate().isBefore(nextMonthStart)
-                )
                 .map(Registration::getTotalAmount)
                 .filter(amount -> amount != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

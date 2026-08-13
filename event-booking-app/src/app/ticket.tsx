@@ -222,6 +222,12 @@ export default function TicketScreen() {
                 <Text style={styles.detailLabel}>Ticket Class</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>{registration.ticketClass?.name || 'Standard'}</Text>
               </View>
+              {ticketData?.seatIdentifier && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Assigned Seat</Text>
+                  <Text style={[styles.detailValue, { color: colors.text, fontWeight: '800' }]}>{ticketData.seatIdentifier}</Text>
+                </View>
+              )}
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Quantity</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>{registration.ticketQuantity || 1}</Text>

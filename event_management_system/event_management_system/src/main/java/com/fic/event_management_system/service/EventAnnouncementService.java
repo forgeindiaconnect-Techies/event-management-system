@@ -13,6 +13,7 @@ import java.util.*;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class EventAnnouncementService {
 
     private final EventAnnouncementRepository announcementRepository;

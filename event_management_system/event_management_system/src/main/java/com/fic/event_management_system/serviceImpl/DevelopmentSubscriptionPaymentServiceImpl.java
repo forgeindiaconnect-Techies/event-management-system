@@ -455,11 +455,10 @@ public class DevelopmentSubscriptionPaymentServiceImpl
             boolean expired
     ) {
         Portal portal = payment.getPortal();
-        User owner = portal == null ? null : portal.getAdmin();
-
-        if (owner == null) {
+        if (portal == null || portal.getAdmin() == null) {
             return;
         }
+        User owner = portal.getAdmin();
 
         String title = expired
                 ? "Subscription payment expired"
@@ -505,10 +504,10 @@ public class DevelopmentSubscriptionPaymentServiceImpl
 
     private void notifyPaymentSuccess(SubscriptionPayment payment) {
         Portal portal = payment.getPortal();
-        User owner = portal == null ? null : portal.getAdmin();
-        if (owner == null) {
+        if (portal == null || portal.getAdmin() == null) {
             return;
         }
+        User owner = portal.getAdmin();
 
         String planName = payment.getPlan() == null
                 ? "subscription"

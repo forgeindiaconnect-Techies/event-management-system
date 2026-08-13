@@ -11,6 +11,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class RegistrationFormFieldServiceImpl implements RegistrationFormFieldService {
 
     private final RegistrationFormFieldRepository fieldRepository;

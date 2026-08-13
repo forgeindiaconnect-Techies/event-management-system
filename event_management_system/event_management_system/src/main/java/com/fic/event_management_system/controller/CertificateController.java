@@ -17,6 +17,7 @@ public class CertificateController {
     }
 
     @GetMapping("/{registrationId}/download")
+    @SuppressWarnings("null")
     public ResponseEntity<byte[]> downloadCertificate(
             @PathVariable Long registrationId) {
 

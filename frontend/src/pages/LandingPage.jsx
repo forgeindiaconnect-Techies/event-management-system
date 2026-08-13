@@ -296,7 +296,7 @@ function LandingPage() {
           </button>
 
           {showLandingProfile ? (
-            <UserProfileMenu dark mode="landing" />
+            <UserProfileMenu mode="landing" />
           ) : (
             <div className="landing-auth-actions">
               <Link to="/create-portal" className="landing-signup-btn">Sign Up</Link>

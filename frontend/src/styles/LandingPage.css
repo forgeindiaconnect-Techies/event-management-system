@@ -153,6 +153,18 @@ html {
   box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
 }
 
+.landing-top-actions .user-profile-trigger {
+  background: #991b1b;
+  border: 1px solid #ef4444;
+  color: #ffffff;
+}
+
+.landing-top-actions .user-profile-trigger:hover {
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
 .landing-signup-btn {
   border: 0;
   border-radius: 12px;

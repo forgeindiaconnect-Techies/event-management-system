@@ -42,6 +42,7 @@ export default function CreateEventScreen() {
     certificateEnabled: false,
     certificateTitle: '',
     bannerUrl: '',
+    assignSeats: false,
   });
 
   const handleChange = (name: string, value: any) => {
@@ -68,6 +69,7 @@ export default function CreateEventScreen() {
         endDateTime: form.endDateTime.toISOString(),
         registrationDeadline: form.hasRegistrationDeadline ? form.registrationDeadline.toISOString() : null,
         status: 'Draft',
+        assignSeats: form.assignSeats,
       };
 
       const response = await fetch(`${API_BASE_URL}/events`, {
@@ -226,6 +228,14 @@ export default function CreateEventScreen() {
             <TextInput style={styles.input} placeholder="e.g. 500" value={form.ticketPrice} onChangeText={t => handleChange('ticketPrice', t)} keyboardType="numeric" />
           </View>
         )}
+
+        <View style={styles.switchRow}>
+          <View>
+            <Text style={styles.label}>Assign Seats Sequentially?</Text>
+            <Text style={styles.desc}>Automatically assign seat numbers</Text>
+          </View>
+          <Switch value={form.assignSeats} onValueChange={v => handleChange('assignSeats', v)} trackColor={{ true: '#3d2e9c' }} />
+        </View>
 
         <View style={styles.switchRow}>
           <View>

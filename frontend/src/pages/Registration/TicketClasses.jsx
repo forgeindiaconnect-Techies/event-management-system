@@ -27,7 +27,8 @@ const emptyTicketClass = {
   maxPerBuyer: "1",
   saleStatus: "Active",
   description: "",
-  benefits: ""
+  benefits: "",
+  assignSeats: false
 };
 
 function TicketClasses() {
@@ -75,6 +76,7 @@ function TicketClasses() {
           saleStatus: capacity > 0 && sold >= capacity ? "Sold Out" : "Active",
           description: `Default ticket class for ${eventData.eventName || "this event"}.`,
           benefits: "Event entry, registration confirmation, attendee access",
+          assignSeats: false,
           active: true
         });
 
@@ -94,6 +96,7 @@ function TicketClasses() {
             saleStatus: capacity > 0 && soldStats.totalSold >= capacity ? "Sold Out" : "Active",
             description: `Default ticket class for ${eventData.eventName || "this event"}.`,
             benefits: "Event entry, registration confirmation, attendee access",
+            assignSeats: false,
             active: true
           }
         ];
@@ -126,7 +129,8 @@ function TicketClasses() {
       maxPerBuyer: ticketClass.maxPerBuyer || 1,
       saleStatus: ticketClass.saleStatus,
       description: ticketClass.description,
-      benefits: ticketClass.benefits
+      benefits: ticketClass.benefits,
+      assignSeats: ticketClass.assignSeats || false
     });
     setShowForm(true);
     setMessage("");
@@ -159,6 +163,7 @@ function TicketClasses() {
       saleStatus: form.saleStatus,
       description: form.description,
       benefits: form.benefits,
+      assignSeats: form.assignSeats,
       active: form.saleStatus !== "Hidden"
     };
 
@@ -328,6 +333,21 @@ function TicketClasses() {
                   placeholder="Priority entry, seating, event kit"
                 />
               </div>
+
+              <div className="col-12">
+                <div className="form-check form-switch mt-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="assignSeatsSwitch"
+                    checked={form.assignSeats}
+                    onChange={(e) => updateField("assignSeats", e.target.checked)}
+                  />
+                  <label className="form-check-label fw-semibold" htmlFor="assignSeatsSwitch">
+                    Assign Seats Sequentially (e.g., Gold-1, Gold-2)
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="d-flex justify-content-end gap-2 mt-4">
@@ -484,8 +504,8 @@ function SummaryCard({ label, value }) {
 function MiniStat({ label, value }) {
   return (
     <div className="col-4">
-      <div className="border rounded-3 p-2 text-center">
-        <div className="text-muted small">{label}</div>
+      <div className="border rounded-3 py-2 px-1 text-center">
+        <div className="text-muted small text-truncate" title={label}>{label}</div>
         <div className="fw-semibold">{value}</div>
       </div>
     </div>

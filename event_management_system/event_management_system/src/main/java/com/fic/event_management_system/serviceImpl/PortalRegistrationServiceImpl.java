@@ -19,9 +19,9 @@ import com.fic.event_management_system.repository.PortalRepository;
 import com.fic.event_management_system.security.JwtUtil;
 import com.fic.event_management_system.service.PortalRegistrationService;
 import com.fic.event_management_system.service.PortalService;
-import com.fic.event_management_system.service.SubscriptionService;
 import com.fic.event_management_system.service.EmailService;
 import com.fic.event_management_system.service.NotificationService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class PortalRegistrationServiceImpl
@@ -31,29 +31,29 @@ public class PortalRegistrationServiceImpl
     private final RoleRepository roleRepository;
     private final PortalService portalService;
     private final JwtUtil jwtUtil;
-    private final SubscriptionService subscriptionService;
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final PortalRepository portalRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public PortalRegistrationServiceImpl(
             UserRepository userRepository,
             RoleRepository roleRepository,
             PortalService portalService,
             JwtUtil jwtUtil,
-            SubscriptionService subscriptionService,
             NotificationService notificationService,
             EmailService emailService,
-            PortalRepository portalRepository
+            PortalRepository portalRepository,
+            PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.portalService = portalService;
         this.jwtUtil = jwtUtil;
-        this.subscriptionService = subscriptionService;
         this.notificationService = notificationService;
         this.emailService = emailService;
         this.portalRepository = portalRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -96,7 +96,7 @@ public class PortalRegistrationServiceImpl
         owner.setFirstName(request.getFirstName());
         owner.setLastName(request.getLastName());
         owner.setEmail(request.getEmail());
-        owner.setPassword(request.getPassword());
+        owner.setPassword(passwordEncoder.encode(request.getPassword()));
         owner.setPhoneNumber(request.getPhoneNumber());
         owner.setRole(adminRole);
         owner.setActive(true);

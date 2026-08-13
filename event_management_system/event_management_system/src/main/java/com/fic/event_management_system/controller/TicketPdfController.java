@@ -17,6 +17,7 @@ public class TicketPdfController {
     }
 
     @GetMapping("/{ticketId}/download")
+    @SuppressWarnings("null")
     public ResponseEntity<byte[]> downloadTicket(
             @PathVariable Long ticketId) {
 

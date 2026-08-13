@@ -19,7 +19,6 @@ import com.fic.event_management_system.repository.RoleRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import com.fic.event_management_system.security.TenantSecurityService;
 import com.fic.event_management_system.service.EmailService;
-import com.fic.event_management_system.service.AccountActivationService;
 import com.fic.event_management_system.service.NotificationService;
 import com.fic.event_management_system.service.RoleInvitationService;
 import com.fic.event_management_system.service.SubscriptionLimitService;
@@ -30,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class RoleInvitationServiceImpl implements RoleInvitationService {
 
     @Value("${frontend.url}")
@@ -45,7 +45,6 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
     private final TenantSecurityService tenantSecurityService;
     private final SubscriptionLimitService subscriptionLimitService;
     private final NotificationService notificationService;
-    private final AccountActivationService accountActivationService;
 
     public RoleInvitationServiceImpl(
             RoleInvitationRepository invitationRepository,
@@ -57,8 +56,7 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
             EventAssignmentRepository eventAssignmentRepository,
             TenantSecurityService tenantSecurityService,
             SubscriptionLimitService subscriptionLimitService,
-            NotificationService notificationService,
-            AccountActivationService accountActivationService) {
+            NotificationService notificationService) {
 
         this.invitationRepository = invitationRepository;
         this.portalRepository = portalRepository;
@@ -70,7 +68,6 @@ public class RoleInvitationServiceImpl implements RoleInvitationService {
         this.tenantSecurityService = tenantSecurityService;
         this.subscriptionLimitService = subscriptionLimitService;
         this.notificationService = notificationService;
-        this.accountActivationService = accountActivationService;
     }
 
     @Override

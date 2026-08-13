@@ -11,6 +11,7 @@ import com.fic.event_management_system.service.SubscriptionLimitService;
 import com.fic.event_management_system.security.TenantSecurityService;
 
 @Service
+@SuppressWarnings("null")
 public class PortalServiceImpl implements PortalService {
 
     private final PortalRepository portalRepository;

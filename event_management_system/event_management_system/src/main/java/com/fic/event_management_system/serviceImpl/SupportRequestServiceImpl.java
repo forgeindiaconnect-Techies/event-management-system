@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+import org.springframework.lang.NonNull;
 import com.fic.event_management_system.dto.CreateSupportRequestRequest;
 import com.fic.event_management_system.dto.UpdateSupportRequestRequest;
 import com.fic.event_management_system.entity.SupportRequest;
@@ -22,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
+@SuppressWarnings("null")
 public class SupportRequestServiceImpl
         implements SupportRequestService {
 
@@ -221,7 +223,7 @@ public class SupportRequestServiceImpl
         );
     }
 
-    private SupportRequest findRequest(Long requestId) {
+    private SupportRequest findRequest(@NonNull Long requestId) {
         return supportRequestRepository
                 .findById(requestId)
                 .orElseThrow(() ->

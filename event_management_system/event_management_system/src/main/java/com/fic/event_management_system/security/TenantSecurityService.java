@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class TenantSecurityService {
 
     private final UserRepository userRepository;

@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+
 import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.Ticket;
 import com.fic.event_management_system.enums.TicketStatus;
@@ -12,6 +13,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;

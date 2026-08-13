@@ -3,7 +3,6 @@ package com.fic.event_management_system.controller;
 import com.fic.event_management_system.dto.SuperAdminDashboardResponse;
 import com.fic.event_management_system.dto.SuperAdminPortalResponse;
 import com.fic.event_management_system.dto.ManualSubscriptionRecoveryRequest;
-import com.fic.event_management_system.entity.PortalSubscription;
 import com.fic.event_management_system.entity.SubscriptionAuditLog;
 import com.fic.event_management_system.dto.SubscriptionDetailsResponse;
 import com.fic.event_management_system.dto.SubscriptionPaymentHistoryResponse;

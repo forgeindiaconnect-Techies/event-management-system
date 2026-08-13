@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class CertificateServiceImpl implements CertificateService {
 
     private final RegistrationRepository registrationRepository;

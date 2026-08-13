@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+import org.springframework.lang.NonNull;
 import com.fic.event_management_system.entity.Portal;
 import com.fic.event_management_system.entity.PortalSubscription;
 import com.fic.event_management_system.entity.SubscriptionPlan;
@@ -31,9 +32,10 @@ import java.util.Optional;
 import java.util.Comparator;
 
 @Service
+@SuppressWarnings("null")
 public class SubscriptionServiceImpl implements SubscriptionService {
 
-    private static final int TRIAL_DAYS = 2;
+    private static final int TRIAL_DAYS = 30;
 
     private static final List<SubscriptionStatus> USABLE_STATUSES =
             List.of(
@@ -197,7 +199,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     @Transactional
     public Optional<PortalSubscription> getCurrentSubscription(
-            Long portalId
+            @NonNull Long portalId
     ) {
         Portal portal = portalRepository.findById(portalId)
                 .orElseThrow(() ->

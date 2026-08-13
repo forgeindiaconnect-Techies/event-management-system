@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+
 import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.StaffAssignment;
 import com.fic.event_management_system.entity.User;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@SuppressWarnings("null")
 public class StaffAssignmentServiceImpl implements StaffAssignmentService {
 
     private final StaffAssignmentRepository staffAssignmentRepository;
@@ -27,6 +29,7 @@ public class StaffAssignmentServiceImpl implements StaffAssignmentService {
             EventRepository eventRepository,
             UserRepository userRepository,
             NotificationService notificationService) {
+
 
         this.staffAssignmentRepository = staffAssignmentRepository;
         this.eventRepository = eventRepository;

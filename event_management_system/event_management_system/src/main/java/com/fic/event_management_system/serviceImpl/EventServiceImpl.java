@@ -9,9 +9,9 @@ import com.fic.event_management_system.enums.NotificationType;
 import com.fic.event_management_system.enums.RegistrationStatus;
 import com.fic.event_management_system.enums.RegistrationType;
 import com.fic.event_management_system.repository.EventRepository;
-import com.fic.event_management_system.repository.PortalRepository;
+
 import com.fic.event_management_system.repository.RegistrationRepository;
-import com.fic.event_management_system.repository.UserRepository;
+
 import com.fic.event_management_system.security.TenantSecurityService;
 import com.fic.event_management_system.service.EventService;
 import com.fic.event_management_system.service.EmailService;
@@ -26,8 +26,6 @@ import org.springframework.stereotype.Service;
 public class EventServiceImpl implements EventService {
 
     private final EventRepository eventRepository;
-    private final PortalRepository portalRepository;
-    private final UserRepository userRepository;
     private final RegistrationRepository registrationRepository;
     private final TenantSecurityService tenantSecurityService;
     private final SubscriptionLimitService subscriptionLimitService;
@@ -36,8 +34,6 @@ public class EventServiceImpl implements EventService {
 
     public EventServiceImpl(
             EventRepository eventRepository,
-            PortalRepository portalRepository,
-            UserRepository userRepository,
             RegistrationRepository registrationRepository,
             TenantSecurityService tenantSecurityService,
             SubscriptionLimitService subscriptionLimitService,
@@ -45,8 +41,6 @@ public class EventServiceImpl implements EventService {
             EmailService emailService) {
 
         this.eventRepository = eventRepository;
-        this.portalRepository = portalRepository;
-        this.userRepository = userRepository;
         this.registrationRepository = registrationRepository;
         this.tenantSecurityService = tenantSecurityService;
         this.subscriptionLimitService = subscriptionLimitService;

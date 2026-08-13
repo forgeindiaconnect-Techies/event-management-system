@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useSession } from '../session';
 
 const API_BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';

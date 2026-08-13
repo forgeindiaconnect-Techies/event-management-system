@@ -349,6 +349,7 @@ const styles = StyleSheet.create({
   kicker: { color: '#6d3ee6', fontSize: 13, fontWeight: '800', textTransform: 'uppercase', marginBottom: 8 },
   sectionTitleDark: { fontSize: 28, fontWeight: '800', color: '#1e1b3d', marginBottom: 16 },
   sectionDescDark: { fontSize: 15, color: '#68667a', lineHeight: 24, marginBottom: 32 },
+  trustRow: { marginTop: 40 },
   trustTitle: { fontSize: 16, fontWeight: '700', color: '#1e1b3d', marginBottom: 16, textAlign: 'center' },
   trustBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
   trustBadge: { backgroundColor: '#f6f7fb', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#eceaf3' },

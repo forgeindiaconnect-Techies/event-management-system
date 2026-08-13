@@ -37,6 +37,8 @@ public class TicketClass {
 
     private Boolean active = true;
 
+    private Boolean assignSeats = false;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -63,6 +65,7 @@ public class TicketClass {
     public String getBenefits() { return benefits; }
     public Integer getMaxPerBuyer() { return maxPerBuyer; }
     public Boolean getActive() { return active; }
+    public Boolean getAssignSeats() { return assignSeats; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -77,6 +80,7 @@ public class TicketClass {
     public void setBenefits(String benefits) { this.benefits = benefits; }
     public void setMaxPerBuyer(Integer maxPerBuyer) { this.maxPerBuyer = maxPerBuyer; }
     public void setActive(Boolean active) { this.active = active; }
+    public void setAssignSeats(Boolean assignSeats) { this.assignSeats = assignSeats; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

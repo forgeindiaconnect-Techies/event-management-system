@@ -15,6 +15,12 @@ type AssignedEvent = {
   location: string;
   roleDuty: string;
   bannerUrl?: string;
+  status?: string;
+  sessionTitle?: string;
+  sessionDate?: string;
+  sessionTime?: string;
+  portalId?: string | number;
+  roleName?: string;
 };
 
 export default function TeamHomeScreen() {

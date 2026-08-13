@@ -9,6 +9,7 @@ import com.fic.event_management_system.service.AttendanceDashboardService;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class AttendanceDashboardServiceImpl implements AttendanceDashboardService {
 
     private final EventRepository eventRepository;

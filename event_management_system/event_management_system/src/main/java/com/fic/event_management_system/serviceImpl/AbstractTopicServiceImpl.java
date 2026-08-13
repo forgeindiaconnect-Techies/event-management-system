@@ -9,6 +9,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class AbstractTopicServiceImpl implements AbstractTopicService {
 
     private final AbstractTopicRepository repository;

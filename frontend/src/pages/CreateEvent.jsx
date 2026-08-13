@@ -32,6 +32,7 @@ const submittingRef = useRef(false);
     certificateEnabled: false,
     certificateTitle: "",
     bannerUrl: "",
+    assignSeats: false,
   });
 
   const handleChange = (e) => {
@@ -134,6 +135,7 @@ const submittingRef = useRef(false);
         capacity: Number(event.capacity),
         availableSeats: Number(event.capacity),
         ticketPrice: event.paid ? Number(event.ticketPrice) : 0,
+        assignSeats: event.assignSeats,
       });
 
       alert("Event created successfully");
@@ -458,6 +460,21 @@ const filteredCategoryGroups = categoryGroups
                     />
                     <label className="form-check-label fw-semibold">
                       Certificate Enabled
+                    </label>
+                  </div>
+                </div>
+
+                <div className="col-md-6">
+                  <div className="form-check form-switch mb-3">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      name="assignSeats"
+                      checked={event.assignSeats}
+                      onChange={handleChange}
+                    />
+                    <label className="form-check-label fw-semibold">
+                      Assign Seats Sequentially
                     </label>
                   </div>
                 </div>

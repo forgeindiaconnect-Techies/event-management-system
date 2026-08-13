@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+
 import com.fic.event_management_system.entity.Event;
 import com.fic.event_management_system.entity.SpeakerAssignment;
 import com.fic.event_management_system.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@SuppressWarnings("null")
 public class SpeakerAssignmentServiceImpl implements SpeakerAssignmentService {
 
     private final SpeakerAssignmentRepository speakerAssignmentRepository;

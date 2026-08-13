@@ -1,5 +1,6 @@
 package com.fic.event_management_system.serviceImpl;
 
+
 import com.fic.event_management_system.entity.Ticket;
 import com.fic.event_management_system.enums.TicketStatus;
 import com.fic.event_management_system.repository.TicketRepository;
@@ -15,10 +16,8 @@ import com.itextpdf.text.Image;
 
 import java.io.ByteArrayOutputStream;
 
-
-import java.io.ByteArrayOutputStream;
-
 @Service
+@SuppressWarnings("null")
 public class TicketPdfServiceImpl implements TicketPdfService {
 
     private final TicketRepository ticketRepository;

@@ -323,6 +323,12 @@ function PublicTicket() {
                 label="Ticket Class"
                 value={registration.ticketClass?.name}
               />
+              {displayTicket?.seatIdentifier && (
+                <InfoRow
+                  label="Assigned Seat"
+                  value={<strong style={{ color: '#4f46e5' }}>{displayTicket.seatIdentifier}</strong>}
+                />
+              )}
               <InfoRow
                 label="Quantity"
                 value={registration.ticketQuantity}

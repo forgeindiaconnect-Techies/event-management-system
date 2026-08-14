@@ -283,7 +283,11 @@ const filteredCategoryGroups = categoryGroups
     }}
   >
     <span>{event.eventType || "Select category"}</span>
-    <span className="fw-semibold">v</span>
+    <span className="text-muted">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+      </svg>
+    </span>
   </div>
 
   {showCategoryDropdown && (
@@ -558,23 +562,17 @@ const filteredCategoryGroups = categoryGroups
             </div>
 
             <div
-              className="create-event-aside col-md-3 p-4 border-start"
-              style={{ backgroundColor: "#f4f6fb" }}
+              className="create-event-aside col-md-3 p-4 border-start text-white"
+              style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}
             >
-              <div className="text-center mb-4" style={{ fontSize: "80px" }}>
-                <div className="d-inline-flex align-items-center justify-content-center rounded-circle bg-white shadow-sm fw-bold" style={{ width: "96px", height: "96px", color: "#4f46e5", fontSize: "28px" }}>
-                  CAL
-                </div>
-              </div>
+              <h3 className="fw-semibold text-white">Create your event</h3>
 
-              <h3 className="fw-semibold">Create your event</h3>
-
-              <p style={{ fontSize: "15px", lineHeight: "1.6" }}>
+              <p style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(255, 255, 255, 0.9)" }}>
                 Start creating your event by providing the basic details now and
                 fill in what your event is all about later.
               </p>
 
-              <p className="text-primary fw-semibold">
+              <p className="fw-semibold" style={{ color: "#fff" }}>
                 Complete event setup after creation
               </p>
             </div>

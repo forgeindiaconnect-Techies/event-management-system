@@ -24,6 +24,7 @@ function EventInfo() {
   const [form, setForm] = useState(null);
   const [activeSection, setActiveSection] = useState("basic");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [customCategory, setCustomCategory] = useState("");
 
@@ -64,6 +65,23 @@ function EventInfo() {
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleFileUpload = async (file, onUploaded) => {
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      onUploaded(res.data.url);
+    } catch (err) {
+      alert("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const saveEvent = async () => {
@@ -311,51 +329,55 @@ function EventInfo() {
             </FormGroup>
           </div>
 
-          <FormGroup label="Event Thumbnail / Banner URL">
-            <input
-              value={form.bannerUrl}
-              onChange={(e) => updateField("bannerUrl", e.target.value)}
-              placeholder="Paste banner image URL"
-            />
+          <FormGroup label="Event Thumbnail / Banner">
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(e.target.files[0], (url) => updateField("bannerUrl", url))}
+                disabled={uploading}
+                style={{ flex: 1, padding: "8px", border: "1px dashed #cbd5e1", borderRadius: "8px" }}
+              />
+            </div>
+            {form.bannerUrl && (
+              <div style={{ marginTop: "10px" }}>
+                <img src={form.bannerUrl} alt="Banner Preview" style={{ width: "200px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
+              </div>
+            )}
           </FormGroup>
 
           <div style={{ marginTop: "15px", marginBottom: "25px", borderTop: "1px solid #e2e8f0", paddingTop: "15px" }}>
-            <FormGroup label={`Event Gallery URLs (${(form.galleryUrls || []).length}/5)`}>
+            <FormGroup label={`Event Gallery (${(form.galleryUrls || []).length}/5)`}>
               {(form.galleryUrls || []).map((url, idx) => (
-                <div key={idx} style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                  <input
-                    value={url}
-                    onChange={(e) => {
-                      const newGallery = [...form.galleryUrls];
-                      newGallery[idx] = e.target.value;
-                      updateField("galleryUrls", newGallery);
-                    }}
-                    placeholder={`Gallery Image ${idx + 1} URL`}
-                    style={{ flex: 1 }}
-                  />
+                <div key={idx} style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
+                  <img src={url} alt={`Gallery ${idx + 1}`} style={{ width: "100px", height: "60px", objectFit: "cover", borderRadius: "6px", border: "1px solid #cbd5e1" }} />
+                  <div style={{ flex: 1, color: "#64748b", fontSize: "14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</div>
                   <button
                     type="button"
                     onClick={() => {
                       const newGallery = form.galleryUrls.filter((_, i) => i !== idx);
                       updateField("galleryUrls", newGallery);
                     }}
-                    style={{ padding: "0 15px", background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}
+                    style={{ padding: "8px 15px", background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}
                   >
                     Remove
                   </button>
                 </div>
               ))}
               {(!form.galleryUrls || form.galleryUrls.length < 5) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newGallery = [...(form.galleryUrls || []), ""];
-                    updateField("galleryUrls", newGallery);
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    handleFileUpload(e.target.files[0], (newUrl) => {
+                      const newGallery = [...(form.galleryUrls || []), newUrl];
+                      updateField("galleryUrls", newGallery);
+                    });
+                    e.target.value = null;
                   }}
-                  style={{ padding: "10px 15px", background: "#f1f5f9", color: "#334155", border: "1px dashed #cbd5e1", borderRadius: "8px", cursor: "pointer", width: "100%", fontWeight: "600" }}
-                >
-                  + Add Gallery Image
-                </button>
+                  disabled={uploading}
+                  style={{ marginTop: "10px", padding: "10px", border: "1px dashed #cbd5e1", borderRadius: "8px", width: "100%", background: "#f1f5f9" }}
+                />
               )}
             </FormGroup>
           </div>

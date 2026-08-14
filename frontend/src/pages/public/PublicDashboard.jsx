@@ -992,7 +992,7 @@ function PublicDashboard() {
               <div className="event-horizontal-scroll">
                 {upcomingEvents.map((event) => (
                   <div className="upcoming-scroll-card" key={event.id}>
-                    <EventMiniCard event={event} />
+                    <UpcomingEventCard event={event} />
                   </div>
                 ))}
               </div>
@@ -1118,6 +1118,30 @@ function FeaturedCard({ event }) {
         </Link>
       )}
     </div>
+  );
+}
+
+function UpcomingEventCard({ event }) {
+  return (
+    <Link
+      to={`/public/events/${event.id}`}
+      className="border rounded-4 overflow-hidden bg-white event-hover position-relative d-block text-decoration-none"
+      style={{ width: "100%", height: "100%", minHeight: "220px" }}
+    >
+      <img
+        src={event.bannerUrl || getDefaultBanner(event.eventType)}
+        alt={event.eventName}
+        style={{ width: "100%", height: "100%", minHeight: "220px", objectFit: "cover", position: "absolute", top: 0, left: 0 }}
+      />
+      <div 
+        className="position-absolute bottom-0 start-0 w-100 p-3"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)", zIndex: 1 }}
+      >
+        <h6 className="text-white fw-bold mb-0" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {event.eventName}
+        </h6>
+      </div>
+    </Link>
   );
 }
 

@@ -562,19 +562,37 @@ const filteredCategoryGroups = categoryGroups
             </div>
 
             <div
-              className="create-event-aside col-md-3 p-4 border-start text-white"
+              className="create-event-aside col-md-3 p-4 border-start text-white d-flex flex-column"
               style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}
             >
-              <h3 className="fw-semibold text-white">Create your event</h3>
+              <h3 className="fw-bold text-white mb-4">Quick Tips 💡</h3>
+              
+              <div className="mb-4">
+                <h6 className="fw-semibold text-white mb-2">1. Choose the Right Mode</h6>
+                <p style={{ fontSize: "14px", lineHeight: "1.5", color: "rgba(255, 255, 255, 0.85)" }}>
+                  Decide whether your event is In-Person, Virtual, or Hybrid. This determines the venue and meeting link requirements.
+                </p>
+              </div>
 
-              <p style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(255, 255, 255, 0.9)" }}>
-                Start creating your event by providing the basic details now and
-                fill in what your event is all about later.
-              </p>
+              <div className="mb-4">
+                <h6 className="fw-semibold text-white mb-2">2. Categorize Properly</h6>
+                <p style={{ fontSize: "14px", lineHeight: "1.5", color: "rgba(255, 255, 255, 0.85)" }}>
+                  Select the most relevant category or add a custom one so attendees can easily find your event.
+                </p>
+              </div>
 
-              <p className="fw-semibold" style={{ color: "#fff" }}>
-                Complete event setup after creation
-              </p>
+              <div className="mb-4">
+                <h6 className="fw-semibold text-white mb-2">3. Accurate Scheduling</h6>
+                <p style={{ fontSize: "14px", lineHeight: "1.5", color: "rgba(255, 255, 255, 0.85)" }}>
+                  Double-check your start and end dates. Set a registration deadline if you need a final headcount early.
+                </p>
+              </div>
+
+              <div className="mt-auto pt-4 border-top" style={{ borderColor: "rgba(255, 255, 255, 0.2) !important" }}>
+                <p className="fw-semibold mb-0" style={{ fontSize: "14px", color: "#fff" }}>
+                  ✨ A good banner image can increase registrations by 30%! You can add it now or later.
+                </p>
+              </div>
             </div>
           </div>
 

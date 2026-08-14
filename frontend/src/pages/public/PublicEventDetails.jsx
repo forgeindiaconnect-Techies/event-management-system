@@ -36,7 +36,7 @@ function PublicEventDetails() {
   }
 
   const banner = event.bannerUrl || getDefaultBanner(event.eventType);
-  const tabs = ["Overview", "Gallery", "Agenda", "Speakers", "Sponsors"];
+  const tabs = ["Overview", "Gallery", "Agenda", "Speakers", "Organizer"];
   const isOnline = event.eventMode === "VIRTUAL";
   const isHybrid = event.eventMode === "HYBRID";
   const registrationClosed = isRegistrationClosed(event.registrationDeadline);
@@ -174,7 +174,42 @@ function PublicEventDetails() {
 
               {activeTab === "Agenda" && <EmptyTab title="Agenda" text="Agenda details will be published by the organizer." />}
               {activeTab === "Speakers" && <EmptyTab title="Speakers" text="Speaker details will be announced soon." />}
-              {activeTab === "Sponsors" && <EmptyTab title="Sponsors" text="Sponsor details will be announced soon." />}
+              {activeTab === "Organizer" && (
+                <div className="event-overview">
+                  <div className="event-section-heading">
+                    <span><BsPeople /></span>
+                    <div>
+                      <small>EVENT ORGANIZER</small>
+                      <h2>Meet the Organizer</h2>
+                    </div>
+                  </div>
+                  <div style={{ padding: "24px", border: "1px solid #e2e8f0", borderRadius: "12px", background: "#f8fafc", marginTop: "20px" }}>
+                    <h4 style={{ margin: "0 0 10px 0", color: "#1e293b", fontSize: "1.2rem", fontWeight: "700" }}>
+                      {event.organizer ? `${event.organizer.firstName || ""} ${event.organizer.lastName || ""}`.trim() || "Event Organizer" : "Event Organizer"}
+                    </h4>
+                    {event.organizer?.email && (
+                      <p style={{ margin: "0 0 15px 0", color: "#64748b", display: "flex", alignItems: "center", gap: "8px", fontSize: "15px" }}>
+                        <strong>Email:</strong> {event.organizer.email}
+                      </p>
+                    )}
+                    {event.portal && (
+                      <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #cbd5e1" }}>
+                        <h5 style={{ margin: "0 0 8px 0", color: "#334155", fontWeight: "600", fontSize: "1.1rem" }}>{event.portal.portalName}</h5>
+                        {event.portal.description && (
+                          <p style={{ margin: "0", color: "#475569", fontSize: "0.95rem", lineHeight: "1.5" }}>
+                            {event.portal.description}
+                          </p>
+                        )}
+                        {event.portal.organizationLocation && (
+                          <p style={{ margin: "8px 0 0 0", color: "#64748b", fontSize: "0.9rem" }}>
+                            <strong>Location:</strong> {event.portal.organizationLocation}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

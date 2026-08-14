@@ -74,6 +74,10 @@ export default function ExploreScreen() {
   const currentCategory = CATEGORIES.find((c) => c.label === activeCategory)!;
 
   let filteredEvents = events.filter((e) => {
+    const endDateTimeRaw = e.endDateTime ? new Date(e.endDateTime).getTime() : Infinity;
+    const status = e.status || "PUBLISHED";
+    if (endDateTimeRaw < Date.now() || status === "COMPLETED") return false;
+
     const matchesCategory = eventMatchesCategory(e, currentCategory);
     const matchesSearch =
       !search ||

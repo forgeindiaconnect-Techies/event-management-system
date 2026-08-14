@@ -270,12 +270,21 @@ export default function LandingScreen() {
         startDateTimeRaw: e.startDateTime
           ? new Date(e.startDateTime).getTime()
           : Infinity,
+        endDateTimeRaw: e.endDateTime
+          ? new Date(e.endDateTime).getTime()
+          : Infinity,
+        status: e.status || "PUBLISHED",
       })),
     [events],
   );
 
   const currentCategory =
     CATEGORIES.find((c) => c.label === activeCategory) ?? CATEGORIES[0];
+
+  const activeEvents = parsedEvents.filter(
+    (e) => e.endDateTimeRaw > Date.now() && e.status !== "COMPLETED"
+  );
+
   const isSearchActive =
     activeCategory !== "All Events" ||
     searchQuery.trim().length > 0 ||
@@ -283,7 +292,7 @@ export default function LandingScreen() {
     filterDate !== "All" ||
     filterPlace.trim().length > 0;
 
-  let filteredEvents = parsedEvents;
+  let filteredEvents = activeEvents;
   if (isSearchActive) {
     filteredEvents = filteredEvents.filter((e) =>
       eventMatchesCategory(e, currentCategory),
@@ -332,7 +341,7 @@ export default function LandingScreen() {
   }
 
   const now = Date.now();
-  const futureEvents = parsedEvents.filter((e) => e.startDateTimeRaw >= now);
+  const futureEvents = activeEvents.filter((e) => e.startDateTimeRaw >= now);
   const trending = [...futureEvents]
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 10);

@@ -235,7 +235,7 @@ export default function RegisterScreen() {
           )}
 
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Attendee Details</Text>
 
             <Text style={[styles.label, { color: colors.text }]}>First Name *</Text>
             <TextInput
@@ -275,11 +275,8 @@ export default function RegisterScreen() {
               value={phoneNumber}
               onChangeText={setPhoneNumber}
             />
-          </View>
 
-          {activeFields.length > 0 && (
-            <View style={styles.section}>
-              {activeFields.map(field => (
+            {activeFields.length > 0 && activeFields.map(field => (
                 <View key={field.id} style={styles.fieldContainer}>
                   <Text style={[styles.label, { color: colors.text }]}>
                     {field.fieldLabel} {field.required && '*'}
@@ -332,9 +329,8 @@ export default function RegisterScreen() {
                     />
                   )}
                 </View>
-              ))}
-            </View>
-          )}
+            ))}
+          </View>
 
           <TouchableOpacity 
             style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: submitting ? 0.7 : 1 }]} 

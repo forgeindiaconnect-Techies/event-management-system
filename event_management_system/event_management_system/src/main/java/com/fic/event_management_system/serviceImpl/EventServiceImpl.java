@@ -118,6 +118,7 @@ public class EventServiceImpl implements EventService {
         existingEvent.setPaid(event.getPaid());
         existingEvent.setTicketPrice(event.getTicketPrice());
         existingEvent.setBannerUrl(event.getBannerUrl());
+        existingEvent.setGalleryUrls(event.getGalleryUrls());
         existingEvent.setCertificateEnabled(event.getCertificateEnabled());
         existingEvent.setCertificateTitle(event.getCertificateTitle());
         normalizeRegistrationPermissions(event);

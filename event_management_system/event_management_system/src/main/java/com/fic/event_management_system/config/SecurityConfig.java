@@ -51,6 +51,7 @@ public class SecurityConfig {
 
                         // Public APIs
                         .requestMatchers("/api/events/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/events/*/announcements").permitAll()
                         .requestMatchers("/api/registrations/public/**").permitAll()
                         .requestMatchers("/api/tickets/search/**").permitAll()
 

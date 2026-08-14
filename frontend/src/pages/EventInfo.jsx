@@ -50,7 +50,8 @@ function EventInfo() {
         paid: Boolean(res.data.paid),
         ticketPrice: res.data.ticketPrice || 0,
         certificateEnabled: Boolean(res.data.certificateEnabled),
-        certificateTitle: res.data.certificateTitle || ""
+        certificateTitle: res.data.certificateTitle || "",
+        galleryUrls: res.data.galleryUrls || []
       });
     }
 
@@ -88,7 +89,8 @@ function EventInfo() {
         availableSeats: Number(form.availableSeats) || 0,
         ticketPrice: Number(form.ticketPrice) || 0,
         paid: Boolean(form.paid),
-        certificateEnabled: Boolean(form.certificateEnabled)
+        certificateEnabled: Boolean(form.certificateEnabled),
+        galleryUrls: form.galleryUrls || []
       };
 
       const res = await api.put(`/events/${id}`, payload);
@@ -316,6 +318,47 @@ function EventInfo() {
               placeholder="Paste banner image URL"
             />
           </FormGroup>
+
+          <div style={{ marginTop: "15px", marginBottom: "25px", borderTop: "1px solid #e2e8f0", paddingTop: "15px" }}>
+            <FormGroup label={`Event Gallery URLs (${(form.galleryUrls || []).length}/5)`}>
+              {(form.galleryUrls || []).map((url, idx) => (
+                <div key={idx} style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                  <input
+                    value={url}
+                    onChange={(e) => {
+                      const newGallery = [...form.galleryUrls];
+                      newGallery[idx] = e.target.value;
+                      updateField("galleryUrls", newGallery);
+                    }}
+                    placeholder={`Gallery Image ${idx + 1} URL`}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newGallery = form.galleryUrls.filter((_, i) => i !== idx);
+                      updateField("galleryUrls", newGallery);
+                    }}
+                    style={{ padding: "0 15px", background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              {(!form.galleryUrls || form.galleryUrls.length < 5) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newGallery = [...(form.galleryUrls || []), ""];
+                    updateField("galleryUrls", newGallery);
+                  }}
+                  style={{ padding: "10px 15px", background: "#f1f5f9", color: "#334155", border: "1px dashed #cbd5e1", borderRadius: "8px", cursor: "pointer", width: "100%", fontWeight: "600" }}
+                >
+                  + Add Gallery Image
+                </button>
+              )}
+            </FormGroup>
+          </div>
 
           <label className="event-toggle-row">
             <input

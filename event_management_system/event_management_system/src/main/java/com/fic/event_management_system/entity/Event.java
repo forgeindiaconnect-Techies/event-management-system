@@ -4,6 +4,7 @@ import com.fic.event_management_system.enums.EventMode;
 import com.fic.event_management_system.enums.EventStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "events")
@@ -49,6 +50,10 @@ public class Event {
     private Double ticketPrice = 0.0;
 
     private String bannerUrl;
+
+    @Convert(converter = com.fic.event_management_system.config.ListToStringConverter.class)
+    @Column(name = "gallery_urls", length = 2000)
+    private List<String> galleryUrls;
 
     private LocalDateTime createdAt;
 
@@ -212,6 +217,14 @@ public class Event {
 
 	public void setBannerUrl(String bannerUrl) {
 		this.bannerUrl = bannerUrl;
+	}
+
+	public List<String> getGalleryUrls() {
+		return galleryUrls;
+	}
+
+	public void setGalleryUrls(List<String> galleryUrls) {
+		this.galleryUrls = galleryUrls;
 	}
 
 	public LocalDateTime getCreatedAt() {

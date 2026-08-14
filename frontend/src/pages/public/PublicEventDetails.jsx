@@ -8,6 +8,7 @@ import {
   BsClock,
   BsGeoAlt,
   BsGlobe2,
+  BsImage,
   BsInfoCircle,
   BsPeople,
   BsTag,
@@ -35,7 +36,7 @@ function PublicEventDetails() {
   }
 
   const banner = event.bannerUrl || getDefaultBanner(event.eventType);
-  const tabs = ["Overview", "Agenda", "Speakers", "Sponsors"];
+  const tabs = ["Overview", "Gallery", "Agenda", "Speakers", "Sponsors"];
   const isOnline = event.eventMode === "VIRTUAL";
   const isHybrid = event.eventMode === "HYBRID";
   const registrationClosed = isRegistrationClosed(event.registrationDeadline);
@@ -145,6 +146,27 @@ function PublicEventDetails() {
                     <div className="event-certificate-note">
                       <BsCheckCircle />
                       Certificate available{event.certificateTitle ? ` — ${event.certificateTitle}` : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "Gallery" && (
+                <div className="event-overview">
+                  <div className="event-section-heading">
+                    <span><BsImage /></span>
+                    <div>
+                      <small>EVENT GALLERY</small>
+                      <h2>Event Photos</h2>
+                    </div>
+                  </div>
+                  {(!event.galleryUrls || event.galleryUrls.length === 0) ? (
+                    <EmptyTab title="Gallery" text="No images available in the gallery yet." />
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px", marginTop: "20px" }}>
+                      {event.galleryUrls.map((url, i) => (
+                        <img key={i} src={url} alt={`Gallery image ${i + 1}`} style={{ width: "100%", height: "200px", objectFit: "cover", borderRadius: "12px", border: "1px solid #e2e8f0" }} />
+                      ))}
                     </div>
                   )}
                 </div>

@@ -12,29 +12,38 @@ import {
   TouchableOpacity,
   View,
   Platform,
-  Linking,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useWishlist } from '../context/WishlistContext';
 import { useTheme } from '../context/ThemeContext';
 
 const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
 
-const TABS = ['Overview', 'Details'];
+const SECTIONS = ['About', 'Gallery', 'Organizer', 'More'];
 
-function formatDate(dateTime: string | null) {
+function formatDateOnly(dateTime: string | null) {
   if (!dateTime) return 'To be announced';
   return new Date(dateTime).toLocaleString('en-IN', {
-    day: 'numeric',
+    day: '2-digit',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   });
 }
 
-function formatMode(mode: string) {
-  if (!mode) return 'Not specified';
-  return mode.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+function formatTimeOnly(dateTime: string | null) {
+  if (!dateTime) return '';
+  const timeStr = new Date(dateTime).toLocaleString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).toLowerCase();
+  // Remove all types of spaces including non-breaking spaces
+  return timeStr.replace(/[\s\u202F\u00A0]/g, '');
+}
+
+function formatMode(mode: string | null) {
+  if (!mode) return '';
+  return mode.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function isRegistrationClosed(deadline: string | null) {
@@ -43,41 +52,14 @@ function isRegistrationClosed(deadline: string | null) {
   return !isNaN(d.getTime()) && new Date() >= d;
 }
 
-function InfoRow({ icon, label, value }: { icon: any; label: string; value: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIconWrap}>
-        <Ionicons name={icon} size={16} color={colors.primary} />
-      </View>
-      <View style={styles.infoText}>
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-        <Text style={[styles.infoValue, { color: colors.text }]}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-function DetailTile({ icon, label, value }: { icon: any; label: string; value: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.detailTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Ionicons name={icon} size={18} color={colors.primary} />
-      <View style={{ marginTop: 8 }}>
-        <Text style={[styles.detailTileLabel, { color: colors.textMuted }]}>{label}</Text>
-        <Text style={[styles.detailTileValue, { color: colors.text }]}>{value || 'Not added'}</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { likedEvents, toggleLike } = useWishlist();
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
+  
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeSection, setActiveSection] = useState('About');
 
   useEffect(() => {
     if (!id) return;
@@ -111,200 +93,209 @@ export default function EventDetailScreen() {
 
   const banner = event.bannerUrl;
   const isOnline = event.eventMode === 'VIRTUAL';
-  const isHybrid = event.eventMode === 'HYBRID';
   const isPaid = event.paid;
   const price = isPaid ? `₹${Number(event.ticketPrice || 0).toLocaleString('en-IN')}` : 'Free';
   const regClosed = isRegistrationClosed(event.registrationDeadline);
+  
+  const startTimeStr = formatTimeOnly(event.startDateTime);
+  const endTimeStr = formatTimeOnly(event.endDateTime);
+  const timeDisplay = endTimeStr ? `${startTimeStr} - ${endTimeStr}` : startTimeStr;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <ScrollView showsVerticalScrollIndicator={false}>
-
-        {/* Hero Banner */}
+      
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Hero Image */}
         <View style={styles.heroContainer}>
           {banner ? (
             <Image source={{ uri: banner }} style={styles.heroImage} />
           ) : (
             <View style={[styles.heroImage, styles.heroImagePlaceholder]} />
           )}
-          <View style={styles.heroOverlay} />
+          <LinearGradient
+            colors={['transparent', colors.background]}
+            style={styles.gradientOverlay}
+          />
 
-          {/* Back button */}
           <TouchableOpacity style={styles.backBtn} onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/home'); } }}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
 
-          {/* Chips */}
-          <View style={styles.heroChips}>
+          <TouchableOpacity style={styles.heartBtn} onPress={() => toggleLike(id as string)}>
+            <Ionicons name={likedEvents.has(id as string) ? "heart" : "heart-outline"} size={24} color={likedEvents.has(id as string) ? "#ef4444" : "#fff"} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content Section */}
+        <View style={styles.contentContainer}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
             {event.eventType && (
-              <View style={styles.chip}>
-                <Ionicons name="pricetag-outline" size={11} color="#fff" />
-                <Text style={styles.chipText}>{event.eventType}</Text>
+              <View style={[styles.categoryPill, { backgroundColor: colors.primary }]}>
+                <Text style={styles.categoryText}>{event.eventType}</Text>
               </View>
             )}
             {event.eventMode && (
-              <View style={styles.chip}>
-                <Ionicons name={isOnline ? 'globe-outline' : 'location-outline'} size={11} color="#fff" />
-                <Text style={styles.chipText}>{formatMode(event.eventMode)}</Text>
+              <View style={[styles.categoryPill, { borderWidth: 1, borderColor: colors.primary }]}>
+                <Text style={[styles.categoryText, { color: colors.primary }]}>{formatMode(event.eventMode)}</Text>
               </View>
             )}
-            <View style={[styles.chip, isPaid ? styles.chipPaid : styles.chipFree]}>
-              <Ionicons name="ticket-outline" size={11} color="#fff" />
-              <Text style={styles.chipText}>{price}</Text>
+          </View>
+
+          <Text style={[styles.titleText, { color: colors.text }]}>{event.eventName || 'Event'}</Text>
+          
+          <Text style={[styles.subtitleText, { color: colors.textMuted }]}>
+            {event.description?.substring(0, 100) || 'Welcome to the beginning of something unforgettable!'}
+          </Text>
+
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={16} color={colors.primary} />
+            <Text style={[styles.locationText, { color: colors.textMuted }]}>
+              {isOnline ? 'Online Event' : event.venue || 'Venue TBA'}
+            </Text>
+          </View>
+
+          <View style={styles.dateTimeContainer}>
+            <View style={[styles.dateTimeCard, { backgroundColor: colors.surface, shadowColor: isDarkMode ? 'transparent' : '#000', borderColor: colors.border, borderWidth: isDarkMode ? 1 : 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+                <Text style={[styles.dateTimeLabel, { color: colors.textMuted, marginLeft: 6, marginBottom: 0 }]} numberOfLines={1}>Date</Text>
+              </View>
+              <Text style={[styles.dateTimeValue, { color: colors.text, fontSize: 13 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatDateOnly(event.startDateTime)}</Text>
+            </View>
+            <View style={[styles.dateTimeCard, { backgroundColor: colors.surface, shadowColor: isDarkMode ? 'transparent' : '#000', borderColor: colors.border, borderWidth: isDarkMode ? 1 : 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+                <Text style={[styles.dateTimeLabel, { color: colors.textMuted, marginLeft: 6, marginBottom: 0 }]} numberOfLines={1}>Time</Text>
+              </View>
+              <Text style={[styles.dateTimeValue, { color: colors.text, fontSize: 13 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{timeDisplay}</Text>
             </View>
           </View>
 
-          {/* Title & Meta */}
-          <View style={styles.heroContent}>
-            <Text style={styles.heroTitle} numberOfLines={3}>{event.eventName || 'Event'}</Text>
-            {event.description && (
-              <Text style={styles.heroSummary} numberOfLines={2}>{event.description}</Text>
-            )}
-            <View style={styles.heroMeta}>
-              <View style={styles.heroMetaItem}>
-                <Ionicons name="calendar-outline" size={14} color="#a5b4fc" />
-                <Text style={styles.heroMetaText}>{formatDate(event.startDateTime)}</Text>
-              </View>
-              <View style={styles.heroMetaItem}>
-                <Ionicons name={isOnline ? 'globe-outline' : 'location-outline'} size={14} color="#a5b4fc" />
-                <Text style={styles.heroMetaText}>
-                  {isOnline ? 'Online event' : event.venue || 'Venue TBA'}
-                </Text>
-              </View>
+          {/* Segmented Control */}
+          <View style={[styles.tabsWrapper, { backgroundColor: isDarkMode ? '#1f1f1f' : '#f0f0f0' }]}>
+            <View style={styles.tabsContainer}>
+              {SECTIONS.map((section) => (
+                <TouchableOpacity
+                  key={section}
+                  style={[
+                    styles.tabButton,
+                    activeSection === section && [styles.tabButtonActive, { backgroundColor: colors.primary, shadowColor: isDarkMode ? 'transparent' : colors.primary, borderColor: colors.primary, borderWidth: 1 }]
+                  ]}
+                  onPress={() => setActiveSection(section)}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    { color: activeSection === section ? '#fff' : colors.textMuted },
+                    activeSection === section && { fontWeight: '700' }
+                  ]} numberOfLines={1} adjustsFontSizeToFit>{section}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
-        </View>
 
-        {/* Tabs */}
-        <View style={[styles.tabsRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-          {TABS.map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive, activeTab !== tab && { borderBottomColor: colors.border }]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, { color: colors.textMuted }, activeTab === tab && styles.tabTextActive, activeTab === tab && { color: colors.primary }]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.body}>
-
-          {/* OVERVIEW TAB */}
-          {activeTab === 'Overview' && (
-            <>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>About this Event</Text>
+          {/* Dynamic Content based on Selection */}
+          <View style={styles.sectionContent}>
+            {activeSection === 'About' && (
               <Text style={[styles.aboutText, { color: colors.textMuted }]}>
                 {event.description || 'No description provided for this event.'}
               </Text>
+            )}
 
-              {/* Certificate badge */}
-              {event.certificateEnabled && (
-                <View style={styles.certBadge}>
-                  <Ionicons name="ribbon-outline" size={18} color="#047857" />
-                  <Text style={styles.certText}>
-                    Certificate available{event.certificateTitle ? ` — ${event.certificateTitle}` : ''}
+            {activeSection === 'Gallery' && (
+              <View style={styles.moreSection}>
+                <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Event Gallery</Text>
+                {(!event.galleryUrls || event.galleryUrls.length === 0) ? (
+                  <Text style={[styles.aboutText, { color: colors.textMuted }]}>
+                    No images available in the gallery yet.
+                  </Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 }}>
+                    {event.galleryUrls.map((url: string, index: number) => (
+                      <Image
+                        key={index}
+                        source={{ uri: url }}
+                        style={{ width: '48%', height: 120, borderRadius: 10, marginBottom: 12, backgroundColor: colors.border }}
+                        resizeMode="cover"
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {activeSection === 'Organizer' && (
+              <View style={styles.organizerSection}>
+                {event.portal && (
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Portal Details</Text>
+                    <Text style={[styles.organizerText, { color: colors.text, fontWeight: '700', fontSize: 15 }]}>
+                      {event.portal.portalName}
+                    </Text>
+                    {event.portal.description && (
+                      <Text style={[styles.aboutText, { color: colors.textMuted, marginTop: 6 }]}>
+                        {event.portal.description}
+                      </Text>
+                    )}
+                    {event.portal.organizationLocation && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                        <Ionicons name="business-outline" size={14} color={colors.primary} />
+                        <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 6 }}>
+                          {event.portal.organizationLocation}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Event Organizer</Text>
+                <Text style={[styles.organizerText, { color: colors.textMuted }]}>
+                  {event.organizer ? `${event.organizer.firstName || ''} ${event.organizer.lastName || ''}`.trim() : 'Not specified'}
+                </Text>
+                
+                <Text style={[styles.sectionSubtitle, { color: colors.text, marginTop: 16 }]}>Contact Info</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
+                  <Text style={[styles.organizerText, { color: colors.textMuted, marginLeft: 6 }]}>
+                    {event.organizer?.email || 'No contact email provided'}
                   </Text>
                 </View>
-              )}
-
-              {/* Online access note */}
-              {(isOnline || isHybrid) && event.meetingLink && (
-                <View style={styles.onlineBadge}>
-                  <Ionicons name="globe-outline" size={18} color="#1d4ed8" />
-                  <View>
-                    <Text style={styles.onlineBadgeTitle}>Online access available</Text>
-                    <Text style={styles.onlineBadgeSub}>Joining link is shared after registration.</Text>
-                  </View>
-                </View>
-              )}
-            </>
-          )}
-
-          {/* DETAILS TAB */}
-          {activeTab === 'Details' && (
-            <>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Event Details</Text>
-              <View style={styles.detailsGrid}>
-                <DetailTile icon="pricetag-outline" label="Category" value={event.eventType} />
-                <DetailTile icon="globe-outline" label="Mode" value={formatMode(event.eventMode)} />
-                <DetailTile icon="calendar-outline" label="Starts" value={formatDate(event.startDateTime)} />
-                <DetailTile icon="time-outline" label="Ends" value={formatDate(event.endDateTime)} />
-                <DetailTile
-                  icon={isOnline ? 'globe-outline' : 'location-outline'}
-                  label={isOnline ? 'Access' : 'Venue'}
-                  value={isOnline ? 'Online' : event.venue || 'TBA'}
-                />
-                <DetailTile
-                  icon="people-outline"
-                  label="Capacity"
-                  value={event.capacity ? `${event.capacity} attendees` : 'Not specified'}
-                />
-                <DetailTile
-                  icon="calendar-outline"
-                  label="Reg. closes"
-                  value={formatDate(event.registrationDeadline)}
-                />
-                <DetailTile icon="ticket-outline" label="Ticket" value={price} />
               </View>
-            </>
-          )}
-
-          {/* BOOKING CARD */}
-          <View style={[styles.bookingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.bookingEyebrow, { color: colors.textMuted }]}>REGISTRATION</Text>
-            <View style={styles.bookingRow}>
-              <View>
-                <Text style={[styles.bookingPrice, { color: colors.text }]}>{price}</Text>
-                <Text style={[styles.bookingPerAttendee, { color: colors.textMuted }]}>per attendee</Text>
-              </View>
-              <View style={styles.bottomActions}>
-                <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => toggleLike(id as string)}>
-                  <Ionicons name={likedEvents.has(id as string) ? "heart" : "heart-outline"} size={22} color={likedEvents.has(id as string) ? "#ef4444" : colors.textMuted} />
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                  <Ionicons name="share-outline" size={22} color={colors.textMuted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <InfoRow icon="calendar-outline" label="Starts" value={formatDate(event.startDateTime)} />
-            <InfoRow icon="time-outline" label="Ends" value={formatDate(event.endDateTime)} />
-            <InfoRow
-              icon={isOnline ? 'globe-outline' : 'location-outline'}
-              label={isOnline ? 'Location' : 'Venue'}
-              value={isOnline ? 'Online' : event.venue || 'To be announced'}
-            />
-            {event.availableSeats !== undefined && (
-              <InfoRow icon="people-outline" label="Seats left" value={`${event.availableSeats} seats`} />
             )}
 
-            {regClosed ? (
-              <View style={styles.closedBanner}>
-                <Ionicons name="information-circle-outline" size={20} color="#9f1239" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.closedTitle}>Registration is closed</Text>
-                  <Text style={styles.closedSub}>The registration deadline has passed.</Text>
-                </View>
+            {activeSection === 'More' && (
+              <View style={styles.moreSection}>
+                <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Agenda</Text>
+                <Text style={[styles.aboutText, { color: colors.textMuted, marginBottom: 16 }]}>
+                  {event.agenda || 'Agenda details will be updated soon.'}
+                </Text>
+                
+                <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Chief Guest</Text>
+                <Text style={[styles.aboutText, { color: colors.textMuted }]}>
+                  {event.chiefGuest || 'To be announced'}
+                </Text>
               </View>
-            ) : (
-              <TouchableOpacity
-                style={[styles.registerBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push({ pathname: '/register', params: { id: event.id } })}
-              >
-                <Text style={styles.registerBtnText}>Register Now</Text>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
-              </TouchableOpacity>
             )}
-
-            <View style={styles.ticketNote}>
-              <Ionicons name="ticket-outline" size={14} color={colors.primary} />
-              <Text style={[styles.ticketNoteText, { color: colors.textMuted }]}>Ticket is generated after successful registration.</Text>
-            </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* Bottom Sticky Bar */}
+      <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        <View>
+          <Text style={[styles.fromText, { color: colors.textMuted }]}>From</Text>
+          <Text style={[styles.priceText, { color: colors.text }]}>{price} {isPaid ? 'onwards' : ''}</Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.bookBtn, { backgroundColor: colors.primary }, regClosed && styles.bookBtnDisabled]}
+          onPress={() => {
+            if (!regClosed) router.push({ pathname: '/register', params: { id: event.id } });
+          }}
+          disabled={regClosed}
+        >
+          <Text style={styles.bookBtnText}>{regClosed ? 'Closed' : 'Book now'}</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -312,270 +303,195 @@ export default function EventDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fe',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   heroContainer: {
-    height: 400,
+    height: 280, // Decreased banner image height
     position: 'relative',
   },
   heroImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   heroImagePlaceholder: {
-    backgroundColor: '#1e1b4b',
+    backgroundColor: '#374151',
   },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 7, 18, 0.62)',
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 120,
   },
   backBtn: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 54 : 16,
+    top: Platform.OS === 'ios' ? 54 : 36,
     left: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  heartBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 54 : 36,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    marginTop: -20,
+  },
+  categoryPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  categoryText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  titleText: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitleText: {
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  locationText: {
+    fontSize: 13,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  dateTimeCard: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    borderRadius: 16,
+    padding: 12,
+    width: '48%',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  dateTimeLabel: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  dateTimeValue: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  tabsWrapper: {
+    borderRadius: 30,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabButtonActive: {
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  sectionContent: {
+    marginTop: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  organizerSection: {
+    marginBottom: 20,
+  },
+  organizerText: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  moreSection: {
+    marginBottom: 20,
+  },
+  aboutText: {
+    fontSize: 14,
+    lineHeight: 24,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+  },
+  fromText: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  bookBtn: {
+    paddingHorizontal: 36,
+    paddingVertical: 14,
+    borderRadius: 24,
+  },
+  bookBtnDisabled: {
+    backgroundColor: '#d1d5db',
+  },
+  bookBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   backBtnCenter: {
     marginTop: 16,
     paddingHorizontal: 24,
     paddingVertical: 10,
-    backgroundColor: '#ede9fe',
     borderRadius: 12,
   },
-  heroChips: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 54 : 16,
-    right: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    maxWidth: '70%',
-    justifyContent: 'flex-end',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  chipFree: { backgroundColor: 'rgba(16,185,129,0.5)' },
-  chipPaid: { backgroundColor: 'rgba(124,58,237,0.5)' },
-  chipText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  heroContent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    paddingBottom: 28,
-  },
-  heroTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-    marginBottom: 8,
-  },
-  heroSummary: {
-    color: '#e5e7eb',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  heroMeta: { gap: 8 },
-  heroMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroMetaText: { color: '#c7d2fe', fontSize: 13, fontWeight: '500', flex: 1 },
-
-  tabsRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#fff',
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: { borderBottomColor: '#7c3aed' },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
-  tabTextActive: { color: '#6d28d9' },
-
-  body: {
-    padding: 20,
-    gap: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 10,
-  },
-  aboutText: {
-    fontSize: 15,
-    color: '#4b5563',
-    lineHeight: 24,
-  },
-  certBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#ecfdf5',
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 14,
-  },
-  certText: { color: '#047857', fontWeight: '700', fontSize: 14 },
-  onlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: '#eff6ff',
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 14,
-  },
-  onlineBadgeTitle: { color: '#1d4ed8', fontWeight: '700', fontSize: 14 },
-  onlineBadgeSub: { color: '#3b82f6', fontSize: 12, marginTop: 2 },
-
-  detailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  detailTile: {
-    width: '47%',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5eaf2',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  detailTileLabel: { color: '#9ca3af', fontSize: 12, marginBottom: 2 },
-  detailTileValue: { color: '#111827', fontWeight: '700', fontSize: 14 },
-
-  bookingCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e5eaf2',
-    shadowColor: '#6b3ce4',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  bookingEyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#7c3aed',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  bookingPrice: {
-    fontSize: 38,
-    fontWeight: '900',
-    color: '#111827',
-    letterSpacing: -1,
-  },
-  bookingPerAttendee: {
-    fontSize: 13,
-    color: '#9ca3af',
-  },
-  bookingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  bottomActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  actionBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 14,
-  },
-  infoIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#ede9fe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoText: { flex: 1 },
-  infoLabel: { fontSize: 12, color: '#9ca3af', marginBottom: 2 },
-  infoValue: { fontSize: 14, color: '#111827', fontWeight: '700' },
-  closedBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: '#fff1f2',
-    borderWidth: 1,
-    borderColor: '#fecdd3',
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 8,
-  },
-  closedTitle: { color: '#9f1239', fontWeight: '700', fontSize: 14 },
-  closedSub: { color: '#e11d48', fontSize: 12, marginTop: 2 },
-  registerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#6d28d9',
-    borderRadius: 14,
-    paddingVertical: 15,
-    marginTop: 8,
-    shadowColor: '#7c3aed',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  registerBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  ticketNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#f8fafc',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 14,
-  },
-  ticketNoteText: { color: '#64748b', fontSize: 12, flex: 1, lineHeight: 16 },
 });

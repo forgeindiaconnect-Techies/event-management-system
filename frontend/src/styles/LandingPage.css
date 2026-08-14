@@ -135,22 +135,22 @@ html {
 
 .landing-auth-actions .landing-signup-btn,
 .landing-auth-actions .landing-login-btn {
-  background: #991b1b;
-  border: 1px solid #ef4444;
+  background: #7c3aed;
+  border: 1px solid #8b5cf6;
   border-radius: 9px;
   color: #ffffff;
   font-weight: 600;
 }
 
 .landing-auth-actions .landing-login-btn {
-  background: #991b1b;
+  background: #7c3aed;
 }
 
 .landing-auth-actions .landing-signup-btn:hover,
 .landing-auth-actions .landing-login-btn:hover {
-  background: #ef4444;
+  background: #6d28d9;
   color: #ffffff;
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
 }
 
 .landing-top-actions .user-profile-trigger {

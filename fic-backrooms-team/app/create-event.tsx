@@ -229,13 +229,7 @@ export default function CreateEventScreen() {
           </View>
         )}
 
-        <View style={styles.switchRow}>
-          <View>
-            <Text style={styles.label}>Assign Seats Sequentially?</Text>
-            <Text style={styles.desc}>Automatically assign seat numbers</Text>
-          </View>
-          <Switch value={form.assignSeats} onValueChange={v => handleChange('assignSeats', v)} trackColor={{ true: '#3d2e9c' }} />
-        </View>
+
 
         <View style={styles.switchRow}>
           <View>

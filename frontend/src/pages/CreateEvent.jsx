@@ -497,20 +497,6 @@ const filteredCategoryGroups = categoryGroups
                   </div>
                 </div>
 
-                <div className="col-md-6">
-                  <div className="form-check form-switch mb-3">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      name="assignSeats"
-                      checked={event.assignSeats}
-                      onChange={handleChange}
-                    />
-                    <label className="form-check-label fw-semibold">
-                      Assign Seats Sequentially
-                    </label>
-                  </div>
-                </div>
               </div>
 
               {event.paid && (

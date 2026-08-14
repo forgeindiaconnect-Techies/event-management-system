@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRef } from "react";
 import api from "../api/axiosConfig";
@@ -193,13 +193,16 @@ const submittingRef = useRef(false);
 ];
 
 const filteredCategoryGroups = categoryGroups
-  .map((group) => ({
-    ...group,
-    categories: group.categories.filter((category) =>
-      category.toLowerCase().includes(categorySearch.toLowerCase())
-    ),
-  }))
-  .filter((group) => group.categories.length > 0);
+  .map((group) => {
+    const headingMatch = group.heading.toLowerCase().includes(categorySearch.toLowerCase());
+    return {
+      ...group,
+      categories: group.categories.filter((category) =>
+        headingMatch || category.toLowerCase().includes(categorySearch.toLowerCase())
+      ),
+    };
+  })
+  .filter((group) => group.categories.length > 0 || group.heading.toLowerCase().includes(categorySearch.toLowerCase()));
 
   return (
     <div
@@ -303,18 +306,26 @@ const filteredCategoryGroups = categoryGroups
 
       {filteredCategoryGroups.map((group) => (
         <div key={group.heading}>
-          <div
-            className="px-2 py-2 fw-bold text-uppercase text-muted"
-            style={{ fontSize: "12px", background: "#f8fafc" }}
+          <button
+            type="button"
+            className="dropdown-item fw-bold d-flex align-items-center w-100 text-start"
+            style={{ fontSize: "16px", background: "#f8fafc", color: "#0f172a", padding: "8px 12px", border: "none" }}
+            onClick={() => {
+                setEvent({ ...event, eventType: group.heading === "Others" ? "Other" : group.heading });
+                if (group.heading !== "Others") setCustomCategory("");
+                setCategorySearch("");
+                setShowCategoryDropdown(false);
+            }}
           >
             {group.heading}
-          </div>
+          </button>
 
           {group.categories.map((category) => (
             <button
               type="button"
               key={category}
               className="dropdown-item py-2"
+              style={{ paddingLeft: "24px", fontSize: "15px" }}
               onClick={() => {
                 setEvent({ ...event, eventType: category });
                 if (category !== "Other") setCustomCategory("");
@@ -330,6 +341,24 @@ const filteredCategoryGroups = categoryGroups
 
       {filteredCategoryGroups.length === 0 && (
         <div className="text-muted px-3 py-2">No category found</div>
+      )}
+
+      {categorySearch.trim() !== "" && (
+        <div className="border-top mt-2 pt-2">
+            <button
+              type="button"
+              className="dropdown-item py-2 fw-semibold text-primary"
+              style={{ fontSize: "15px", paddingLeft: "12px" }}
+              onClick={() => {
+                setEvent({ ...event, eventType: categorySearch.trim() });
+                setCustomCategory("");
+                setCategorySearch("");
+                setShowCategoryDropdown(false);
+            }}
+            >
+              + Add "{categorySearch.trim()}"
+            </button>
+        </div>
       )}
     </div>
   )}

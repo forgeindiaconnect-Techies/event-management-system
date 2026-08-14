@@ -21,6 +21,7 @@ import * as Location from "expo-location";
 import { useWishlist } from "../context/WishlistContext";
 import { useTheme } from "../context/ThemeContext";
 import * as SecureStore from "expo-secure-store";
+import { BlurView } from "expo-blur";
 
 // Exactly matching the webapp's EVENT_CATEGORIES
 const CATEGORIES = [
@@ -398,7 +399,7 @@ export default function LandingScreen() {
               styles.notificationBtn,
               { backgroundColor: colors.surface },
             ]}
-            onPress={() => console.log("Call Notification API")}
+            onPress={() => router.push('/notifications')}
           >
             <Ionicons
               name="notifications-outline"
@@ -989,7 +990,14 @@ export default function LandingScreen() {
       </ScrollView>
 
       {/* Custom Bottom Navigation */}
-      <View style={[styles.bottomNav, { backgroundColor: colors.surface }]}>
+      <BlurView
+        intensity={80}
+        tint={isDarkMode ? "dark" : "light"}
+        style={[
+          styles.bottomNav,
+          { backgroundColor: isDarkMode ? "rgba(30, 30, 30, 0.6)" : "rgba(255, 255, 255, 0.7)" }
+        ]}
+      >
         <TouchableOpacity style={styles.navItem}>
           <Ionicons name="home" size={24} color={colors.primary} />
           <Text style={[styles.navText, { color: colors.primary }]}>Home</Text>
@@ -1017,7 +1025,7 @@ export default function LandingScreen() {
             My Tickets
           </Text>
         </TouchableOpacity>
-      </View>
+      </BlurView>
 
       <Modal visible={filterVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -1586,7 +1594,6 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 80,
-    backgroundColor: "#FFFFFF",
     borderRadius: 40,
     flexDirection: "row",
     justifyContent: "space-around",
@@ -1597,6 +1604,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
   navItem: {
     alignItems: "center",

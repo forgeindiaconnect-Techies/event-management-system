@@ -201,9 +201,16 @@ function PublicDashboard() {
       const res = await api.get("/events/public/status/PUBLISHED");
       const publishedEvents = res.data || [];
 
-      console.log("Published events:", publishedEvents);
+      const now = Date.now();
+      const activeEvents = publishedEvents.filter(e => {
+        const endDateTimeRaw = e.endDateTime ? new Date(e.endDateTime).getTime() : Infinity;
+        const status = e.status || "PUBLISHED";
+        return endDateTimeRaw > now && status !== "COMPLETED";
+      });
 
-      setEvents(publishedEvents);
+      console.log("Published events:", activeEvents);
+
+      setEvents(activeEvents);
     } catch (error) {
       console.log(error);
     } finally {

@@ -64,7 +64,10 @@ export default function EventDetailScreen() {
   useEffect(() => {
     if (!id) return;
     fetch(`${BASE_URL}/events/public/${id}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => setEvent(data))
       .catch((err) => console.log('Error loading event:', err))
       .finally(() => setLoading(false));

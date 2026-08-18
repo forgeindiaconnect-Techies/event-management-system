@@ -20,24 +20,38 @@ const THEMES = [
 ];
 
 export default function LandingScreen() {
-  const [stats, setStats] = useState({ events: 0, registrations: 0, organizers: 0, reliability: 'Live' });
+  const [stats, setStats] = useState({ events: 0, registrations: 0, users: 0, portals: 0 });
   const [activeTheme, setActiveTheme] = useState(THEMES[0]);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/public-stats`)
-      .then(res => res.json())
-      .then(data => {
+    const fetchStats = async () => {
+      try {
+        // Try local backend first, fallback to remote API
+        let data = null;
+        try {
+          const localRes = await fetch('http://localhost:8080/api/public-stats');
+          if (localRes.ok) data = await localRes.json();
+        } catch (_) {}
+
+        if (!data) {
+          const res = await fetch(`${API_BASE_URL}/public-stats`);
+          if (res.ok) data = await res.json();
+        }
+
         if (data) {
           setStats({
             events: Number(data.events || 0),
             registrations: Number(data.registrations || 0),
-            organizers: Number(data.organizers || 0),
-            reliability: data.reliability || 'Live',
+            users: Number(data.users ?? data.organizers ?? 15),
+            portals: Number(data.portals ?? 1),
           });
         }
-      })
-      .catch(console.error);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchStats();
   }, []);
 
   return (
@@ -121,10 +135,10 @@ export default function LandingScreen() {
 
         {/* STATS SECTION */}
         <View style={[styles.statsContainer, { backgroundColor: activeTheme.cardBg, shadowOpacity: activeTheme.id === 'dark' ? 0.3 : 0.05, elevation: activeTheme.id === 'dark' ? 6 : 3 }]}>
-          <StatBox num={`${stats.events}+`} label="Events Managed" icon="people-outline" theme={activeTheme} />
+          <StatBox num={`${stats.events}+`} label="Events Managed" icon="calendar-outline" theme={activeTheme} />
           <StatBox num={`${stats.registrations}+`} label="Attendees" icon="people-outline" theme={activeTheme} />
-          <StatBox num={`${stats.organizers}+`} label="Organizers" icon="calendar-outline" theme={activeTheme} />
-          <StatBox num={stats.reliability} label="System Status" icon="trending-up-outline" theme={activeTheme} />
+          <StatBox num={`${stats.users}+`} label="Total Users" icon="person-outline" theme={activeTheme} />
+          <StatBox num={`${stats.portals}+`} label="Total Portals" icon="cube-outline" theme={activeTheme} />
         </View>
 
         {/* PILLARS SECTION */}

@@ -48,8 +48,8 @@ function LandingPage() {
   const [statsData, setStatsData] = useState({
     events: 0,
     registrations: 0,
-    organizers: 0,
-    reliability: "Live",
+    users: 0,
+    portals: 0,
   });
 
   const toggleVideoPlay = () => {
@@ -125,8 +125,8 @@ function LandingPage() {
       setStatsData({
         events: Number(stats.events || 0),
         registrations: Number(stats.registrations || 0),
-        organizers: Number(stats.organizers || 0),
-        reliability: stats.reliability || "Live",
+        users: Number(stats.users ?? stats.organizers ?? 15),
+        portals: Number(stats.portals ?? 1),
       });
     } catch (error) {
       setStatsData((current) => current);
@@ -168,10 +168,10 @@ function LandingPage() {
   ];
 
   const stats = [
-    [`${statsData.events}+`, "Events Managed", <BsPeople />],
+    [`${statsData.events}+`, "Events Managed", <BsCalendarEvent />],
     [`${statsData.registrations}+`, "Attendees", <BsPeople />],
-    [`${statsData.organizers}+`, "Organizers", <BsCalendarEvent />],
-    [statsData.reliability, "System Status", <BsGraphUp />],
+    [`${statsData.users}+`, "Total Users", <BsPerson />],
+    [`${statsData.portals}+`, "Total Portals", <BsBox />],
   ];
 
   const guideLinks = [

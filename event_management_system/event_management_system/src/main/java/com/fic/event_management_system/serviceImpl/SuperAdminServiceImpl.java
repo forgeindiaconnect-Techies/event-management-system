@@ -93,6 +93,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         tenantSecurityService.requireSuperAdmin();
 
         List<Portal> portals = portalRepository.findAll();
+        List<Portal> activeNonDeletedPortals = portalRepository.findByDeletedFalseOrDeletedIsNull();
+
         List<Registration> registrations = registrationRepository.findAll().stream()
                 .filter(registration -> registration.getEvent() != null)
                 .filter(registration -> registration.getEvent().getPortal() != null)
@@ -104,8 +106,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         BigDecimal totalRevenue = calculateSubscriptionRevenue(subscriptionPayments);
         BigDecimal monthlyRevenue = calculateMonthlySubscriptionRevenue(subscriptionPayments);
 
-        long activePortals = portals.stream()
-                .filter(portal -> !Boolean.TRUE.equals(portal.getDeleted()))
+        long activePortals = activeNonDeletedPortals.stream()
                 .filter(portal -> isSubscriptionCurrentlyActive(
                         subscriptionRepository
                                 .findTopByPortalIdOrderByCreatedAtDesc(portal.getId())
@@ -113,8 +114,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 ))
                 .count();
 
-        long trialPortals = portals.stream()
-                .filter(portal -> !Boolean.TRUE.equals(portal.getDeleted()))
+        long trialPortals = activeNonDeletedPortals.stream()
                 .map(portal -> subscriptionRepository
                         .findTopByPortalIdOrderByCreatedAtDesc(portal.getId())
                         .orElse(null))
@@ -125,8 +125,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 .count();
 
         return new SuperAdminDashboardResponse(
-                portals.size(),
-                userRepository.countByActiveTrue(),
+                activeNonDeletedPortals.size(),
+                userRepository.count(),
                 eventRepository.count(),
                 registrations.size(),
                 totalRevenue,

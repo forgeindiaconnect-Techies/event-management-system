@@ -18,6 +18,8 @@ public interface PortalRepository extends JpaRepository<Portal, Long> {
 
     List<Portal> findByDeletedFalseOrDeletedIsNull();
 
+    long countByDeletedFalseOrDeletedIsNull();
+
     @Query("""
         select case when count(portal) > 0 then true else false end
           from Portal portal

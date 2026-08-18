@@ -38,7 +38,11 @@ public class FileUploadController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", "Please select a file to upload."));
             }
 
-            String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", "Filename is missing."));
+            }
+            originalFilename = StringUtils.cleanPath(originalFilename);
             String fileExtension = "";
             
             if (originalFilename.contains(".")) {

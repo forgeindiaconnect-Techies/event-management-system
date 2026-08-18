@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   skipText: {
-    fontFamily: 'Outfit',
+    fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
     fontWeight: '500',
     fontSize: 16,
     lineHeight: 20,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
   title: {
     width: 332,
-    fontFamily: 'Outfit',
+    fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
     fontWeight: '400',
     fontSize: 20,
     lineHeight: 25,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     width: 332,
-    fontFamily: 'Outfit',
+    fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
     fontWeight: '400',
     fontSize: 14,
     lineHeight: 20,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextText: {
-    fontFamily: 'Outfit',
+    fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
     fontWeight: '400',
     fontSize: 16,
     lineHeight: 20,

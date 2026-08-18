@@ -3,6 +3,7 @@ package com.fic.event_management_system.controller;
 import com.fic.event_management_system.enums.RoleName;
 import com.fic.event_management_system.enums.EventStatus;
 import com.fic.event_management_system.repository.EventRepository;
+import com.fic.event_management_system.repository.PortalRepository;
 import com.fic.event_management_system.repository.RegistrationRepository;
 import com.fic.event_management_system.repository.UserRepository;
 import java.util.List;
@@ -18,14 +19,17 @@ public class PublicStatsController {
     private final EventRepository eventRepository;
     private final RegistrationRepository registrationRepository;
     private final UserRepository userRepository;
+    private final PortalRepository portalRepository;
 
     public PublicStatsController(
             EventRepository eventRepository,
             RegistrationRepository registrationRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            PortalRepository portalRepository) {
         this.eventRepository = eventRepository;
         this.registrationRepository = registrationRepository;
         this.userRepository = userRepository;
+        this.portalRepository = portalRepository;
     }
 
     @GetMapping
@@ -35,7 +39,8 @@ public class PublicStatsController {
                         List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED)),
                 "registrations", registrationRepository.count(),
                 "organizers", userRepository.countByRole_RoleName(RoleName.ORGANIZER),
-                "reliability", "Live"
+                "users", userRepository.count(),
+                "portals", portalRepository.countByDeletedFalseOrDeletedIsNull()
         );
     }
 }

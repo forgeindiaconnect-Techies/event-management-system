@@ -238,7 +238,10 @@ export default function LandingScreen() {
     fetch(
       "https://event-management-system-y9fa.onrender.com/api/events/public/status/PUBLISHED",
     )
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (Array.isArray(data)) setEvents(data);
         else if (data && data.events) setEvents(data.events);

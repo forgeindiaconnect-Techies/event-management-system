@@ -62,7 +62,10 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     fetch(`${BASE_URL}/events/public/status/PUBLISHED`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (Array.isArray(data)) setEvents(data);
         else if (data?.events) setEvents(data.events);

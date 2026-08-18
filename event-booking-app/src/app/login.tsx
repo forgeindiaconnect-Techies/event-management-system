@@ -12,7 +12,17 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
+  ImageBackground,
+  Dimensions,
+  StatusBar,
+  Image,
+  Alert
 } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+// Using Figma scale ratio to keep proportions somewhat similar
+const scale = Math.min(width / 390, height / 844);
 
 export default function LoginScreen() {
   const [name, setName] = useState('');
@@ -20,168 +30,234 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
 
   const handleContinue = async () => {
-    if (name) await SecureStore.setItemAsync('user_name', name);
-    if (phoneNumber) await SecureStore.setItemAsync('user_phone', phoneNumber);
-    if (email) await SecureStore.setItemAsync('user_email', email);
+    if (!name.trim() || !phoneNumber.trim()) {
+      Alert.alert('Required Fields', 'Please enter your Full Name and Mobile Number to continue. You can also choose to Skip.');
+      return;
+    }
+
+    await SecureStore.setItemAsync('user_name', name.trim());
+    await SecureStore.setItemAsync('user_phone', phoneNumber.trim());
+
+    if (email.trim()) await SecureStore.setItemAsync('user_email', email.trim());
+    else await SecureStore.deleteItemAsync('user_email');
     
     router.replace('/home');
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    await SecureStore.deleteItemAsync('user_name');
+    await SecureStore.deleteItemAsync('user_phone');
+    await SecureStore.deleteItemAsync('user_email');
     router.replace('/home');
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Background Image Layer */}
+      <ImageBackground 
+        source={require('../../assets/images/image 1477.png')} 
+        style={styles.backgroundImage}
+      >
+        <View style={styles.overlay} />
+        
+        <SafeAreaView style={styles.headerSafeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/'); } }} 
+              style={styles.logoBtn}
+            >
+              <Image 
+                source={require('../../assets/images/Frame 2147234592.png')} 
+                style={styles.logoImage} 
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+
+      {/* Foreground Form Layer */}
       <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardContainer} 
+        behavior="padding"
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollGrow}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets={true}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/home'); } }} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color="#111827" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSkip}>
-              <Text style={styles.skipText}>Skip</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.bottomSheet}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollGrow}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
+          >
+            <Text style={styles.title}>Welcome!</Text>
 
-          <View style={styles.content}>
-            <Text style={styles.title}>Welcome</Text>
-            <Text style={styles.subtitle}>Please enter your details to explore events.</Text>
-
-            <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
               <Text style={styles.label}>Full Name</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="Enter your name"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="words"
-                value={name}
-                onChangeText={setName}
-              />
+              <View style={styles.inputContainer}>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="Enter Name" 
+                  placeholderTextColor="#837C8D"
+                  autoCapitalize="words"
+                  value={name}
+                  onChangeText={setName}
+                />
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="Enter your phone number"
-                placeholderTextColor="#9ca3af"
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-              />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>Mobile Number</Text>
+              <View style={styles.inputContainer}>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="Enter Mobile Number"
+                  placeholderTextColor="#837C8D"
+                  keyboardType="phone-pad"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                />
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#9ca3af"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>Email Address <Text style={styles.optionalText}>(If Available)</Text></Text>
+              <View style={styles.inputContainer}>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="Enter Email Address"
+                  placeholderTextColor="#837C8D"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.loginBtn} onPress={handleContinue}>
-              <Text style={styles.loginBtnText}>Continue</Text>
+            <View style={{ flex: 1 }} />
+
+            <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
+              <Text style={styles.continueBtnText}>Continue</Text>
             </TouchableOpacity>
-          </View>
-        </ScrollView>
+
+            <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+              <Text style={styles.skipBtnText}>Skip</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   container: {
     flex: 1,
+    backgroundColor: '#F4F3F6',
   },
-  scrollGrow: {
-    flexGrow: 1,
-    paddingBottom: 40,
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 696 * scale, // Figma height
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(3, 3, 3, 0.32)',
+  },
+  headerSafeArea: {
+    width: '100%',
+    paddingTop: Platform.OS === 'android' ? 10 : 0,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 8,
+    alignItems: 'flex-start',
+    paddingLeft: 10,
+    paddingTop: 10,
   },
-  backBtn: {
-    padding: 4,
+  logoBtn: {
+    padding: 0,
   },
-  skipText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6b3ce4',
+  logoImage: {
+    width: 161,
+    height: 114, // Scaled up logo
   },
-  content: {
+  keyboardContainer: {
     flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: 40,
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: 160 * scale,
+    paddingTop: 32,
+    paddingHorizontal: 20,
+    height: Math.max(540 * scale, 520), // Increased slightly and guaranteed minimum to prevent scrolling
+  },
+  scrollGrow: {
+    flexGrow: 1,
+    paddingBottom: 40, // Restored to give Skip button proper spacing at the bottom
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 8,
+    fontSize: 26,
+    fontWeight: '500',
+    color: '#2E2C30',
+    marginBottom: 24,
+    textAlign: 'left',
+    alignSelf: 'flex-start',
+    width: '100%',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 40,
-  },
-  inputContainer: {
-    marginBottom: 20,
+  inputWrapper: {
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '500',
+    color: '#2E2C30',
     marginBottom: 8,
   },
-  input: {
-    height: 52,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: '#111827',
+  optionalText: {
+    color: '#837C8D',
   },
-  footer: {
-    paddingHorizontal: 32,
-    paddingBottom: 60,
-  },
-  loginBtn: {
-    backgroundColor: '#5b3cc4',
-    height: 56,
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: '#EAE9EC',
     borderRadius: 16,
+    height: 44,
+    justifyContent: 'center',
+  },
+  input: {
+    flex: 1,
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: '#2E2C30',
+    fontWeight: '500',
+  },
+  continueBtn: {
+    backgroundColor: '#7931ED',
+    borderRadius: 16,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginTop: 24,
   },
-  loginBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
+  continueBtnText: {
+    color: '#FAFAFA',
+    fontSize: 14,
+    fontWeight: '500',
   },
+  skipBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    padding: 8,
+  },
+  skipBtnText: {
+    color: '#7931ED',
+    fontSize: 14,
+    fontWeight: '500',
+  }
 });

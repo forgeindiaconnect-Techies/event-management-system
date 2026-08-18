@@ -54,14 +54,14 @@ html {
   font-size: 22px;
   line-height: 1.1;
   font-weight: 800;
-  color: #140b5d;
+  color: #111827;
   letter-spacing: -0.3px;
   text-decoration: none;
 }
 
 a:hover .landing-brand,
 a:focus .landing-brand {
-  color: #140b5d;
+  color: #7c3aed;
   text-decoration: none;
 }
 
@@ -143,45 +143,36 @@ a:focus .landing-brand {
   line-height: 1;
 }
 
-.landing-auth-actions .landing-signup-btn {
-  background: rgba(20, 11, 93, 0.08);
-  border: 1px solid rgba(20, 11, 93, 0.2);
+.landing-auth-actions .landing-signup-btn,
+.landing-auth-actions .landing-login-btn {
+  background: #7c3aed;
+  border: 1px solid #8b5cf6;
   border-radius: 9px;
-  color: #140b5d;
-  font-weight: 700;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .landing-auth-actions .landing-login-btn {
-  background: #140b5d;
-  border: 1px solid #140b5d;
-  border-radius: 9px;
-  color: #ffffff;
-  font-weight: 700;
+  background: #7c3aed;
 }
 
-.landing-auth-actions .landing-signup-btn:hover {
-  background: rgba(20, 11, 93, 0.15);
-  color: #140b5d;
-  transform: translateY(-1px);
-}
-
+.landing-auth-actions .landing-signup-btn:hover,
 .landing-auth-actions .landing-login-btn:hover {
-  background: #1e1b4b;
+  background: #6d28d9;
   color: #ffffff;
-  box-shadow: 0 8px 20px rgba(20, 11, 93, 0.25);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
 }
 
 .landing-top-actions .user-profile-trigger {
-  background: #140b5d;
-  border: 1px solid #140b5d;
+  background: #7c3aed;
+  border: 1px solid #8b5cf6;
   color: #ffffff;
 }
 
 .landing-top-actions .user-profile-trigger:hover {
-  background: #1e1b4b;
+  background: #6d28d9;
   color: #ffffff;
-  box-shadow: 0 8px 20px rgba(20, 11, 93, 0.25);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
 }
 
 .landing-signup-btn {

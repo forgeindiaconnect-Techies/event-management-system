@@ -257,7 +257,7 @@ function LandingPage() {
           <div className="landing-logo-box">
             <img src={logo} alt="FIC BackRooms Logo" />
           </div>
-          <h1 className="landing-brand mb-0">FIC BackRooms</h1>
+          <h1 className="landing-brand mb-0" style={{ color: "#140b5d" }}>FIC BackRooms</h1>
         </Link>
 
         <div className="landing-section-nav landing-navbar-links">

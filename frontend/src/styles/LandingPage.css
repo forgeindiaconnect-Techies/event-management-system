@@ -52,7 +52,16 @@ html {
 .landing-brand {
   font-size: 22px;
   line-height: 1.1;
-  font-weight: 700;
+  font-weight: 800;
+  color: #140b5d;
+  letter-spacing: -0.3px;
+  text-decoration: none;
+}
+
+a:hover .landing-brand,
+a:focus .landing-brand {
+  color: #140b5d;
+  text-decoration: none;
 }
 
 .landing-top-actions {

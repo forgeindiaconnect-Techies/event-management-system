@@ -453,7 +453,6 @@ function LandingPage() {
               {index === 0 ? (
                 <div
                   className="landing-pillar-layered-container"
-                  title="Click to swap layer preview"
                   onClick={() => setActivePlanningLayer((prev) => (prev === 0 ? 1 : 0))}
                 >
                   <div
@@ -473,9 +472,6 @@ function LandingPage() {
                     }}
                   >
                     <img src={planningImg2} alt="Planning View 2" className="landing-layered-img" />
-                  </div>
-                  <div className="landing-layer-swap-badge">
-                    <span>Click card to switch layer ⇄</span>
                   </div>
                 </div>
               ) : (

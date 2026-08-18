@@ -703,42 +703,45 @@ a:focus .landing-brand {
   transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   background: #ffffff;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .landing-layered-card-bottom {
-  width: 84%;
-  height: 82%;
-  top: 7%;
+  width: 86%;
+  height: 84%;
+  top: 6%;
   left: 5%;
   z-index: 1;
-  transform: rotate(-3deg) scale(0.96);
-  opacity: 0.88;
-  filter: brightness(0.96);
+  transform: rotate(-2.5deg) scale(0.97) translateZ(0);
+  opacity: 0.94;
+  filter: brightness(0.98);
 }
 
 .landing-layered-card-top {
-  width: 86%;
-  height: 84%;
-  bottom: 6%;
-  right: 5%;
+  width: 88%;
+  height: 86%;
+  bottom: 5%;
+  right: 4%;
   z-index: 10;
-  transform: rotate(1.5deg) scale(1);
+  transform: rotate(1deg) scale(1) translateZ(0);
   opacity: 1;
   filter: brightness(1);
   box-shadow: 0 24px 55px rgba(15, 23, 42, 0.22), 0 6px 16px rgba(15, 23, 42, 0.12);
 }
 
 .landing-layered-card:hover {
-  filter: brightness(1.02);
+  filter: brightness(1);
 }
 
 .landing-layered-card-bottom:hover {
-  transform: rotate(-4deg) scale(0.98) translate(-6px, -4px);
-  opacity: 0.96;
+  transform: rotate(-3.5deg) scale(0.98) translate(-4px, -3px) translateZ(0);
+  opacity: 0.98;
 }
 
 .landing-layered-card-top:hover {
-  transform: rotate(2.5deg) scale(1.01) translate(4px, -4px);
+  transform: rotate(2deg) scale(1.01) translate(4px, -4px) translateZ(0);
 }
 
 .landing-layered-img {
@@ -748,26 +751,8 @@ a:focus .landing-brand {
   object-position: top left;
   display: block;
   image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-}
-
-.landing-layer-swap-badge {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.78);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 16px;
-  border-radius: 20px;
-  z-index: 20;
-  pointer-events: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  letter-spacing: 0.3px;
+  image-rendering: high-quality;
+  background: #ffffff;
 }
 
 .landing-pillar-preview {

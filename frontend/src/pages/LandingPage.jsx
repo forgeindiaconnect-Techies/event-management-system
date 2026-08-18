@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import heroImage from "../assets/images/landing_hero.png";
 import logo from "../assets/images/fic-logo.png";
+import planningImg1 from "../assets/images/Screenshot 2026-08-18 135427.png";
+import planningImg2 from "../assets/images/Screenshot 2026-08-18 135752.png";
 import bgVideo from "../assets/videos/landing-bg.mp4";
 import api from "../api/axiosConfig";
 import UserProfileMenu from "../components/Public/UserProfileMenu";
@@ -447,20 +449,31 @@ function LandingPage() {
                 </div>
               </div>
 
-              <div className="landing-pillar-preview">
-                <div className="landing-preview-top">
-                  <span>{index === 0 ? "Planning Board" : index === 1 ? "Secure Access" : "Live Insights"}</span>
+              {index === 0 ? (
+                <div className="landing-pillar-layered-container" title="Planning Board & Management View">
+                  <div className="landing-layered-card landing-layered-card-bottom">
+                    <img src={planningImg1} alt="Planning View 1" className="landing-layered-img" />
+                  </div>
+                  <div className="landing-layered-card landing-layered-card-top">
+                    <img src={planningImg2} alt="Planning View 2" className="landing-layered-img" />
+                  </div>
                 </div>
-                <div className="landing-preview-lines">
-                  <i />
-                  <i />
-                  <i />
+              ) : (
+                <div className="landing-pillar-preview">
+                  <div className="landing-preview-top">
+                    <span>{index === 1 ? "Secure Access" : "Live Insights"}</span>
+                  </div>
+                  <div className="landing-preview-lines">
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                  <div className="landing-preview-panel">
+                    <strong>{title}</strong>
+                    <p>{category} workspace</p>
+                  </div>
                 </div>
-                <div className="landing-preview-panel">
-                  <strong>{title}</strong>
-                  <p>{category} workspace</p>
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>

@@ -9,24 +9,19 @@ html {
 }
 
 .landing-topbar {
-  height: 64px;
-  width: calc(100% - 48px);
-  max-width: 1320px;
-  margin: 16px auto 0;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(28px) saturate(200%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  height: 58px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   color: #111827;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 48px;
   position: sticky;
-  top: 16px;
-  z-index: 1000;
+  top: 0;
+  z-index: 100;
   column-gap: 16px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -212,8 +207,6 @@ a:focus .landing-brand {
   min-height: 540px;
   position: relative;
   overflow: hidden;
-  margin-top: -80px;
-  padding-top: 100px;
 }
 
 .landing-hero-glow {

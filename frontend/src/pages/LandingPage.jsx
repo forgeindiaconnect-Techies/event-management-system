@@ -51,6 +51,7 @@ function LandingPage() {
   const videoRef = useRef(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [isAtPageBottom, setIsAtPageBottom] = useState(false);
+  const [activePlanningLayer, setActivePlanningLayer] = useState(0);
   const showLandingProfile = Boolean(
     localStorage.getItem("token") || localStorage.getItem("email")
   );
@@ -450,12 +451,31 @@ function LandingPage() {
               </div>
 
               {index === 0 ? (
-                <div className="landing-pillar-layered-container" title="Planning Board & Management View">
-                  <div className="landing-layered-card landing-layered-card-bottom">
+                <div
+                  className="landing-pillar-layered-container"
+                  title="Click to swap layer preview"
+                  onClick={() => setActivePlanningLayer((prev) => (prev === 0 ? 1 : 0))}
+                >
+                  <div
+                    className={`landing-layered-card ${activePlanningLayer === 0 ? 'landing-layered-card-bottom' : 'landing-layered-card-top'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePlanningLayer(0);
+                    }}
+                  >
                     <img src={planningImg1} alt="Planning View 1" className="landing-layered-img" />
                   </div>
-                  <div className="landing-layered-card landing-layered-card-top">
+                  <div
+                    className={`landing-layered-card ${activePlanningLayer === 0 ? 'landing-layered-card-top' : 'landing-layered-card-bottom'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePlanningLayer(1);
+                    }}
+                  >
                     <img src={planningImg2} alt="Planning View 2" className="landing-layered-img" />
+                  </div>
+                  <div className="landing-layer-swap-badge">
+                    <span>Click card to switch layer ⇄</span>
                   </div>
                 </div>
               ) : (

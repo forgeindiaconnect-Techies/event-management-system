@@ -4,6 +4,8 @@ import heroImage from "../assets/images/landing_hero.png";
 import logo from "../assets/images/fic-logo.png";
 import planningImg1 from "../assets/images/Screenshot 2026-08-18 135427.png";
 import planningImg2 from "../assets/images/Screenshot 2026-08-18 135752.png";
+import controlImg1 from "../assets/images/Screenshot 2026-08-18 141534.png";
+import controlImg2 from "../assets/images/Screenshot 2026-08-18 141710.png";
 import bgVideo from "../assets/videos/landing-bg.mp4";
 import api from "../api/axiosConfig";
 import UserProfileMenu from "../components/Public/UserProfileMenu";
@@ -52,6 +54,7 @@ function LandingPage() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [isAtPageBottom, setIsAtPageBottom] = useState(false);
   const [activePlanningLayer, setActivePlanningLayer] = useState(0);
+  const [activeControlLayer, setActiveControlLayer] = useState(0);
   const showLandingProfile = Boolean(
     localStorage.getItem("token") || localStorage.getItem("email")
   );
@@ -474,10 +477,34 @@ function LandingPage() {
                     <img src={planningImg2} alt="Planning View 2" className="landing-layered-img" />
                   </div>
                 </div>
+              ) : index === 1 ? (
+                <div
+                  className="landing-pillar-layered-container"
+                  onClick={() => setActiveControlLayer((prev) => (prev === 0 ? 1 : 0))}
+                >
+                  <div
+                    className={`landing-layered-card ${activeControlLayer === 0 ? 'landing-layered-card-bottom' : 'landing-layered-card-top'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveControlLayer(0);
+                    }}
+                  >
+                    <img src={controlImg1} alt="Control View 1" className="landing-layered-img" />
+                  </div>
+                  <div
+                    className={`landing-layered-card ${activeControlLayer === 0 ? 'landing-layered-card-top' : 'landing-layered-card-bottom'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveControlLayer(1);
+                    }}
+                  >
+                    <img src={controlImg2} alt="Control View 2" className="landing-layered-img" />
+                  </div>
+                </div>
               ) : (
                 <div className="landing-pillar-preview">
                   <div className="landing-preview-top">
-                    <span>{index === 1 ? "Secure Access" : "Live Insights"}</span>
+                    <span>Live Insights</span>
                   </div>
                   <div className="landing-preview-lines">
                     <i />

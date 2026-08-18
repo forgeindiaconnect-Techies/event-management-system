@@ -169,11 +169,32 @@ function LandingPage() {
     ["Features", "#features"],
   ];
 
+  function formatStatNumber(num) {
+    const n = Number(num) || 0;
+    if (n >= 10000000) {
+      const formatted = (n / 10000000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}Cr`;
+    }
+    if (n >= 1000000) {
+      const formatted = (n / 1000000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}M`;
+    }
+    if (n >= 100000) {
+      const formatted = (n / 100000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}L`;
+    }
+    if (n >= 1000) {
+      const formatted = (n / 1000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}k`;
+    }
+    return String(n);
+  }
+
   const stats = [
-    [`${statsData.events}+`, "Events Managed", <BsCalendarEvent />],
-    [`${statsData.registrations}+`, "Attendees", <BsPeople />],
-    [`${statsData.users}+`, "Total Users", <BsPerson />],
-    [`${statsData.portals}+`, "Total Portals", <BsBox />],
+    [`${formatStatNumber(statsData.events)}+`, "Events Managed", <BsCalendarEvent />],
+    [`${formatStatNumber(statsData.registrations)}+`, "Attendees", <BsPeople />],
+    [`${formatStatNumber(statsData.users)}+`, "Total Users", <BsPerson />],
+    [`${formatStatNumber(statsData.portals)}+`, "Total Portals", <BsBox />],
   ];
 
   const guideLinks = [

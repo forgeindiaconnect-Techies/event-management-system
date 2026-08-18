@@ -5,6 +5,27 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Ima
 
 const API_BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
 
+function formatStatNumber(num: number): string {
+  const n = Number(num) || 0;
+  if (n >= 10000000) {
+    const formatted = (n / 10000000).toFixed(1).replace(/\.0$/, '');
+    return `${formatted}Cr`;
+  }
+  if (n >= 1000000) {
+    const formatted = (n / 1000000).toFixed(1).replace(/\.0$/, '');
+    return `${formatted}M`;
+  }
+  if (n >= 100000) {
+    const formatted = (n / 100000).toFixed(1).replace(/\.0$/, '');
+    return `${formatted}L`;
+  }
+  if (n >= 1000) {
+    const formatted = (n / 1000).toFixed(1).replace(/\.0$/, '');
+    return `${formatted}k`;
+  }
+  return String(n);
+}
+
 const defaultPage = { pageBg: '#f6f7fb', cardBg: '#ffffff', cardBorder: '#eceaf3', heading: '#1e1b3d', body: '#68667a', statIconBg: '#f0edfb', badgeBg: '#f6f7fb' };
 
 const THEMES = [
@@ -135,10 +156,10 @@ export default function LandingScreen() {
 
         {/* STATS SECTION */}
         <View style={[styles.statsContainer, { backgroundColor: activeTheme.cardBg, shadowOpacity: activeTheme.id === 'dark' ? 0.3 : 0.05, elevation: activeTheme.id === 'dark' ? 6 : 3 }]}>
-          <StatBox num={`${stats.events}+`} label="Events Managed" icon="calendar-outline" theme={activeTheme} />
-          <StatBox num={`${stats.registrations}+`} label="Attendees" icon="people-outline" theme={activeTheme} />
-          <StatBox num={`${stats.users}+`} label="Total Users" icon="person-outline" theme={activeTheme} />
-          <StatBox num={`${stats.portals}+`} label="Total Portals" icon="cube-outline" theme={activeTheme} />
+          <StatBox num={`${formatStatNumber(stats.events)}+`} label="Events Managed" icon="calendar-outline" theme={activeTheme} />
+          <StatBox num={`${formatStatNumber(stats.registrations)}+`} label="Attendees" icon="people-outline" theme={activeTheme} />
+          <StatBox num={`${formatStatNumber(stats.users)}+`} label="Total Users" icon="person-outline" theme={activeTheme} />
+          <StatBox num={`${formatStatNumber(stats.portals)}+`} label="Total Portals" icon="cube-outline" theme={activeTheme} />
         </View>
 
         {/* PILLARS SECTION */}

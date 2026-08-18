@@ -54,14 +54,15 @@ html {
   font-size: 22px;
   line-height: 1.1;
   font-weight: 800;
-  color: #111827;
+  color: #7c3aed;
   letter-spacing: -0.3px;
   text-decoration: none;
+  transition: color 0.25s ease;
 }
 
 a:hover .landing-brand,
 a:focus .landing-brand {
-  color: #7c3aed;
+  color: #140b5d;
   text-decoration: none;
 }
 

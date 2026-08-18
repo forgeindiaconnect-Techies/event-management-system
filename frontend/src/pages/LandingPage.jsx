@@ -10,6 +10,8 @@ import {
   BsArrowRight,
   BsCalendarEvent,
   BsPeople,
+  BsPerson,
+  BsBox,
   BsGraphUp,
   BsStars,
   BsArrowDown,

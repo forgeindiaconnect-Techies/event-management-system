@@ -6,6 +6,9 @@ import planningImg1 from "../assets/images/Screenshot 2026-08-18 135427.png";
 import planningImg2 from "../assets/images/Screenshot 2026-08-18 135752.png";
 import controlImg1 from "../assets/images/Screenshot 2026-08-18 141534.png";
 import controlImg2 from "../assets/images/Screenshot 2026-08-18 141710.png";
+import reportingImg1 from "../assets/images/Screenshot 2026-08-18 143336.png";
+import reportingImg2 from "../assets/images/Screenshot 2026-08-18 143348.png";
+import reportingImg3 from "../assets/images/Screenshot 2026-08-18 143410.png";
 import bgVideo from "../assets/videos/landing-bg.mp4";
 import api from "../api/axiosConfig";
 import UserProfileMenu from "../components/Public/UserProfileMenu";
@@ -55,6 +58,7 @@ function LandingPage() {
   const [isAtPageBottom, setIsAtPageBottom] = useState(false);
   const [activePlanningLayer, setActivePlanningLayer] = useState(0);
   const [activeControlLayer, setActiveControlLayer] = useState(0);
+  const [activeReportingLayer, setActiveReportingLayer] = useState(0);
   const showLandingProfile = Boolean(
     localStorage.getItem("token") || localStorage.getItem("email")
   );
@@ -502,18 +506,54 @@ function LandingPage() {
                   </div>
                 </div>
               ) : (
-                <div className="landing-pillar-preview">
-                  <div className="landing-preview-top">
-                    <span>Live Insights</span>
+                <div
+                  className="landing-pillar-layered-container"
+                  onClick={() => setActiveReportingLayer((prev) => (prev + 1) % 3)}
+                >
+                  <div
+                    className={`landing-layered-card ${
+                      activeReportingLayer === 0
+                        ? 'landing-layered-card-top'
+                        : activeReportingLayer === 1
+                        ? 'landing-layered-card-bottom'
+                        : 'landing-layered-card-mid'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveReportingLayer(0);
+                    }}
+                  >
+                    <img src={reportingImg1} alt="Reporting View 1" className="landing-layered-img" />
                   </div>
-                  <div className="landing-preview-lines">
-                    <i />
-                    <i />
-                    <i />
+                  <div
+                    className={`landing-layered-card ${
+                      activeReportingLayer === 1
+                        ? 'landing-layered-card-top'
+                        : activeReportingLayer === 2
+                        ? 'landing-layered-card-bottom'
+                        : 'landing-layered-card-mid'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveReportingLayer(1);
+                    }}
+                  >
+                    <img src={reportingImg2} alt="Reporting View 2" className="landing-layered-img" />
                   </div>
-                  <div className="landing-preview-panel">
-                    <strong>{title}</strong>
-                    <p>{category} workspace</p>
+                  <div
+                    className={`landing-layered-card ${
+                      activeReportingLayer === 2
+                        ? 'landing-layered-card-top'
+                        : activeReportingLayer === 0
+                        ? 'landing-layered-card-bottom'
+                        : 'landing-layered-card-mid'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveReportingLayer(2);
+                    }}
+                  >
+                    <img src={reportingImg3} alt="Reporting View 3" className="landing-layered-img" />
                   </div>
                 </div>
               )}

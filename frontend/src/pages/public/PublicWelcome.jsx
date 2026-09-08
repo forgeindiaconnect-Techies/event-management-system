@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { BsCalendarEvent, BsPerson, BsEnvelope, BsPhone } from "react-icons/bs";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { BsCalendarEvent, BsPerson, BsEnvelope, BsPhone, BsFilm } from "react-icons/bs";
 
 function PublicWelcome() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isMovieMode = searchParams.get("tab") === "movie" || searchParams.get("redirect") === "movie";
 
   const [form, setForm] = useState({
     name: "",
@@ -15,9 +17,9 @@ function PublicWelcome() {
     const savedUser = sessionStorage.getItem("publicUser");
 
     if (savedUser) {
-      navigate("/find-events");
+      navigate(isMovieMode ? "/find-events?tab=movie" : "/find-events");
     }
-  }, [navigate]);
+  }, [navigate, isMovieMode]);
 
   const handleChange = (e) => {
     setForm({
@@ -31,20 +33,19 @@ function PublicWelcome() {
 
     sessionStorage.setItem("publicUser", JSON.stringify(form));
 
-    navigate("/find-events");
+    navigate(isMovieMode ? "/find-events?tab=movie" : "/find-events");
   };
 
   const skipDetails = () => {
     sessionStorage.removeItem("publicUser");
-    navigate("/find-events");
+    navigate(isMovieMode ? "/find-events?tab=movie" : "/find-events");
   };
 
   return (
     <div
       className="public-welcome-page min-vh-100 d-flex align-items-center justify-content-center"
       style={{
-        background:
-          "linear-gradient(135deg, #030712, #1e1b4b, #4c1d95)",
+        background: "linear-gradient(135deg, #030712, #1e1b4b, #4c1d95)",
       }}
     >
       <div
@@ -56,25 +57,27 @@ function PublicWelcome() {
       >
         <div className="text-center mb-4">
           <div
-            className="mx-auto mb-3 d-flex align-items-center justify-content-center"
+            className="mx-auto mb-3 d-flex align-items-center justify-content-center shadow-sm"
             style={{
               width: "64px",
               height: "64px",
               borderRadius: "18px",
-              background: "#ede9fe",
-              color: "#7c3aed",
+              background: isMovieMode ? "#eff6ff" : "#ede9fe",
+              color: isMovieMode ? "#2563eb" : "#7c3aed",
               fontSize: "30px",
             }}
           >
-            <BsCalendarEvent />
+            {isMovieMode ? <BsFilm /> : <BsCalendarEvent />}
           </div>
 
-          <h1 className="fw-bold mb-2" style={{ fontSize: "26px" }}>
-            Welcome to FIC Events
+          <h1 className="fw-bold mb-2 text-dark" style={{ fontSize: "26px" }}>
+            Welcome to FIC BackRooms
           </h1>
 
-          <p className="text-muted mb-0">
-            Enter your details to explore public events.
+          <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
+            {isMovieMode
+              ? "Enter your details to explore blockbusters & book movie tickets."
+              : "Enter your details to explore public events & activities."}
           </p>
         </div>
 
@@ -125,8 +128,8 @@ function PublicWelcome() {
             />
           </div>
 
-          <button className="btn btn-primary w-100 py-2">
-            Continue to Events
+          <button className="btn btn-primary w-100 py-2.5 fw-bold shadow-sm">
+            {isMovieMode ? "Continue to Movies" : "Continue to Events"}
           </button>
         </form>
 

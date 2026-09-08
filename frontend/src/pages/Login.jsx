@@ -13,7 +13,10 @@ import {
 
 const dashboardRoutes = {
   SUPER_ADMIN: "/super-admin",
+  MOVIE_CONTENT_MANAGER: "/content-operations",
   PORTAL_ADMIN: "/admin",
+  THEATER_OWNER: "/theater/dashboard",
+  THEATER_MANAGER: "/theater/dashboard",
   ORGANIZER: "/organizer",
   STAFF: "/staff",
   VOLUNTEER: "/volunteer",
@@ -40,18 +43,15 @@ function Login() {
     try {
       const response = await api.post("/auth/login", { email, password });
 
-      const rawRole =
-        response.data.role?.roleName ||
-        response.data.roleName ||
-        response.data.role ||
-        "";
-
+      const rawRole = response.data.role || "";
       const role = rawRole === "Staff" ? "STAFF" : rawRole.toUpperCase();
+      const dutyRole = (response.data.dutyRole || "").toLowerCase();
 
       localStorage.clear();
       clearAssistantSession();
       localStorage.setItem("token", response.data.token || "");
       localStorage.setItem("role", role);
+      localStorage.setItem("dutyRole", response.data.dutyRole || "");
       localStorage.setItem("email", response.data.email || "");
       localStorage.setItem("userId", response.data.userId || response.data.id || "");
       localStorage.setItem("portalId", response.data.portalId || "");
@@ -61,34 +61,46 @@ function Login() {
       localStorage.setItem("lastName", response.data.lastName || "");
       localStorage.setItem("phoneNumber", response.data.phoneNumber || response.data.phone || "");
 
-      const accessOptions = await loadAccessOptions(
-        response.data.userId || response.data.id,
-        role,
-        response.data.portalName
-      );
+      const redirectPath = response.data.redirectPath;
+      const portalCode = response.data.portalCode || "";
+      const isTheater =
+        (redirectPath && redirectPath.startsWith("/theater")) ||
+        role.startsWith("THEATER_") ||
+        role === "BRANCH_MANAGER" ||
+        portalCode.startsWith("TH-");
 
-      localStorage.setItem("accessOptions", JSON.stringify(accessOptions));
-
-      if (accessOptions.length > 1) {
-        navigate("/choose-access");
+      if (isTheater) {
+        if (redirectPath && redirectPath.startsWith("/theater/")) {
+          navigate(redirectPath);
+          return;
+        }
+        if (role.includes("CASHIER") || dutyRole.includes("cashier")) {
+          navigate("/theater/cashier-dashboard");
+          return;
+        }
+        if (role.includes("USHER") || dutyRole.includes("usher") || dutyRole.includes("gate")) {
+          navigate("/theater/usher-dashboard");
+          return;
+        }
+        if (role === "THEATER_MANAGER" || role === "BRANCH_MANAGER" || dutyRole.includes("manager")) {
+          navigate("/theater/manager-dashboard");
+          return;
+        }
+        if (role === "THEATER_STAFF") {
+          navigate("/theater/cashier-dashboard");
+          return;
+        }
+        navigate("/theater/dashboard");
         return;
       }
 
-      if (accessOptions.length === 1) {
-        const selectedRole = normalizeRole(accessOptions[0].role || accessOptions[0].roleName);
-        const selectedPath = dashboardRoutes[selectedRole] || accessOptions[0].path || dashboardRoutes[role] || "/login";
-
-        localStorage.setItem("activeRole", selectedRole);
-        localStorage.setItem("activeEventId", accessOptions[0].eventId || "");
-        localStorage.setItem("activeEventName", accessOptions[0].eventName || "");
-        localStorage.setItem("activeAssignmentId", accessOptions[0].assignmentId || "");
-        localStorage.setItem("activePortalId", accessOptions[0].portalId || response.data.portalId || "");
-        localStorage.setItem("activePortalName", accessOptions[0].portalName || response.data.portalName || "");
-        navigate(selectedPath);
+      if (email.toLowerCase() === "content@backrooms.com") {
+        navigate("/content-operations");
         return;
       }
 
-      navigate(dashboardRoutes[role] || "/login");
+      const targetPath = redirectPath || dashboardRoutes[role] || "/login";
+      navigate(targetPath);
     } catch (error) {
       console.log(error);
       setMessage("Invalid email or password");
@@ -205,11 +217,11 @@ function Login() {
               </div>
 
               <form onSubmit={handleLogin}>
-                <label className="form-label fw-semibold">Email Address</label>
+                <label className="form-label fw-semibold">Email Address or Username</label>
                 <input
                   className="form-control mb-3"
-                  type="email"
-                  placeholder="Enter your email address"
+                  type="text"
+                  placeholder="Enter your email or username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ height: "48px", borderRadius: "12px" }}
@@ -218,40 +230,40 @@ function Login() {
 
                 <label className="form-label fw-semibold">Password</label>
 
-<div className="position-relative mb-3">
-  <input
-    type={showPassword ? "text" : "password"}
-    className="form-control pe-5"
-    placeholder="Enter your password"
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-    style={{
-      height: "50px",
-      borderRadius: "12px",
-      fontSize: "15px",
-    }}
-    required
-  />
+                <div className="position-relative mb-3">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="form-control pe-5"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    style={{
+                      height: "50px",
+                      borderRadius: "12px",
+                      fontSize: "15px",
+                    }}
+                    required
+                  />
 
-  <button
-    type="button"
-    onClick={() => setShowPassword(!showPassword)}
-    className="btn border-0 bg-transparent position-absolute"
-    style={{
-      top: "50%",
-      right: "12px",
-      transform: "translateY(-50%)",
-      padding: 0,
-      color: "#6b7280",
-    }}
-  >
-    {showPassword ? (
-      <EyeOff size={20} strokeWidth={2} />
-    ) : (
-      <Eye size={20} strokeWidth={2} />
-    )}
-  </button>
-</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="btn border-0 bg-transparent position-absolute"
+                    style={{
+                      top: "50%",
+                      right: "12px",
+                      transform: "translateY(-50%)",
+                      padding: 0,
+                      color: "#6b7280",
+                    }}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} strokeWidth={2} />
+                    ) : (
+                      <Eye size={20} strokeWidth={2} />
+                    )}
+                  </button>
+                </div>
 
                 {message && (
                   <div className="alert alert-danger py-2">{message}</div>

@@ -209,7 +209,9 @@ public class EmailServiceImpl implements EmailService {
             delivery.setStatus(EmailDeliveryStatus.SENT);
             delivery.setSentAt(LocalDateTime.now());
             delivery.setFailureReason(null);
+            System.out.println("[EMAIL DELIVERED SUCCESS]: Sent to " + delivery.getRecipientEmail());
         } catch (Exception exception) {
+            System.err.println("[EMAIL DELIVERY FAILED]: " + exception.getMessage());
             int nextRetryCount = delivery.getRetryCount() + 1;
 
             delivery.setRetryCount(nextRetryCount);
@@ -241,7 +243,8 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private void deliverEmail(EmailDelivery delivery) throws Exception {
-        if ("brevo".equalsIgnoreCase(emailProvider == null ? "" : emailProvider.trim())) {
+        if ("brevo".equalsIgnoreCase(emailProvider == null ? "" : emailProvider.trim())
+                || (brevoApiKey != null && !brevoApiKey.isBlank())) {
             sendThroughBrevo(delivery);
             return;
         }
@@ -265,12 +268,14 @@ public class EmailServiceImpl implements EmailService {
 
     private void sendThroughBrevo(EmailDelivery delivery) throws Exception {
         requireBrevoSetting(brevoApiKey, "BREVO_API_KEY");
-        requireBrevoSetting(brevoSenderEmail, "BREVO_SENDER_EMAIL");
+        String senderEmail = (brevoSenderEmail != null && !brevoSenderEmail.isBlank())
+                ? brevoSenderEmail.trim()
+                : "noreply@backrooms.com";
 
         Map<String, Object> payload = Map.of(
                 "sender", Map.of(
                         "name", normalizeSenderName(),
-                        "email", brevoSenderEmail.trim()
+                        "email", senderEmail
                 ),
                 "to", List.of(Map.of("email", delivery.getRecipientEmail())),
                 "subject", delivery.getSubject(),

@@ -53,6 +53,9 @@ function LandingPage() {
   const [guideOpen, setGuideOpen] = useState(false);
   const guideButtonRef = useRef(null);
   const guideMenuRef = useRef(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const aboutButtonRef = useRef(null);
+  const aboutMenuRef = useRef(null);
   const videoRef = useRef(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [isAtPageBottom, setIsAtPageBottom] = useState(false);
@@ -62,21 +65,52 @@ function LandingPage() {
   const showLandingProfile = Boolean(
     localStorage.getItem("token") || localStorage.getItem("email")
   );
-  const dashboardRoutes = {
-    PORTAL_ADMIN: "/admin",
-    ORGANIZER: "/organizer",
-    STAFF: "/staff",
-    VOLUNTEER: "/volunteer",
-    COORDINATOR: "/coordinator",
-    SPEAKER: "/speaker",
-    JUDGE: "/judge",
-    TRAINER: "/mentor",
-    CHIEF_GUEST: "/chief-guest",
-    PARTICIPANT: "/participant",
-  };
   const role = (localStorage.getItem("role") || "").toUpperCase();
+  const dutyRole = (localStorage.getItem("dutyRole") || "").toLowerCase();
+  const portalCode = localStorage.getItem("portalCode") || "";
+  const redirectPath = localStorage.getItem("redirectPath") || "";
+
+  const isTheater =
+    role.startsWith("THEATER_") ||
+    role.includes("CASHIER") ||
+    role.includes("USHER") ||
+    role === "BRANCH_MANAGER" ||
+    dutyRole.includes("cashier") ||
+    dutyRole.includes("usher") ||
+    dutyRole.includes("manager") ||
+    portalCode.startsWith("TH-") ||
+    (redirectPath && redirectPath.startsWith("/theater"));
+
+  let targetDashboardPath = "/admin";
+  if (isTheater) {
+    if (role.includes("CASHIER") || dutyRole.includes("cashier") || role === "THEATER_STAFF" || dutyRole.includes("staff")) {
+      targetDashboardPath = "/theater/cashier-dashboard";
+    } else if (role.includes("USHER") || dutyRole.includes("usher") || dutyRole.includes("gate")) {
+      targetDashboardPath = "/theater/usher-dashboard";
+    } else if (role === "THEATER_MANAGER" || role === "BRANCH_MANAGER" || dutyRole.includes("manager")) {
+      targetDashboardPath = "/theater/manager-dashboard";
+    } else {
+      targetDashboardPath = "/theater/dashboard";
+    }
+  } else {
+    const dashboardRoutes = {
+      SUPER_ADMIN: "/super-admin",
+      PORTAL_ADMIN: "/admin",
+      ORGANIZER: "/organizer",
+      STAFF: "/staff",
+      VOLUNTEER: "/volunteer",
+      COORDINATOR: "/coordinator",
+      SPEAKER: "/speaker",
+      JUDGE: "/judge",
+      TRAINER: "/mentor",
+      CHIEF_GUEST: "/chief-guest",
+      PARTICIPANT: "/participant",
+    };
+    targetDashboardPath = dashboardRoutes[role] || "/admin";
+  }
+
   const getStartedPath = localStorage.getItem("token")
-    ? dashboardRoutes[role] || "/login"
+    ? (redirectPath && redirectPath.startsWith("/") ? redirectPath : targetDashboardPath)
     : "/create-portal";
   const [statsData, setStatsData] = useState({
     events: 0,
@@ -120,21 +154,24 @@ function LandingPage() {
   }, []);
 
   useEffect(() => {
-    if (!guideOpen) return undefined;
+    if (!guideOpen && !aboutOpen) return undefined;
 
-    const closeGuideOutside = (event) => {
-      if (!guideButtonRef.current?.contains(event.target) && !guideMenuRef.current?.contains(event.target)) {
+    const closeDropdownsOutside = (event) => {
+      if (guideOpen && !guideButtonRef.current?.contains(event.target) && !guideMenuRef.current?.contains(event.target)) {
         setGuideOpen(false);
+      }
+      if (aboutOpen && !aboutButtonRef.current?.contains(event.target) && !aboutMenuRef.current?.contains(event.target)) {
+        setAboutOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", closeGuideOutside);
-    document.addEventListener("touchstart", closeGuideOutside);
+    document.addEventListener("mousedown", closeDropdownsOutside);
+    document.addEventListener("touchstart", closeDropdownsOutside);
     return () => {
-      document.removeEventListener("mousedown", closeGuideOutside);
-      document.removeEventListener("touchstart", closeGuideOutside);
+      document.removeEventListener("mousedown", closeDropdownsOutside);
+      document.removeEventListener("touchstart", closeDropdownsOutside);
     };
-  }, [guideOpen]);
+  }, [guideOpen, aboutOpen]);
 
   useEffect(() => {
     loadLandingStats();
@@ -194,10 +231,15 @@ function LandingPage() {
     navigate(publicUser ? "/find-events" : "/public");
   };
 
-  const navItems = [
-    ["About Us", "#about"],
-    ["Resources", "#resources"],
-    ["Features", "#features"],
+  const handleFindMovies = () => {
+    const publicUser = sessionStorage.getItem("publicUser");
+    navigate(publicUser ? "/find-events?tab=movie" : "/public?tab=movie");
+  };
+
+  const aboutDropdownItems = [
+    ["About Us", "#about", "Platform mission, vision & our story"],
+    ["Resources", "#resources", "Templates, planning assets & tools"],
+    ["Features", "#features", "Full suite of event management tools"],
   ];
 
   const stats = [
@@ -292,14 +334,66 @@ function LandingPage() {
         </Link>
 
         <div className="landing-section-nav landing-navbar-links">
-          {navItems.map(([label, href]) => (
-            <a href={href} className="landing-nav-link" key={label}>{label}</a>
-          ))}
+          {/* ABOUT DROPDOWN MENU */}
+          <div ref={aboutButtonRef} className="landing-guide-hover">
+            <button
+              type="button"
+              className="landing-nav-link landing-guide-toggle"
+              onClick={() => {
+                setAboutOpen((open) => !open);
+                setGuideOpen(false);
+              }}
+            >
+              About <span>{aboutOpen ? "▴" : "▾"}</span>
+            </button>
+            {aboutOpen && (
+              <div
+                ref={aboutMenuRef}
+                className="landing-guide-menu landing-guide-menu-compact landing-guide-menu-open"
+                style={{ width: "260px", left: 0, right: "auto" }}
+              >
+                <div className="landing-guide-menu-header" style={{ padding: "12px 16px" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Overview
+                    </p>
+                    <h3 style={{ margin: 0, fontSize: "14px" }}>Platform Information</h3>
+                  </div>
+                </div>
+                <div className="landing-guide-menu-list" style={{ padding: "6px 0" }}>
+                  {aboutDropdownItems.map(([label, href, desc]) => (
+                    <a
+                      key={label}
+                      href={href}
+                      className="landing-guide-menu-link"
+                      onClick={(e) => {
+                        setAboutOpen(false);
+                        const target = document.querySelector(href);
+                        if (target) {
+                          e.preventDefault();
+                          target.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }}
+                      style={{ padding: "10px 16px", display: "flex", flexDirection: "column" }}
+                    >
+                      <span style={{ fontWeight: 600, color: "#111827" }}>{label}</span>
+                      {desc && <span style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>{desc}</span>}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* GUIDES DROPDOWN MENU */}
           <div ref={guideButtonRef} className="landing-guide-hover">
             <button
               type="button"
               className="landing-nav-link landing-guide-toggle"
-              onClick={() => setGuideOpen((open) => !open)}
+              onClick={() => {
+                setGuideOpen((open) => !open);
+                setAboutOpen(false);
+              }}
             >
               Guides <span>{guideOpen ? "▴" : "▾"}</span>
             </button>
@@ -327,6 +421,14 @@ function LandingPage() {
           <button onClick={handleFindEvents} className="landing-top-link landing-explore-link border-0 bg-transparent">
             Explore Events
           </button>
+
+          <button onClick={handleFindMovies} className="landing-top-link landing-explore-link border-0 bg-transparent">
+            Explore Movie
+          </button>
+          
+          <Link to="/theater/signup" className="landing-top-link landing-explore-link border-0 bg-transparent text-decoration-none fw-bold me-2">
+            Create Theater Portals
+          </Link>
 
           {showLandingProfile ? (
             <UserProfileMenu mode="landing" />

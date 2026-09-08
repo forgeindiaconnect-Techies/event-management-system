@@ -31,10 +31,15 @@ function AcceptRoleInvitation() {
   useEffect(() => {
     async function loadInvitation() {
       try {
-        const res = await api.get(`/role-invitations/${token}`);
-        setInvitation(res.data);
-      } catch (error) {
-        setMessage("Invalid or expired invitation link.");
+        const resTheater = await api.get(`/theater-invitations/${token}`);
+        setInvitation(resTheater.data);
+      } catch (e1) {
+        try {
+          const res = await api.get(`/role-invitations/${token}`);
+          setInvitation(res.data);
+        } catch (e2) {
+          setMessage(e2.response?.data?.message || "Invalid or expired invitation link.");
+        }
       }
     }
 
@@ -54,12 +59,52 @@ function AcceptRoleInvitation() {
     }
 
     try {
-      await api.post(`/role-invitations/accept/${token}`, {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        phoneNumber: form.phoneNumber,
-        password: form.password,
-      });
+      let isTheater = false;
+      let userRes = null;
+
+      const isTheaterInv = Boolean(invitation?.theaterPortal || invitation?.invitedByTheaterUser);
+
+      if (isTheaterInv) {
+        userRes = await api.post(`/theater-invitations/accept/${token}`, {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phoneNumber: form.phoneNumber,
+          password: form.password,
+        });
+        isTheater = true;
+      } else {
+        try {
+          userRes = await api.post(`/theater-invitations/accept/${token}`, {
+            firstName: form.firstName,
+            lastName: form.lastName,
+            phoneNumber: form.phoneNumber,
+            password: form.password,
+          });
+          isTheater = true;
+        } catch (err1) {
+          userRes = await api.post(`/role-invitations/accept/${token}`, {
+            firstName: form.firstName,
+            lastName: form.lastName,
+            phoneNumber: form.phoneNumber,
+            password: form.password,
+          });
+        }
+      }
+
+      if (isTheater && userRes?.data) {
+        const user = userRes.data;
+        localStorage.setItem("userRole", user.role || "THEATER_MANAGER");
+        localStorage.setItem("userEmail", user.email);
+        localStorage.setItem("userName", `${user.firstName || ''} ${user.lastName || ''}`.trim());
+        if (user.theaterPortal?.id) {
+          localStorage.setItem("portalId", user.theaterPortal.id);
+        }
+        setMessage("Theater account setup successfully! Redirecting to Theater Manager Dashboard...");
+        setTimeout(() => {
+          navigate("/theater/manager-dashboard");
+        }, 1500);
+        return;
+      }
 
       setMessage("Account created successfully. Redirecting to login...");
 
@@ -73,7 +118,11 @@ function AcceptRoleInvitation() {
 
   const handleReject = async () => {
     try {
-      await api.post(`/role-invitations/reject/${token}`);
+      try {
+        await api.post(`/theater-invitations/reject/${token}`);
+      } catch (err1) {
+        await api.post(`/role-invitations/reject/${token}`);
+      }
       setMessage("Invitation rejected successfully. Redirecting to login...");
 
       setTimeout(() => {
@@ -124,43 +173,64 @@ function AcceptRoleInvitation() {
 
         {invitation && (
           <div
-            className="p-4 rounded-4 mb-4"
+            className="p-4 rounded-4 mb-4 text-start"
             style={{
               background: "#eff6ff",
               border: "1px solid #bfdbfe",
             }}
           >
-            <p className="mb-3 d-flex align-items-center gap-2" style={{ fontSize: "16px" }}>
+            {/* Auto-generated Employee / Login Username */}
+            <div className="p-3 bg-white rounded-3 border border-primary border-opacity-25 mb-3 text-center shadow-sm">
+              <span className="text-muted d-block small mb-1 fw-bold">YOUR ASSIGNED LOGIN USERNAME</span>
+              <span className="fs-3 fw-bold text-primary font-monospace">
+                {invitation.username || invitation.assignedUsername || "GC-1001"}
+              </span>
+              <span className="d-block text-secondary mt-1" style={{ fontSize: "13px" }}>
+                💡 Use this Username (<strong>{invitation.username || "GC-1001"}</strong>) or your email to sign in.
+              </span>
+            </div>
+
+            <p className="mb-2 d-flex align-items-center gap-2" style={{ fontSize: "16px" }}>
               <BsEnvelope color="#2563eb" />
-              <strong>Email:</strong> {invitation.email}
+              <strong>Email Address:</strong>{" "}
+              <span className="badge bg-white text-dark border px-2 py-1 fs-6 fw-semibold">
+                {invitation.email || invitation.inviteEmail || invitation.userEmail || "email@cinema.com"}
+              </span>
             </p>
 
-            <p className="mb-0 d-flex align-items-center gap-2" style={{ fontSize: "16px" }}>
+            <p className="mb-2 d-flex align-items-center gap-2" style={{ fontSize: "16px" }}>
               <BsPersonBadge color="#2563eb" />
-              <strong>Role:</strong> {invitation.roleName}
+              <strong>Assigned Role:</strong>{" "}
+              <span className="badge bg-primary px-3 py-1 fs-6 fw-bold">
+                {invitation.roleName === "THEATER_MANAGER" || invitation.role === "THEATER_MANAGER" || String(invitation.roleName || invitation.role).includes("MANAGER")
+                  ? "Branch Manager"
+                  : invitation.roleName === "THEATER_STAFF" || invitation.role === "THEATER_STAFF" || String(invitation.roleName || invitation.role).includes("STAFF")
+                  ? "Theater Staff"
+                  : "Branch Manager"}
+              </span>
             </p>
 
-            <hr />
+            <hr className="my-2" />
 
             <p className="mb-2" style={{ fontSize: "16px" }}>
-              <strong>Portal:</strong> {invitation.portal?.portalName || "N/A"}
+              <strong>🎭 Theater Portal:</strong>{" "}
+              <span className="fw-bold text-primary">
+                {invitation.theaterPortal?.portalName || invitation.portal?.portalName || invitation.portalName || localStorage.getItem("portalName") || "Gopal Multiplex"}
+              </span>
             </p>
 
-            <p className="mb-2" style={{ fontSize: "16px" }}>
-              <strong>Invited By:</strong>{" "}
-              {invitation.invitedBy?.firstName || "N/A"}{" "}
-              {invitation.invitedBy?.lastName || ""}
+            <p className="mb-0" style={{ fontSize: "16px" }}>
+              <strong>👑 Invited By (Owner):</strong>{" "}
+              <span className="fw-semibold text-dark">
+                {invitation.invitedByTheaterUser
+                  ? `${invitation.invitedByTheaterUser.firstName || ""} ${invitation.invitedByTheaterUser.lastName || ""}`.trim()
+                  : invitation.theaterPortal?.adminUser
+                  ? `${invitation.theaterPortal.adminUser.firstName || ""} ${invitation.theaterPortal.adminUser.lastName || ""}`.trim()
+                  : invitation.invitedBy
+                  ? `${invitation.invitedBy.firstName || ""} ${invitation.invitedBy.lastName || ""}`.trim()
+                  : "Gopal Multiplex"}
+              </span>
             </p>
-
-            <p className="mb-2" style={{ fontSize: "16px" }}>
-              <strong>Event:</strong> {invitation.eventName || "N/A"}
-            </p>
-
-            {invitation.sessionTitle && (
-              <p className="mb-0" style={{ fontSize: "16px" }}>
-                <strong>Session:</strong> {invitation.sessionTitle}
-              </p>
-            )}
           </div>
         )}
 

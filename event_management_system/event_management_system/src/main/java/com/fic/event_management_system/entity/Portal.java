@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 import com.fic.event_management_system.enums.PortalCategory;
+import com.fic.event_management_system.enums.PortalType;
 
 @Entity
 @Table(name = "portals")
@@ -25,6 +26,9 @@ public class Portal {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PortalCategory category;
+
+    @Enumerated(EnumType.STRING)
+    private PortalType portalType = PortalType.EVENT_PORTAL;
 
     private String logoUrl;
 
@@ -49,8 +53,6 @@ public class Portal {
     @JoinColumn(name = "admin_id")
     private User admin;
 
-    
-    
     @PrePersist
     public void onCreate() {
         createdAt = LocalDateTime.now();
@@ -61,127 +63,131 @@ public class Portal {
         updatedAt = LocalDateTime.now();
     }
 
-	public Long getId() {
-		return id;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public String getPortalName() {
-		return portalName;
-	}
+    public String getPortalName() {
+        return portalName;
+    }
 
-	public void setPortalName(String portalName) {
-		this.portalName = portalName;
-	}
+    public void setPortalName(String portalName) {
+        this.portalName = portalName;
+    }
 
-	public String getDescription() {
-		return description;
-	}
+    public String getDescription() {
+        return description;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-	public PortalCategory getCategory() {
-		return category;
-	}
+    public PortalCategory getCategory() {
+        return category;
+    }
 
-	public void setCategory(PortalCategory category) {
-		this.category = category;
-	}
+    public void setCategory(PortalCategory category) {
+        this.category = category;
+    }
 
-	public String getLogoUrl() {
-		return logoUrl;
-	}
+    public PortalType getPortalType() {
+        return portalType;
+    }
 
-	public void setLogoUrl(String logoUrl) {
-		this.logoUrl = logoUrl;
-	}
+    public void setPortalType(PortalType portalType) {
+        this.portalType = portalType;
+    }
 
-	public String getOrganizationLocation() {
-		return organizationLocation;
-	}
+    public String getLogoUrl() {
+        return logoUrl;
+    }
 
-	public void setOrganizationLocation(String organizationLocation) {
-		this.organizationLocation = organizationLocation;
-	}
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
+    }
 
-	public String getTimeZone() {
-		return timeZone;
-	}
+    public String getOrganizationLocation() {
+        return organizationLocation;
+    }
 
-	public void setTimeZone(String timeZone) {
-		this.timeZone = timeZone;
-	}
+    public void setOrganizationLocation(String organizationLocation) {
+        this.organizationLocation = organizationLocation;
+    }
 
-	public Boolean getActive() {
-		return active;
-	}
+    public String getTimeZone() {
+        return timeZone;
+    }
 
-	public void setActive(Boolean active) {
-		this.active = active;
-	}
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
+    }
 
-	public Boolean getDeleted() {
-		return deleted;
-	}
+    public Boolean getActive() {
+        return active;
+    }
 
-	public void setDeleted(Boolean deleted) {
-		this.deleted = deleted;
-	}
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
 
-	public String getDeletionReason() {
-		return deletionReason;
-	}
+    public Boolean getDeleted() {
+        return deleted;
+    }
 
-	public void setDeletionReason(String deletionReason) {
-		this.deletionReason = deletionReason;
-	}
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
 
-	public LocalDateTime getDeletedAt() {
-		return deletedAt;
-	}
+    public String getDeletionReason() {
+        return deletionReason;
+    }
 
-	public void setDeletedAt(LocalDateTime deletedAt) {
-		this.deletedAt = deletedAt;
-	}
+    public void setDeletionReason(String deletionReason) {
+        this.deletionReason = deletionReason;
+    }
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
 
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
 
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
-	public User getAdmin() {
-		return admin;
-	}
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
-	public void setAdmin(User admin) {
-		this.admin = admin;
-	}
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
-	public String getPortalCode() {
-		return portalCode;
-	}
+    public User getAdmin() {
+        return admin;
+    }
 
-	public void setPortalCode(String portalCode) {
-		this.portalCode = portalCode;
-	}
-	
-	
+    public void setAdmin(User admin) {
+        this.admin = admin;
+    }
 
-    
+    public String getPortalCode() {
+        return portalCode;
+    }
+
+    public void setPortalCode(String portalCode) {
+        this.portalCode = portalCode;
+    }
 }

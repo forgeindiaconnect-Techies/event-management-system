@@ -24,6 +24,24 @@ public class InviteRoleRequest {
     private String lastName;
     private String phoneNumber;
     private String password;
+    private String username;
+    private String dutyRole;
+
+    public String getDutyRole() {
+        return dutyRole;
+    }
+
+    public void setDutyRole(String dutyRole) {
+        this.dutyRole = dutyRole;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
     public String getEmail() {
         return email;

@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams, useLocation } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import logo from "../../assets/images/fic-logo.png";
 import heroImage from "../../assets/images/hero-event.jpg";
 import { getDefaultBanner } from "../../utils/bannerUtils";
 import UserProfileMenu from "../../components/Public/UserProfileMenu";
+import PublicMovieDiscovery from "../../components/theater/PublicMovieDiscovery";
+import PublicForYouFeed from "../../components/public/PublicForYouFeed";
+import LocationSelectionModal from "../../components/public/LocationSelectionModal";
 import {
   BsSearch,
   BsGeoAlt,
@@ -21,6 +24,13 @@ import {
   BsMusicNoteBeamed,
   BsTrophy,
   BsCrosshair,
+  BsList,
+  BsXLg,
+  BsFilm,
+  BsHouseDoor,
+  BsTicketPerforated,
+  BsInfoCircle,
+  BsBook,
 } from "react-icons/bs";
 
 const EVENT_CATEGORIES = [
@@ -178,10 +188,56 @@ function PublicDashboard() {
   const [location, setLocation] = useState("");
   const [activeCategory, setActiveCategory] = useState("All Events");
   const [loading, setLoading] = useState(true);
+  // Movies
+  const [globalMovieSearch, setGlobalMovieSearch] = useState("");
+
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [showLocationMenu, setShowLocationMenu] = useState(false);
   const [showLocationConsent, setShowLocationConsent] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const locationObj = useLocation();
+
+  const getInitialNavTab = () => {
+    const tabParam = searchParams.get("tab") || (locationObj.pathname.includes("movie") ? "movie" : null);
+    if (tabParam === "movie") return "movie";
+    if (tabParam === "events") return "events";
+    return "foryou";
+  };
+
+  const [activeNavTab, setActiveNavTab] = useState(getInitialNavTab);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab") || (locationObj.pathname.includes("movie") ? "movie" : null);
+    if (tabParam === "movie") {
+      setActiveNavTab("movie");
+    } else if (tabParam === "events") {
+      setActiveNavTab("events");
+    } else {
+      setActiveNavTab("foryou");
+    }
+  }, [searchParams, locationObj.pathname]);
+  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
+  const hamburgerBtnRef = useRef(null);
+  const hamburgerPopupRef = useRef(null);
+
+  useEffect(() => {
+    if (!isHamburgerOpen) return undefined;
+    const handleOutsideClick = (e) => {
+      if (
+        !hamburgerBtnRef.current?.contains(e.target) &&
+        !hamburgerPopupRef.current?.contains(e.target)
+      ) {
+        setIsHamburgerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [isHamburgerOpen]);
 
   useEffect(() => {
     loadEvents();
@@ -638,17 +694,48 @@ function PublicDashboard() {
               gap: 10px;
             }
           }
+
+          @keyframes popoverFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-8px) scale(0.96);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+
+          .popup-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: #f1f5f9;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+          }
+
+          .popup-nav-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            transform: translateX(3px);
+          }
         `}
       </style>
 
       <nav
-        className="public-dashboard-navbar d-flex justify-content-between align-items-center px-5"
+        className="public-dashboard-navbar d-flex justify-content-between align-items-center px-5 border-bottom shadow-sm"
         style={{
           height: "68px",
-          background: "#030712",
-          color: "#fff",
+          background: "#ffffff",
+          color: "#0f172a",
         }}
       >
+        {/* LEFT: BRAND */}
         <Link
           to="/"
           className="public-dashboard-brand d-flex align-items-center gap-3 fw-bold text-decoration-none"
@@ -660,7 +747,8 @@ function PublicDashboard() {
               width: "44px",
               height: "44px",
               borderRadius: "12px",
-              background: "#ffffff",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
               overflow: "hidden",
               padding: "4px",
             }}
@@ -681,9 +769,9 @@ function PublicDashboard() {
               className="public-dashboard-brand-name"
               style={{
                 fontSize: "22px",
-                fontWeight: "700",
+                fontWeight: "800",
                 lineHeight: "22px",
-                color: "#e5dfe6",
+                color: "#1e293b",
               }}
             >
               FIC BackRooms
@@ -691,25 +779,256 @@ function PublicDashboard() {
           </div>
         </Link>
 
-        <div className="public-dashboard-nav-links d-flex align-items-center gap-4">
-          <Link to="/" className="public-nav-link text-white text-decoration-none">
-            Home
-          </Link>
-          <Link to="/find-my-ticket" className="public-nav-link text-white text-decoration-none">
-            Find My Ticket
-          </Link>
-          <a href="/#about" className="public-nav-link text-white text-decoration-none">
-            About Us
-          </a>
-          <a href="/#resources" className="public-nav-link text-white text-decoration-none">
-            Resources
-          </a>
-          <UserProfileMenu dark />
+        {/* MIDDLE: SEARCH BAR */}
+        <div className="flex-grow-1 d-flex justify-content-center px-lg-4" style={{ zIndex: 1050 }}>
+          {(activeNavTab === "movie" || activeNavTab === "events" || activeNavTab === "foryou") && (
+            <div
+              className="d-none d-md-flex align-items-center bg-light border rounded-pill shadow-sm overflow-visible position-relative"
+              style={{ width: "100%", maxWidth: "600px", height: "46px" }}
+            >
+              {/* Search Input */}
+              <div className="d-flex align-items-center flex-grow-1 px-3 h-100">
+                <BsSearch className="text-muted me-2" size={14} />
+                <input
+                  type="text"
+                  className="form-control border-0 bg-transparent shadow-none p-0 w-100 h-100"
+                  placeholder={
+                    activeNavTab === "movie"
+                      ? "Search movies..."
+                      : activeNavTab === "events"
+                      ? "Search events..."
+                      : "Search events & movies..."
+                  }
+                  value={activeNavTab === "movie" ? globalMovieSearch : search}
+                  onChange={(e) => 
+                    activeNavTab === "movie" 
+                      ? setGlobalMovieSearch(e.target.value) 
+                      : setSearch(e.target.value)
+                  }
+                  style={{ fontSize: "14px" }}
+                />
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: "1px", height: "60%", backgroundColor: "#e2e8f0" }} />
+
+              {/* Location Button */}
+              <div 
+                className="d-flex align-items-center h-100 px-3 pe-4 text-dark"
+                style={{ cursor: "pointer", flexShrink: 0 }}
+                onClick={() => setShowLocationMenu(true)}
+              >
+                <BsGeoAlt className="text-muted me-2" size={14} />
+                <span style={{ fontSize: "14px", fontWeight: "500", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {location || "Online"}
+                </span>
+              </div>
+
+              {/* Location Modal */}
+              <LocationSelectionModal
+                show={showLocationMenu}
+                onHide={() => setShowLocationMenu(false)}
+                currentLocation={location}
+                onSelectLocation={(city) => {
+                  setLocation(city);
+                  setShowLocationMenu(false);
+                }}
+                onDetectLocation={() => {
+                  setShowLocationConsent(true);
+                  setShowLocationMenu(false);
+                }}
+                locating={locating}
+                allCities={districts}
+              />
+
+              {locationError && (
+                <div
+                  className="position-absolute text-danger bg-white px-2 py-1 shadow-sm"
+                  style={{ top: "54px", right: "20px", zIndex: 1060, fontSize: "12px", borderRadius: "8px" }}
+                >
+                  {locationError}
+                </div>
+              )}
+              
+              <style>{`
+                .location-suggestion-row:hover {
+                  background-color: #f1f5f9;
+                }
+              `}</style>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT AREA: BUTTONS + HAMBURGER */}
+        <div className="d-flex align-items-center gap-3">
+          {/* NAVIGATION BUTTONS */}
+          <div className="d-none d-md-flex align-items-center gap-2">
+            <button
+              type="button"
+              className={`btn btn-sm px-4 py-1.5 fw-bold rounded-pill transition-all ${
+                activeNavTab === "foryou"
+                  ? "btn-dark text-white shadow-sm"
+                  : "btn-outline-secondary text-dark border-0"
+              }`}
+              onClick={() => {
+                setActiveNavTab("foryou");
+                setSearchParams({ tab: "foryou" });
+              }}
+            >
+              For You
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm px-4 py-1.5 fw-bold rounded-pill transition-all ${
+                activeNavTab === "events"
+                  ? "btn-dark text-white shadow-sm"
+                  : "btn-outline-secondary text-dark border-0"
+              }`}
+              onClick={() => {
+                setActiveNavTab("events");
+                setSearchParams({ tab: "events" });
+              }}
+            >
+              Events
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm px-4 py-1.5 fw-bold rounded-pill transition-all ${
+                activeNavTab === "movie"
+                  ? "btn-dark text-white shadow-sm"
+                  : "btn-outline-secondary text-dark border-0"
+              }`}
+              onClick={() => {
+                setActiveNavTab("movie");
+                setSearchParams({ tab: "movie" });
+              }}
+            >
+              Movie
+            </button>
+          </div>
+          
+          <div style={{ position: "relative" }}>
+            <button
+              ref={hamburgerBtnRef}
+              type="button"
+              className={`btn btn-link p-2 d-flex align-items-center justify-content-center text-decoration-none border-0 rounded-circle ${
+                isHamburgerOpen ? "bg-light text-dark" : "text-dark"
+              }`}
+              onClick={() => setIsHamburgerOpen((prev) => !prev)}
+              aria-label="Toggle navigation menu"
+              title="Menu"
+              style={{
+                cursor: "pointer",
+                width: "42px",
+                height: "42px",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {isHamburgerOpen ? <BsXLg size={20} /> : <BsList size={28} />}
+            </button>
+
+            {/* PROFESSIONAL FLOATING POPUP ICON BAR */}
+            {isHamburgerOpen && (
+              <div
+                ref={hamburgerPopupRef}
+                className="shadow-lg"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 12px)",
+                  right: 0,
+                  width: "260px",
+                  backgroundColor: "#0f172a",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  borderRadius: "16px",
+                  padding: "10px",
+                  zIndex: 9999,
+                  boxShadow: "0 20px 45px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+                  animation: "popoverFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both",
+                }}
+              >
+                {/* Header title */}
+                <div
+                  className="px-3 pt-2 pb-2 text-secondary small fw-bold text-uppercase d-flex align-items-center justify-content-between"
+                  style={{ fontSize: "11px", letterSpacing: "1px" }}
+                >
+                  <span>Quick Access</span>
+                  <span className="badge bg-secondary bg-opacity-50 text-light fw-normal" style={{ fontSize: "10px" }}>
+                    Menu
+                  </span>
+                </div>
+
+                {/* Items with icons */}
+                <div className="d-flex flex-column gap-1">
+                  <Link
+                    to="/find-my-ticket"
+                    className="popup-nav-item"
+                    onClick={() => setIsHamburgerOpen(false)}
+                  >
+                    <BsTicketPerforated size={17} className="text-info" />
+                    <span>Find My Ticket</span>
+                  </Link>
+
+                  <a
+                    href="/#about"
+                    className="popup-nav-item"
+                    onClick={() => setIsHamburgerOpen(false)}
+                  >
+                    <BsInfoCircle size={17} className="text-secondary" />
+                    <span>About Us</span>
+                  </a>
+
+                  <a
+                    href="/#resources"
+                    className="popup-nav-item"
+                    onClick={() => setIsHamburgerOpen(false)}
+                  >
+                    <BsBook size={17} className="text-success" />
+                    <span>Resources</span>
+                  </a>
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: "1px", backgroundColor: "rgba(255, 255, 255, 0.08)", margin: "8px 4px" }} />
+
+                {/* Home Button */}
+                <Link
+                  to="/"
+                  className="popup-nav-item"
+                  style={{
+                    backgroundColor: "rgba(59, 130, 246, 0.12)",
+                    color: "#60a5fa",
+                  }}
+                  onClick={() => setIsHamburgerOpen(false)}
+                >
+                  <BsHouseDoor size={18} />
+                  <span>Home</span>
+                </Link>
+
+                {/* Divider */}
+                <div style={{ height: "1px", backgroundColor: "rgba(255, 255, 255, 0.08)", margin: "8px 4px" }} />
+
+                {/* Profile / Account section */}
+                <div className="px-2 py-1">
+                  <UserProfileMenu dark />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 
-      <section
-        className="public-dashboard-hero"
+      {activeNavTab === "movie" && (
+        <PublicMovieDiscovery globalSearchQuery={globalMovieSearch} locationFilter={location} />
+      )}
+
+      {activeNavTab === "foryou" && (
+        <PublicForYouFeed events={filteredEvents} searchQuery={search} />
+      )}
+
+      {activeNavTab === "events" && (
+        <>
+          <section
+            className="public-dashboard-hero"
         style={{
           minHeight: "300px",
           background: `linear-gradient(90deg, rgba(3,7,18,.95), rgba(17,24,39,.78)), url(${heroImage}) center/cover`,
@@ -721,154 +1040,13 @@ function PublicDashboard() {
             Discover Events
           </h1>
 
-          <p style={{ maxWidth: "520px", color: "#e5e7eb", fontSize: "17px" }}>
+          <p style={{ maxWidth: "520px", color: "#e5e7eb", fontSize: "17px", marginBottom: "2rem" }}>
             Find events that match your interests and passions.
           </p>
 
-          <Link to="/find-my-ticket" className="btn btn-outline-light mt-2">
+          <Link to="/find-my-ticket" className="btn btn-outline-light">
             Find My Ticket
           </Link>
-
-          <div
-            className="public-dashboard-search bg-white d-flex align-items-center shadow mt-4"
-            style={{
-              maxWidth: "920px",
-              height: "58px",
-              borderRadius: "10px",
-              overflow: "visible",
-            }}
-          >
-            <div className="d-flex align-items-center flex-grow-1 px-3">
-              <BsSearch className="text-muted me-2" />
-              <input
-                className="form-control border-0 shadow-none"
-                placeholder="Search events, workshops, hackathons..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <div
-              className="d-flex align-items-center flex-grow-1 px-3 border-start position-relative"
-              style={{ height: "100%" }}
-            >
-              <BsGeoAlt className="text-muted me-2" />
-              <input
-                className="form-control border-0 shadow-none"
-                placeholder="Enter location or Online"
-                value={location}
-                onFocus={() => {
-                  setLocationError("");
-                  setShowLocationMenu(true);
-                }}
-                onBlur={() => window.setTimeout(() => setShowLocationMenu(false), 150)}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  setLocationError("");
-                  setShowLocationMenu(true);
-                }}
-              />
-
-              <button
-                type="button"
-                className="current-location-btn d-flex align-items-center justify-content-center"
-                onClick={() => {
-                  setShowLocationConsent(true);
-                  setShowLocationMenu(false);
-                }}
-                disabled={locating}
-                title="Use my current location"
-                aria-label="Use my current location"
-              >
-                {locating ? (
-                  <span className="spinner-border spinner-border-sm" />
-                ) : (
-                  <BsCrosshair />
-                )}
-              </button>
-
-              {showLocationMenu && (!location.trim() || locationSuggestions.length > 0) && (
-                <div
-                  className="position-absolute bg-white text-dark shadow border"
-                  style={{
-                    top: "62px",
-                    left: 0,
-                    right: 0,
-                    zIndex: 20,
-                    borderRadius: "10px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <table className="table table-sm mb-0">
-                    <tbody>
-                      {!location.trim() && (
-                        <tr
-                          className="location-suggestion-row"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => {
-                            setShowLocationConsent(true);
-                            setShowLocationMenu(false);
-                          }}
-                        >
-                          <td className="ps-3 py-3 fw-semibold text-primary" colSpan="2">
-                            <BsCrosshair className="me-2" />
-                            {locating ? "Detecting your location..." : "Use current location"}
-                          </td>
-                        </tr>
-                      )}
-
-                      {locationSuggestions.length > 0 && (
-                        <tr>
-                          <td
-                            colSpan="2"
-                            className="px-3 pt-2 pb-1 text-uppercase text-muted fw-semibold"
-                            style={{ fontSize: "11px", letterSpacing: ".06em" }}
-                          >
-                            Suggested locations
-                          </td>
-                        </tr>
-                      )}
-
-                      {locationSuggestions.map(({ district, state }) => (
-                        <tr
-                          key={`${district}-${state}`}
-                          className="location-suggestion-row"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => {
-                            setLocation(district);
-                            setLocationError("");
-                            setShowLocationMenu(false);
-                          }}
-                        >
-                          <td className="ps-3 fw-semibold">{district}</td>
-                          <td className="pe-3 text-muted text-end">{state}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {locationError && (
-                <div
-                  className="position-absolute text-danger bg-white px-2 py-1 shadow-sm"
-                  style={{ top: "62px", left: 0, zIndex: 21, fontSize: "12px", borderRadius: "8px" }}
-                >
-                  {locationError}
-                </div>
-              )}
-            </div>
-
-            <button
-              className="btn text-white px-5 h-100"
-              style={{
-                background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
-                borderRadius: 0,
-              }}
-            >
-              Search
-            </button>
-          </div>
         </div>
       </section>
 
@@ -1033,6 +1211,8 @@ function PublicDashboard() {
           </>
         )}
       </main>
+        </>
+      )}
 
       {showLocationConsent && (
         <div

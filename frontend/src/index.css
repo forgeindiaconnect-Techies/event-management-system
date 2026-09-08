@@ -1,5 +1,7 @@
 /* Reset */
 
+/* Reset */
+
 * {
   margin: 0;
   padding: 0;
@@ -10,6 +12,33 @@ body {
   background-color: #f5f7fb;
   font-family: "Inter", sans-serif;
   overflow-x: hidden;
+}
+
+/* ELEGANT FAINTED BLACK PLACEHOLDER STYLING */
+::placeholder {
+  color: #6b7280 !important;
+  opacity: 0.65 !important;
+}
+
+::-webkit-input-placeholder {
+  color: #6b7280 !important;
+  opacity: 0.65 !important;
+}
+
+::-moz-placeholder {
+  color: #6b7280 !important;
+  opacity: 0.65 !important;
+}
+
+:-ms-input-placeholder {
+  color: #6b7280 !important;
+  opacity: 0.65 !important;
+}
+
+select option[value=""]:disabled,
+select option:disabled {
+  color: #6b7280 !important;
+  opacity: 0.65 !important;
 }
 
 #root {
@@ -1063,7 +1092,7 @@ input::placeholder {
 .email-delivery-table th:nth-child(8) { width: 7%; }
 .email-delivery-table td { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .email-delivery-table .email-failure-cell { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
-.email-delivery-table .email-failure-cell small { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.email-delivery-table .email-failure-cell small { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 
 @media (max-width: 1100px) {
   .sa-app-shell .email-delivery-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

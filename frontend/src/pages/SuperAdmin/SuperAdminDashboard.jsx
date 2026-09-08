@@ -61,6 +61,7 @@ const pageDetails = {
 function SuperAdminDashboard({ section = "overview" }) {
   const navigate = useNavigate();
   const profileRef = useRef(null);
+  const [platformMode, setPlatformMode] = useState("ALL");
   const [dashboard, setDashboard] = useState({});
   const [portals, setPortals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -206,9 +207,33 @@ function SuperAdminDashboard({ section = "overview" }) {
         <button className="sa-topbar-brand" onClick={() => navigate("/super-admin")}>
           <BsBox /><strong>BackRooms</strong><i /> <span>Platform Admin</span>
         </button>
+
+        {/* Platform Mode Switcher */}
+        <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-pill mx-auto">
+          <button 
+            className={`btn btn-sm rounded-pill ${platformMode === 'ALL' ? 'btn-primary' : 'btn-light'}`}
+            onClick={() => setPlatformMode('ALL')}
+          >
+            🌐 All
+          </button>
+          <button 
+            className={`btn btn-sm rounded-pill ${platformMode === 'EVENT' ? 'btn-primary' : 'btn-light'}`}
+            onClick={() => setPlatformMode('EVENT')}
+          >
+            🎪 Event Platform
+          </button>
+          <button 
+            className={`btn btn-sm rounded-pill ${platformMode === 'CINEMA' ? 'btn-primary' : 'btn-light'}`}
+            onClick={() => setPlatformMode('CINEMA')}
+          >
+            🎬 Cinema Platform
+          </button>
+        </div>
+
         <div className="sa-topbar-profile" ref={profileRef}>
           <NotificationBell />
           <button
+            type="button"
             onClick={() => setShowProfile(true)}
             title="Open profile"
             aria-expanded={showProfile}

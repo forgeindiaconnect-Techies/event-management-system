@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { BsChatDots, BsCompass, BsHeadset, BsQuestionCircle, BsXLg } from "react-icons/bs";
 import HelpAssistant from "./HelpAssistant";
 import SupportRequestForm from "./SupportRequestForm";
@@ -10,12 +10,18 @@ const options = [
   ["support", BsHeadset, "Feedback & Support", "Report a problem, suggest a feature or contact support."]
 ];
 
-function HelpMenu({ onSelect }) {
+function HelpMenu({ onSelect, hideFloating = false }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("menu");
   const [launcher, setLauncher] = useState("navbar");
   const menuRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isTheaterPortal =
+    location.pathname.startsWith("/theater") ||
+    location.pathname.startsWith("/theater-") ||
+    location.pathname.startsWith("/staff/workspace");
 
   useEffect(() => {
     if (!open) return undefined;
@@ -61,26 +67,28 @@ function HelpMenu({ onSelect }) {
         <BsQuestionCircle size={23} />
       </button>
 
-      <button
-        type="button"
-        className="fic-assistant-floating-trigger"
-        aria-label="Open FIC AI Assistant"
-        aria-expanded={open && launcher === "floating"}
-        title="Ask FIC Assistant"
-        onClick={() => {
-          setLauncher("floating");
-          setView("assistant");
-          setOpen((value) => launcher === "floating" ? !value : true);
-        }}
-      >
-        <span className="fic-assistant-floating-glow" aria-hidden="true" />
-        <BsChatDots size={25} />
-        <span className="fic-assistant-floating-dots" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-      </button>
+      {!hideFloating && !isTheaterPortal && (
+        <button
+          type="button"
+          className="fic-assistant-floating-trigger"
+          aria-label="Open FIC AI Assistant"
+          aria-expanded={open && launcher === "floating"}
+          title="Ask FIC Assistant"
+          onClick={() => {
+            setLauncher("floating");
+            setView("assistant");
+            setOpen((value) => launcher === "floating" ? !value : true);
+          }}
+        >
+          <span className="fic-assistant-floating-glow" aria-hidden="true" />
+          <BsChatDots size={25} />
+          <span className="fic-assistant-floating-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </button>
+      )}
 
       {open && (
         <div className={`fic-help-popup ${launcher === "floating" ? "is-floating" : ""}`} role="dialog" aria-label="Help and Support">

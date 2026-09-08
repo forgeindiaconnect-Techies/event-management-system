@@ -21,6 +21,12 @@ import OrganizerTickets from "./pages/OrganizerTickets";
 import OrganizerInviteStaff from "./pages/OrganizerInviteStaff";
 import AcceptRoleInvitation from "./pages/AcceptRoleInvitation";
 import OrganizerTeamAssignment from "./pages/OrganizerTeamAssignment";
+import TheaterPartnerSignup from "./pages/theater/TheaterPartnerSignup";
+import TheaterDashboardLayout from "./pages/theater/TheaterDashboardLayout";
+import TheaterManagerDashboard from "./pages/theater/TheaterManagerDashboard";
+import TheaterCashierDashboard from "./pages/theater/TheaterCashierDashboard";
+import TheaterUsherDashboard from "./pages/theater/TheaterUsherDashboard";
+import StaffWebWorkspace from "./pages/staff/StaffWebWorkspace";
 
 import ManageLayout from "./layouts/ManageLayout";
 import EventInfo from "./pages/EventInfo";
@@ -100,6 +106,10 @@ import PublicTicket from "./pages/public/PublicTicket";
 import MobileSelectEnhancer from "./components/MobileSelectEnhancer";
 import HorizontalMenuArrows from "./components/HorizontalMenuArrows";
 import TourCenter from "./pages/Help/TourCenter";
+import ContentOperationsLayout from "./layouts/ContentOperationsLayout";
+import MoviesList from "./pages/operations/MoviesList";
+import MovieForm from "./pages/operations/MovieForm";
+import CastCrewManage from "./pages/operations/CastCrewManage";
 
 const CreateEvent = lazy(() => import("./pages/CreateEvent"));
 const EventDashboard = lazy(() => import("./pages/EventDashboard"));
@@ -238,6 +248,14 @@ function App() {
         </Route>
 
         {/* Role-based Dashboards */}
+        <Route path="/content-operations" element={<ProtectedRoute><ContentOperationsLayout /></ProtectedRoute>}>
+          <Route index element={<MoviesList />} />
+          <Route path="movies" element={<MoviesList />} />
+          <Route path="add-movie" element={<MovieForm />} />
+          <Route path="edit-movie/:id" element={<MovieForm />} />
+          <Route path="cast-crew" element={<CastCrewManage />} />
+        </Route>
+
         <Route path="/staff" element={<ProtectedRoute roles={["STAFF"]}><StaffDashboard /></ProtectedRoute>} />
         <Route path="/staff/events" element={<ProtectedRoute roles={["STAFF"]}><StaffEvents /></ProtectedRoute>} />
         <Route path="/staff/check-in" element={<ProtectedRoute roles={["STAFF"]}><StaffTicketVerification /></ProtectedRoute>} />
@@ -288,10 +306,21 @@ function App() {
 /> 
 
         <Route
-    path="/invitation/accept/:token"
-    element={<AcceptInvitation />}
-    
-/>
+          path="/invitation/accept/:token"
+          element={<AcceptInvitation />}
+        />
+        <Route
+          path="/role-invitation/accept/:token"
+          element={<AcceptRoleInvitation />}
+        />
+        <Route
+          path="/theater-invitation/accept/:token"
+          element={<AcceptRoleInvitation />}
+        />
+        <Route
+          path="/accept-role-invitation"
+          element={<AcceptRoleInvitation />}
+        />
 <Route path="/super-admin" element={<SuperAdminDashboard />} />
 <Route path="/super-admin/portals" element={<SuperAdminDashboard section="portals" />} />
 <Route path="/super-admin/portals/deleted" element={<SuperAdminDashboard section="deletedPortals" />} />
@@ -302,6 +331,16 @@ function App() {
 <Route path="/super-admin/users" element={<SuperAdminDashboard section="users" />} />
 <Route path="/super-admin/reports" element={<SuperAdminDashboard section="reports" />} />
 <Route path="/super-admin/settings" element={<SuperAdminDashboard section="settings" />} />
+
+{/* Theater & Staff Routes */}
+<Route path="/theater/signup" element={<TheaterPartnerSignup />} />
+<Route path="/theater/dashboard" element={<TheaterDashboardLayout />} />
+<Route path="/theater/manager-dashboard" element={<TheaterManagerDashboard />} />
+<Route path="/theater/cashier-dashboard" element={<TheaterCashierDashboard />} />
+<Route path="/theater-cashier" element={<TheaterCashierDashboard />} />
+<Route path="/theater/usher-dashboard" element={<TheaterUsherDashboard />} />
+<Route path="/theater-usher" element={<TheaterUsherDashboard />} />
+<Route path="/staff/workspace" element={<StaffWebWorkspace />} />
 
       </Routes>
       </Suspense>

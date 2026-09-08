@@ -92,7 +92,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     public SuperAdminDashboardResponse getDashboardOverview() {
         tenantSecurityService.requireSuperAdmin();
 
-        List<Portal> portals = portalRepository.findAll();
         List<Portal> activeNonDeletedPortals = portalRepository.findByDeletedFalseOrDeletedIsNull();
 
         List<Registration> registrations = registrationRepository.findAll().stream()

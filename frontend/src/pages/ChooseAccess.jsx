@@ -10,6 +10,14 @@ import {
 
 const dashboardRoutes = {
   PORTAL_ADMIN: "/admin",
+  SUPER_ADMIN: "/super-admin",
+  THEATER_OWNER: "/theater/dashboard",
+  THEATER_MANAGER: "/theater/manager-dashboard",
+  THEATER_CASHIER: "/theater/cashier-dashboard",
+  CASHIER: "/theater/cashier-dashboard",
+  THEATER_STAFF: "/theater/cashier-dashboard",
+  THEATER_USHER: "/theater/usher-dashboard",
+  USHER: "/theater/usher-dashboard",
   ORGANIZER: "/organizer",
   STAFF: "/staff",
   VOLUNTEER: "/volunteer",

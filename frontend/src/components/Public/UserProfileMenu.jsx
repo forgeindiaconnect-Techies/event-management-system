@@ -6,6 +6,7 @@ import {
   BsPersonCheck,
   BsPersonCircle,
   BsPhone,
+  BsSpeedometer2,
 } from "react-icons/bs";
 
 function UserProfileMenu({ dark = false, mode = "public" }) {
@@ -39,7 +40,7 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
     const lastName = localStorage.getItem("lastName") || "";
     const storedName = `${firstName} ${lastName}`.trim();
 
-    if (mode === "landing") {
+    if (mode === "landing" || localStorage.getItem("token")) {
       const email = localStorage.getItem("email") || "";
       const phone =
         localStorage.getItem("phoneNumber") ||
@@ -50,9 +51,61 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
         return null;
       }
 
+      const role = (localStorage.getItem("role") || "").toUpperCase();
+      const dutyRole = (localStorage.getItem("dutyRole") || "").toLowerCase();
+      const portalCode = localStorage.getItem("portalCode") || "";
+      const redirectPath = localStorage.getItem("redirectPath") || "";
+
+      const isTheater =
+        role.startsWith("THEATER_") ||
+        role.includes("CASHIER") ||
+        role.includes("USHER") ||
+        role === "BRANCH_MANAGER" ||
+        dutyRole.includes("cashier") ||
+        dutyRole.includes("usher") ||
+        dutyRole.includes("manager") ||
+        portalCode.startsWith("TH-") ||
+        (redirectPath && redirectPath.startsWith("/theater"));
+
+      let targetDashboardPath = "/admin";
+      let roleLabel = "User Profile";
+
+      if (isTheater) {
+        if (role.includes("CASHIER") || dutyRole.includes("cashier") || role === "THEATER_STAFF" || dutyRole.includes("staff")) {
+          targetDashboardPath = "/theater/cashier-dashboard";
+          roleLabel = "Cashier Portal";
+        } else if (role.includes("USHER") || dutyRole.includes("usher") || dutyRole.includes("gate")) {
+          targetDashboardPath = "/theater/usher-dashboard";
+          roleLabel = "Usher Portal";
+        } else if (role === "THEATER_MANAGER" || role === "BRANCH_MANAGER" || dutyRole.includes("manager")) {
+          targetDashboardPath = "/theater/manager-dashboard";
+          roleLabel = "Theater Manager";
+        } else {
+          targetDashboardPath = "/theater/dashboard";
+          roleLabel = "Theater Owner";
+        }
+      } else {
+        const dashboardRoutes = {
+          SUPER_ADMIN: "/super-admin",
+          PORTAL_ADMIN: "/admin",
+          ORGANIZER: "/organizer",
+          STAFF: "/staff",
+          VOLUNTEER: "/volunteer",
+          COORDINATOR: "/coordinator",
+          SPEAKER: "/speaker",
+          JUDGE: "/judge",
+          TRAINER: "/mentor",
+          CHIEF_GUEST: "/chief-guest",
+          PARTICIPANT: "/participant",
+        };
+        targetDashboardPath = dashboardRoutes[role] || "/admin";
+        roleLabel = role ? role.replace(/_/g, " ") : "User Profile";
+      }
+
       return {
         name: storedName || email,
-        subtitle: "User Profile",
+        subtitle: roleLabel,
+        dashboardPath: redirectPath && redirectPath.startsWith("/") ? redirectPath : targetDashboardPath,
         lines: [
           {
             icon: <BsEnvelope />,
@@ -85,6 +138,7 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
             value: publicUser.phone || "Not added",
           },
         ],
+        showSignOut: false,
       };
     }
 
@@ -118,7 +172,9 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
             <BsPersonCircle size={46} className="text-primary" />
             <div>
               <h6 className="mb-0 fw-bold">{profile.name}</h6>
-              <small className="text-muted">{profile.subtitle}</small>
+              <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded-pill small fw-semibold mt-1">
+                {profile.subtitle}
+              </span>
             </div>
           </div>
 
@@ -133,6 +189,18 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
 
           {profile.showSignOut && (
             <div className="d-grid gap-2 mt-3">
+              {profile.dashboardPath && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2 fw-bold shadow-xs py-2"
+                  onClick={() => {
+                    setOpen(false);
+                    navigate(profile.dashboardPath);
+                  }}
+                >
+                  <BsSpeedometer2 /> Go to Dashboard
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center gap-2"

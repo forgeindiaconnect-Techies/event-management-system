@@ -10,6 +10,7 @@ public class AuthResponse {
     private Long portalId;
     private String portalCode;
     private String redirectPath;
+    private String dutyRole;
 
     public AuthResponse() {
     }
@@ -38,6 +39,28 @@ public class AuthResponse {
         this.portalCode = portalCode;
         this.portalName = portalName;
         this.redirectPath = redirectPath;
+    }
+
+    public AuthResponse(
+            String token,
+            String role,
+            String email,
+            Long userId,
+            Long portalId,
+            String portalCode,
+            String portalName,
+            String redirectPath,
+            String dutyRole) {
+
+        this.token = token;
+        this.role = role;
+        this.email = email;
+        this.userId = userId;
+        this.portalId = portalId;
+        this.portalCode = portalCode;
+        this.portalName = portalName;
+        this.redirectPath = redirectPath;
+        this.dutyRole = dutyRole;
     }
 
     public String getToken() {
@@ -103,5 +126,12 @@ public class AuthResponse {
 	public void setPortalName(String portalName) {
 		this.portalName = portalName;
 	}
-    
+
+    public String getDutyRole() {
+        return dutyRole;
+    }
+
+    public void setDutyRole(String dutyRole) {
+        this.dutyRole = dutyRole;
+    }
 }

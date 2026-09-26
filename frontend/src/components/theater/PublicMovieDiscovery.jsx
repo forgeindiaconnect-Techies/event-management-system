@@ -53,6 +53,13 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
     
     const nextMovie = movie !== undefined ? movie : selectedMovie;
     if (nextMovie && nextMovie.movieId) newParams.set("movieId", nextMovie.movieId);
+    if (nextMovie && nextMovie.title) newParams.set("movieTitle", nextMovie.title);
+
+    if (view === "DISCOVERY") {
+      newParams.delete("view");
+      newParams.delete("movieId");
+      newParams.delete("movieTitle");
+    }
     
     setSearchParams(newParams);
     setMovieFlowView(view);
@@ -64,6 +71,7 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
   // Filters
   const [selectedScreen, setSelectedScreen] = useState("All Screens");
   const [selectedDate, setSelectedDate] = useState("All Dates");
+  const [selectedLanguage, setSelectedLanguage] = useState("All");
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
 
   // Load real showtimes and theaters from database
@@ -173,6 +181,32 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
           try {
             const localList = JSON.parse(localStorage.getItem(key));
             if (Array.isArray(localList)) {
+              for (const st of localList) {
+                const isLocalOnly = !st.id || Number(st.id) > 1000000 || !allShows.some((s) => s.id === st.id);
+                if (isLocalOnly && st.movieTitle && st.showDate && st.startTime) {
+                  const targetScr = st.screenId || st.screen?.id || 5;
+                  const timeFormatted = st.startTime.length === 5 ? `${st.startTime}:00` : st.startTime;
+                  const classPricesStr = typeof st.classPrices === "string" ? st.classPrices : "balcony(220),gold(190),silver(160)";
+                  try {
+                    const saveRes = await api.post(`/theater/screens/${targetScr}/showtimes`, {
+                      movieTitle: st.movieTitle,
+                      movieId: st.movieId || (st.movieTitle.toLowerCase().includes("paradise") ? 3 : 4),
+                      posterUrl: st.posterUrl,
+                      showDate: st.showDate,
+                      startTime: timeFormatted,
+                      classPrices: classPricesStr,
+                    });
+                    if (saveRes.data && saveRes.data.id) {
+                      st.id = saveRes.data.id;
+                      allShows.push(saveRes.data);
+                    }
+                  } catch (e) {
+                    console.warn("Failed to auto-sync local showtime to MySQL:", e);
+                  }
+                }
+              }
+              localStorage.setItem(key, JSON.stringify(localList));
+
               allShows.push(
                 ...localList.map((st) => ({
                   ...st,
@@ -256,11 +290,20 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
     dbShowtimes.forEach((st) => {
       if (!st || !st.movieTitle) return;
       const key = st.movieTitle.trim();
+      let language = "Tamil"; // Default if completely missing
+      if (st.language) language = st.language;
+      else {
+        const matchingMovie = allMovies.find(m => m.id === st.movieId || m.movieTitle === st.movieTitle);
+        if (matchingMovie?.movieLanguage) language = matchingMovie.movieLanguage;
+        else if (matchingMovie?.language) language = matchingMovie.language;
+      }
+
       const existing = map.get(key) || {
         id: `movie_${key.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
         title: key,
         movieId: st.movieId || null,
         poster: st.posterUrl || "",
+        language: language,
         showtimes: [],
         portals: new Set(),
         cities: new Set(),
@@ -270,6 +313,10 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
         dates: new Set(),
         prices: new Set(),
       };
+
+      if (existing.language === "Tamil" && language !== "Tamil") {
+        existing.language = language;
+      }
 
       if (!existing.poster && st.posterUrl) {
         existing.poster = st.posterUrl;
@@ -334,7 +381,81 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
         maxPrice: pricesArr.length > 0 ? Math.max(...pricesArr) : 220,
       };
     });
-  }, [dbShowtimes]);
+  }, [dbShowtimes, allMovies]);
+
+  // Auto-resolve selectedMovie when arriving with view=DETAILS / THEATERS / SEATS from URL
+  useEffect(() => {
+    const view = searchParams.get("view");
+    const targetMovieId = searchParams.get("movieId");
+    const targetTitle = searchParams.get("movieTitle") || searchParams.get("title");
+
+    if (view && view !== "DISCOVERY" && (targetMovieId || targetTitle)) {
+      if (selectedMovie) {
+        const matchesId = targetMovieId && (String(selectedMovie.movieId) === String(targetMovieId) || String(selectedMovie.id) === String(targetMovieId));
+        const matchesTitle = targetTitle && selectedMovie.title?.trim().toLowerCase() === targetTitle.trim().toLowerCase();
+        if (matchesId || matchesTitle) return;
+      }
+
+      // Try finding in databaseMovies first
+      const foundInDb = databaseMovies.find((m) => {
+        const idMatch = targetMovieId && (String(m.movieId) === String(targetMovieId) || String(m.id) === String(targetMovieId));
+        const titleMatch = targetTitle && m.title?.trim().toLowerCase() === targetTitle.trim().toLowerCase();
+        return idMatch || titleMatch;
+      });
+
+      if (foundInDb) {
+        setSelectedMovie(foundInDb);
+        return;
+      }
+
+      // Try finding in allMovies if not in databaseMovies
+      if (allMovies.length > 0) {
+        const foundInAll = allMovies.find((m) => {
+          const idMatch = targetMovieId && String(m.id) === String(targetMovieId);
+          const mTitle = (m.title || m.movieTitle || "").trim().toLowerCase();
+          const titleMatch = targetTitle && mTitle === targetTitle.trim().toLowerCase();
+          return idMatch || titleMatch;
+        });
+
+        if (foundInAll) {
+          const tName = foundInAll.title || foundInAll.movieTitle;
+          setSelectedMovie({
+            id: `movie_${tName.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
+            title: tName,
+            movieId: foundInAll.id,
+            poster: foundInAll.posterUrl || DEFAULT_POSTER,
+            language: foundInAll.movieLanguage || foundInAll.language || "Tamil",
+            showtimes: [],
+            portalsList: [],
+            screensList: [],
+            theatersList: [],
+            formatsList: ["2D"],
+            datesList: [],
+            minPrice: 120,
+            maxPrice: 220,
+          });
+        }
+      }
+    }
+  }, [searchParams, databaseMovies, allMovies, selectedMovie]);
+
+  // Extract distinct languages
+  const availableLanguages = useMemo(() => {
+    const langs = new Set();
+    // Always show these core languages
+    ["Tamil", "English", "Telugu", "Hindi", "Malayalam", "Kannada"].forEach(l => langs.add(l));
+
+    databaseMovies.forEach((m) => {
+      if (m.language) {
+        m.language.split(',').forEach(l => {
+          const trimmed = l.trim();
+          if (trimmed) langs.add(trimmed);
+        });
+      }
+    });
+
+    return ["All", ...Array.from(langs)];
+  }, [databaseMovies]);
 
   // Extract distinct screens from database movies for filtering
   const availableScreens = useMemo(() => {
@@ -358,10 +479,16 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
       }
       // Location filter
       if (locationFilter.trim()) {
-        const l = locationFilter.toLowerCase();
-        if (!movie.city?.toLowerCase().includes(l)) {
+        const loc = locationFilter.toLowerCase();
+        if (!movie.city.toLowerCase().includes(loc) && !movie.portalsList.some((p) => p.toLowerCase().includes(loc))) {
           return false;
         }
+      }
+      // Language filter
+      if (selectedLanguage !== "All") {
+        if (!movie.language) return false;
+        const movieLangs = movie.language.split(',').map(l => l.trim());
+        if (!movieLangs.includes(selectedLanguage)) return false;
       }
       // Screen filter
       if (selectedScreen !== "All Screens") {
@@ -377,15 +504,25 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
 
   const upcomingMovies = useMemo(() => {
     // A movie is upcoming if it's in allMovies, but its title doesn't match any title in databaseMovies
+    // AND its releaseDate is strictly in the future.
+    const todayStr = new Date().toISOString().split("T")[0];
+
     return allMovies.filter(am => {
       const amTitle = (am.title || "").trim().toLowerCase();
+      
+      // 1. Is it currently showing?
       const isNowShowing = databaseMovies.some(dm => {
         const dmTitle = (dm.title || "").trim().toLowerCase();
         return dmTitle === amTitle || dmTitle.includes(amTitle) || amTitle.includes(dmTitle);
       });
       if (isNowShowing) return false;
       
-      // Filter by global search query
+      // 2. Is its release date in the past or today? If so, it's not "upcoming".
+      if (am.releaseDate && am.releaseDate <= todayStr) {
+        return false;
+      }
+      
+      // 3. Filter by global search query
       if (globalSearchQuery.trim()) {
         const q = globalSearchQuery.toLowerCase();
         if (!amTitle.includes(q)) return false;
@@ -397,25 +534,45 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
   const activeSpotlightMovie = filteredMovies[activeBannerIdx] || filteredMovies[0] || null;
 
   // VIEW 1: Movie Details Page (About, Cast & Crew)
-  if (movieFlowView === "DETAILS" && selectedMovie) {
-    return (
-      <PublicMovieDetails
-        movie={selectedMovie}
-        onBack={() => navigateToView("DISCOVERY")}
-        onProceedToTheaters={() => navigateToView("THEATERS")}
-      />
-    );
+  if (movieFlowView === "DETAILS") {
+    if (selectedMovie) {
+      return (
+        <PublicMovieDetails
+          movie={selectedMovie}
+          onBack={() => navigateToView("DISCOVERY", null, null)}
+          onProceedToTheaters={() => navigateToView("THEATERS")}
+        />
+      );
+    }
+    if (loading || searchParams.get("movieId") || searchParams.get("movieTitle")) {
+      return (
+        <div className="d-flex flex-column justify-content-center align-items-center py-5" style={{ minHeight: "60vh" }}>
+          <div className="spinner-border text-danger" role="status"></div>
+          <span className="mt-3 text-muted small">Loading movie details...</span>
+        </div>
+      );
+    }
   }
 
   // VIEW 2: Theaters & Showtimes Selection Page (Next Page)
-  if (movieFlowView === "THEATERS" && selectedMovie) {
-    return (
-      <PublicMovieShowtimes
-        movie={selectedMovie}
-        onBack={() => navigateToView("DETAILS")}
-        onSelectShowtime={(showtime) => navigateToView("SEATS", undefined, showtime)}
-      />
-    );
+  if (movieFlowView === "THEATERS") {
+    if (selectedMovie) {
+      return (
+        <PublicMovieShowtimes
+          movie={selectedMovie}
+          onBack={() => navigateToView("DETAILS")}
+          onSelectShowtime={(showtime) => navigateToView("SEATS", undefined, showtime)}
+        />
+      );
+    }
+    if (loading || searchParams.get("movieId") || searchParams.get("movieTitle")) {
+      return (
+        <div className="d-flex flex-column justify-content-center align-items-center py-5" style={{ minHeight: "60vh" }}>
+          <div className="spinner-border text-danger" role="status"></div>
+          <span className="mt-3 text-muted small">Loading showtimes...</span>
+        </div>
+      );
+    }
   }
 
   // VIEW 3: Interactive Hall Seat Layout & Booking (Next Page)
@@ -616,19 +773,32 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
 
       {/* 3. NOW SHOWING REAL DATABASE MOVIES GRID */}
       <div className="container py-5">
-        <div className="d-flex align-items-center justify-content-between mb-4">
-          <div>
-            <h2 className="fw-bold mb-1 text-dark d-flex align-items-center gap-2" style={{ fontSize: "28px" }}>
-              <BsFilm className="text-primary" /> Now Showing in Theaters
-            </h2>
-            <p className="text-muted mb-0" style={{ fontSize: "15px" }}>
-              Live movies and showtimes scheduled across theater screens.
-            </p>
-          </div>
-
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h2 className="fw-bold mb-0 text-dark d-flex align-items-center gap-2" style={{ fontSize: "28px" }}>
+            <BsFilm className="text-primary" /> Now Showing in Theaters
+          </h2>
           <span className="badge bg-white text-secondary border px-3 py-2 rounded-pill fw-medium shadow-sm">
             {filteredMovies.length} Movie{filteredMovies.length !== 1 ? "s" : ""} in Database
           </span>
+        </div>
+
+        {/* Language Filter Row */}
+        <div className="d-flex gap-2 overflow-auto pb-3 mb-4 custom-scrollbar" style={{ scrollbarWidth: "none" }}>
+          {availableLanguages.map(lang => (
+            <button
+              key={lang}
+              type="button"
+              className={`btn btn-sm px-4 py-2 rounded-pill fw-medium transition-all ${
+                selectedLanguage === lang
+                  ? "btn-danger shadow text-white"
+                  : "btn-outline-secondary bg-white text-dark border-0 shadow-sm"
+              }`}
+              onClick={() => setSelectedLanguage(lang)}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {lang}
+            </button>
+          ))}
         </div>
 
         {/* Loading Spinner */}

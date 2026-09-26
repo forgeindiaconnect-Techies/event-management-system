@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import TheaterNavbar from "../../components/Navbar/TheaterNavbar";
 import Select from "react-select";
 import api from "../../api/axiosConfig";
@@ -7,6 +7,7 @@ import { formatIndianDate, formatIndianTime } from "../../utils/dateTime";
 import IndianDatePicker from "../../components/Common/IndianDatePicker";
 import "../../styles/Admin.css";
 import LiveSeatBookingMain from "../../components/theater/LiveSeatBooking/LiveSeatBookingMain";
+import TheaterManagerMenuEditor from "../../components/theater/TheaterManagerMenuEditor";
 import {
   BsFilm,
   BsTv,
@@ -44,6 +45,8 @@ import {
   BsPhone,
   BsLock,
   BsShieldCheck,
+  BsXLg,
+  BsVolumeUp,
 } from "react-icons/bs";
 
 export function getCanonicalSection(str) {
@@ -63,9 +66,48 @@ const ROW_LETTERS = [
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
 ];
 
+function Metric({ icon, label, value, subtitle, onClick }) {
+  const content = (
+    <>
+      <span className="admin-bento-icon">{icon}</span>
+      <p>{label}</p>
+      <h2>{value ?? 0}</h2>
+      {subtitle && <span className="sa-metric-sub">{subtitle}</span>}
+    </>
+  );
+  if (onClick) {
+    return (
+      <div 
+        className="admin-bento-card sa-metric sa-linked-metric" 
+        onClick={onClick} 
+        style={{ cursor: "pointer" }}
+        role="button"
+        tabIndex={0}
+        aria-label={`View ${label}`}
+      >
+        {content}
+      </div>
+    );
+  }
+  return <div className="admin-bento-card sa-metric">{content}</div>;
+}
+
 export default function TheaterDashboardLayout() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("overview"); // Default tab: Dashboard overview
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const normalizedInitialTab = rawTab === "fb" ? "concessions" : (rawTab || "overview");
+  const [activeTab, setActiveTab] = useState(normalizedInitialTab);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const normalized = tabParam === "fb" ? "concessions" : tabParam;
+      if (normalized !== activeTab) {
+        setActiveTab(normalized);
+      }
+    }
+  }, [searchParams]);
   const [selectedTheater, setSelectedTheater] = useState(null);
   const [screens, setScreens] = useState([]);
   const [selectedScreen, setSelectedScreen] = useState(null);
@@ -76,6 +118,7 @@ export default function TheaterDashboardLayout() {
   // Editable Cinema Name
   const [cinemaName, setCinemaName] = useState(() => localStorage.getItem("portalName") || "Cinema Partner");
   const [isEditingCinemaName, setIsEditingCinemaName] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // --- 1. PERSISTENT PER-SCREEN LAYOUT STORAGE MAP ---
   const initialDefaultLayouts = {
@@ -167,10 +210,12 @@ export default function TheaterDashboardLayout() {
   const [selectedShowScreenId, setSelectedShowScreenId] = useState("");
   const [newShowDate, setNewShowDate] = useState(new Date().toISOString().split("T")[0]);
   const [newShowTimeStr, setNewShowTimeStr] = useState("18:30");
-
-  const [editingShowtimeId, setEditingShowtimeId] = useState(null);
   const [showtimeScreenFilter, setShowtimeScreenFilter] = useState(null);
   const [showtimeDateFilter, setShowtimeDateFilter] = useState("");
+  const [fbTodayRevenue, setFbTodayRevenue] = useState(0);
+  const [fbTodayOrders, setFbTodayOrders] = useState(0);
+
+  const [editingShowtimeId, setEditingShowtimeId] = useState(null);
   const [showtimeToastMsg, setShowtimeToastMsg] = useState("");
   const [liveMovieSearch, setLiveMovieSearch] = useState("");
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -193,7 +238,8 @@ export default function TheaterDashboardLayout() {
 
 
       const currentScrId = selectedShowScreenId || selectedScreen?.id || screens[0]?.id;
-      const targetStId = editingShowtimeId || (showtimes.find((s) => String(s.screen?.id || s.screenId) === String(currentScrId))?.id);
+      const todayIso = new Date().toISOString().split("T")[0];
+      const targetStId = editingShowtimeId || (showtimes.find((s) => (!s.showDate || s.showDate >= todayIso) && String(s.screen?.id || s.screenId) === String(currentScrId))?.id);
       const targetShow = showtimes.find((s) => String(s.id) === String(targetStId));
       const targetScr = screens.find((s) => String(s.id) === String(currentScrId));
 
@@ -210,22 +256,6 @@ export default function TheaterDashboardLayout() {
             res.data.forEach((k) => {
               currentMap[`${targetStId}-${k}`] = true;
               currentMap[`${ctxKey}-${k}`] = true;
-              currentMap[k] = true;
-              // Also decompose keys formatted as sec_xxx-Row-Num (e.g. sec_1788001329407-A-6)
-              const parts = String(k).split("-");
-              if (parts.length >= 3) {
-                const rL = parts[1];
-                const cN = parts[2];
-                const sNum = `${rL}${cN}`;
-                const secIdPart = parts[0];
-                currentMap[`${targetStId}-${secIdPart}-${sNum}`] = true;
-                currentMap[`${ctxKey}-${secIdPart}-${sNum}`] = true;
-                // If this matches gold/silver/balcony sections
-                currentMap[`${targetStId}-gold-${sNum}`] = true;
-                currentMap[`${ctxKey}-gold-${sNum}`] = true;
-                currentMap[`gold_${sNum}`] = true;
-                currentMap[`${sNum}`] = true;
-              }
             });
           }
         } catch (e) { }
@@ -266,7 +296,7 @@ export default function TheaterDashboardLayout() {
                     currentMap[`${targetStId}-${rawSec.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${seatN}`] = true;
                   }
                   currentMap[`${ctxKey}-${cSec}-${seatN}`] = true;
-                  currentMap[`${cSec}_${seatN}`] = true;
+                  currentMap[`${ctxKey}-${rawSec.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${seatN}`] = true;
                 }
               }
             });
@@ -312,7 +342,7 @@ export default function TheaterDashboardLayout() {
     { id: 1, name: "Butter Popcorn (Large)", category: "Popcorn", size: "Large", price: 220, inStock: true },
     { id: 2, name: "Cheese Popcorn (Regular)", category: "Popcorn", size: "Regular", price: 180, inStock: true },
     { id: 3, name: "Caramel Gourmet Popcorn", category: "Popcorn", size: "Large", price: 240, inStock: true },
-    { id: 4, name: "Cheese Nachos & Jalapeño Dip", category: "Snacks", size: "Medium", price: 190, inStock: true },
+    { id: 4, name: "Cheese Nachos & JalapeÃ±o Dip", category: "Snacks", size: "Medium", price: 190, inStock: true },
     { id: 5, name: "Cold Coffee / Iced Mocha 500ml", category: "Beverages", size: "500ml", price: 140, inStock: true },
     { id: 6, name: "Fountain Pepsi / Coca Cola 500ml", category: "Beverages", size: "500ml", price: 110, inStock: true },
     { id: 7, name: "Family Movie Snack Combo (Large Popcorn + 2 Drinks)", category: "Combos", size: "Combo Pack", price: 450, inStock: true },
@@ -401,7 +431,7 @@ export default function TheaterDashboardLayout() {
   const [newFormat, setNewFormat] = useState("");
   const [customFormat, setCustomFormat] = useState("");
 
-  // Helper: Calculate Ascending Sequential Emp ID / Username (Reusing IDs from rejected invitations)
+  // Helper: Calculate Ascending Sequential Emp ID / Username
   const getNextEmpId = (list = []) => {
     const portalNameStr = (cinemaName || localStorage.getItem("portalName") || "Grand Multiplex").trim();
     const parts = portalNameStr.split(/\s+/).filter(Boolean);
@@ -414,22 +444,22 @@ export default function TheaterDashboardLayout() {
       prefix = (parts[0][0] + "M").toUpperCase();
     }
 
-    // Collect all taken numbers (ignoring rejected staff)
-    const takenNumbers = new Set();
+    // Find the absolute highest number used so far
+    let maxNumber = 1000;
     list.forEach((item) => {
       if (item.status === "Rejected" || item.status === "REJECTED") return;
       const empStr = String(item.empId || item.username || "");
       const numMatch = empStr.match(/\d+/);
       if (numMatch) {
-        takenNumbers.add(parseInt(numMatch[0], 10));
+        const num = parseInt(numMatch[0], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
       }
     });
 
-    // Find lowest available number starting at 1001
-    let candidate = 1001;
-    while (takenNumbers.has(candidate)) {
-      candidate++;
-    }
+    // Continue from the last number instead of filling gaps
+    const candidate = maxNumber + 1;
     return `${prefix}-${candidate}`;
   };
 
@@ -563,6 +593,7 @@ export default function TheaterDashboardLayout() {
         localStorage.setItem("portalName", resolvedName);
         if (res.data.id) {
           fetchScreens(res.data.id);
+          fetchFbSales(res.data.id);
         }
       } else {
         setSelectedTheater({ name: portalName || "Cinema Partner", city: "Chennai" });
@@ -575,6 +606,18 @@ export default function TheaterDashboardLayout() {
       setCinemaName(portalName);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFbSales = async (tid) => {
+    try {
+      const res = await api.get(`/fb/sales/today/${tid}`);
+      if (res.data) {
+        setFbTodayRevenue(res.data.totalRevenue || 0);
+        setFbTodayOrders(res.data.orderCount || 0);
+      }
+    } catch (e) {
+      console.warn("F&B sales fetch warning:", e);
     }
   };
 
@@ -983,8 +1026,11 @@ export default function TheaterDashboardLayout() {
   // --- SHOWTIMES SCHEDULER ---
   const handleAddOrUpdateShowtime = async (e) => {
     e.preventDefault();
-    const targetScreenId = selectedShowScreenId || selectedScreen?.id;
-    if (!targetScreenId || !newMovieTitle) return;
+    const targetScreenId = selectedShowScreenId || selectedScreen?.id || screens[0]?.id;
+    if (!targetScreenId || !newMovieTitle) {
+      if (!targetScreenId) alert("Please select a target screen hall.");
+      return;
+    }
 
     // Enforce limit of maximum 10 shows per screen per day
     if (!editingShowtimeId) {
@@ -995,7 +1041,7 @@ export default function TheaterDashboardLayout() {
       ).length;
       if (existingCount >= 10) {
         alert(
-          `⚠️ Maximum Daily Show Limit Reached!\n\nYou have already scheduled 10 shows for this screen on ${formatIndianDate(newShowDate)}.\n\nThe daily limit is 10 shows per screen.`
+          `âš ï¸ Maximum Daily Show Limit Reached!\n\nYou have already scheduled 10 shows for this screen on ${formatIndianDate(newShowDate)}.\n\nThe daily limit is 10 shows per screen.`
         );
         return;
       }
@@ -1088,20 +1134,13 @@ export default function TheaterDashboardLayout() {
         const pId = localStorage.getItem("portalId") || "2";
         localStorage.setItem(`theater_showtimes_${pId}`, JSON.stringify(updated));
       }
-      triggerShowtimeToast(editingShowtimeId ? "✓ Showtime & ticket prices updated successfully!" : "✓ New showtime scheduled successfully!");
+      triggerShowtimeToast(editingShowtimeId ? "âœ“ Showtime & ticket prices updated successfully!" : "âœ“ New showtime scheduled successfully!");
       setEditingShowtimeId(null);
       setNewMovieTitle("");
     } catch (err) {
-      console.warn("Backend sync notice, saving locally:", err);
-      const updated = editingShowtimeId
-        ? showtimes.map((st) => (st.id === editingShowtimeId ? { ...st, ...showtimeData } : st))
-        : [...showtimes, { ...showtimeData, id: Date.now() }];
-      setShowtimes(updated);
-      const pId = localStorage.getItem("portalId") || "2";
-      localStorage.setItem(`theater_showtimes_${pId}`, JSON.stringify(updated));
-      triggerShowtimeToast(editingShowtimeId ? "✓ Showtime & ticket prices updated successfully!" : "✓ New showtime scheduled successfully!");
-      setEditingShowtimeId(null);
-      setNewMovieTitle("");
+      console.error("Backend error saving showtime:", err);
+      const errMsg = err.response?.data?.message || err.message || "Failed to schedule showtime on server";
+      alert(`⚠️ Could not save showtime to backend database: ${errMsg}\n\nPlease check server connection.`);
     }
   };
 
@@ -1244,7 +1283,7 @@ export default function TheaterDashboardLayout() {
 
     if (existingStaff) {
       alert(
-        `⚠️ Duplicate Staff Member Blocked!\n\n${staffEmail} is already registered as '${existingStaff.role}' in this theater portal.\n\nA single person cannot be added for multiple roles in the same portal.`
+        `âš ï¸ Duplicate Staff Member Blocked!\n\n${staffEmail} is already registered as '${existingStaff.role}' in this theater portal.\n\nA single person cannot be added for multiple roles in the same portal.`
       );
       return;
     }
@@ -1256,7 +1295,7 @@ export default function TheaterDashboardLayout() {
     );
     if (existingEmp) {
       alert(
-        `⚠️ Duplicate Employee ID Blocked!\n\nEmp ID '${assignedEmpId}' is already assigned to '${existingEmp.name}' in this theater portal.\n\nEach employee in this portal must have a unique Employee ID.`
+        `âš ï¸ Duplicate Employee ID Blocked!\n\nEmp ID '${assignedEmpId}' is already assigned to '${existingEmp.name}' in this theater portal.\n\nEach employee in this portal must have a unique Employee ID.`
       );
       return;
     }
@@ -1303,7 +1342,7 @@ export default function TheaterDashboardLayout() {
     const updatedList = [newStaffMember, ...staffList];
     setStaffList(updatedList);
 
-    alert(`✅ Staff Added Directly to Database & Roster!\n\nMember Name: ${fullName}\nRole: ${staffRole}\nEmp ID / Username: ${assignedEmpId}\nEmail Address: ${staffEmail}\nPhone: ${staffPhone}`);
+    alert(`âœ… Staff Added Directly to Database & Roster!\n\nMember Name: ${fullName}\nRole: ${staffRole}\nEmp ID / Username: ${assignedEmpId}\nEmail Address: ${staffEmail}\nPhone: ${staffPhone}`);
     setStaffFirstName("");
     setStaffLastName("");
     setStaffName("");
@@ -1325,7 +1364,7 @@ export default function TheaterDashboardLayout() {
 
     if (existingStaff) {
       alert(
-        `⚠️ Duplicate Staff Invitation Blocked!\n\n${staffEmail} has already been assigned/invited as '${existingStaff.role}' in this theater portal.\n\nA single person cannot be invited for multiple roles in the same portal.`
+        `âš ï¸ Duplicate Staff Invitation Blocked!\n\n${staffEmail} has already been assigned/invited as '${existingStaff.role}' in this theater portal.\n\nA single person cannot be invited for multiple roles in the same portal.`
       );
       return;
     }
@@ -1476,9 +1515,10 @@ export default function TheaterDashboardLayout() {
 
   // DYNAMIC REVENUE & CAPACITY CALCULATIONS ACROSS ALL SCREENS
   const totalCapacitySum = screens.reduce((acc, scr) => acc + getScreenCapacity(scr.id), 0);
-  const totalShowtimesCount = showtimes.length;
-
+  
   const todayISO = new Date().toISOString().split("T")[0];
+  const totalShowtimesCount = showtimes.filter((st) => !st.showDate || st.showDate >= todayISO).length;
+
   const todayShowtimes = showtimes.filter((st) => {
     const d = st.showDate || st.date;
     return d && (d === todayISO || String(d).startsWith(todayISO));
@@ -1883,48 +1923,87 @@ export default function TheaterDashboardLayout() {
     <div style={{ height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* DEDICATED THEATER NAVBAR */}
       <div className="organizer-layout-navbar" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000 }}>
-        <TheaterNavbar theaterName={cinemaName} />
+        <TheaterNavbar 
+          theaterName={cinemaName} 
+          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
+        />
       </div>
 
-      {/* LEFT SIDEBAR */}
-      <div
-        className="bg-white border-end"
+      {/* MOBILE BACKDROP */}
+      {isMobileSidebarOpen && (
+        <div
+          className="d-md-none"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1040,
+            transition: "opacity 0.25s ease",
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* LEFT SIDEBAR (DESKTOP FIXED + MOBILE SLIDE-OVER DRAWER) */}
+      <aside
+        className={`bg-white border-end theater-owner-sidebar ${isMobileSidebarOpen ? "theater-owner-sidebar-open" : ""}`}
         style={{
           position: "fixed",
           top: "50px",
           left: 0,
           width: "250px",
           height: "calc(100vh - 50px)",
-          zIndex: 999,
+          zIndex: 1050,
           overflowY: "auto",
+          transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: isMobileSidebarOpen ? "4px 0 24px rgba(0, 0, 0, 0.18)" : "none",
         }}
       >
-        <div className="pt-3">
-          <div className="px-3 pb-3 mb-2 border-bottom d-flex align-items-center gap-2">
-            <BsFilm size={22} className="text-primary" />
-            <span className="fw-bold text-dark fs-6">{cinemaName}</span>
+        <div className="pt-3 pb-4">
+          <div className="px-3 pb-3 mb-2 border-bottom d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-2 text-truncate">
+              <BsFilm size={22} className="text-primary flex-shrink-0" />
+              <span className="fw-bold text-dark fs-6 text-truncate">{cinemaName}</span>
+            </div>
+            {/* Mobile close button */}
+            <button
+              type="button"
+              className="d-md-none btn btn-sm btn-light border-0 p-1 text-muted"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close menu"
+            >
+              <BsXLg size={16} />
+            </button>
           </div>
 
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`organizer-sidebar-item w-100 border-0 bg-transparent text-start d-flex align-items-center gap-3 px-3 py-2 mb-2 ${activeTab === item.id ? "active mx-3" : "text-dark mx-3"
+          <div className="px-2">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setSearchParams({ tab: item.id });
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={`organizer-sidebar-item w-100 border-0 bg-transparent text-start d-flex align-items-center gap-3 px-3 py-2 mb-2 ${
+                  activeTab === item.id ? "active" : "text-dark"
                 }`}
-              style={{ borderRadius: "8px" }}
-            >
-              <span style={{ fontSize: "18px" }}>{item.icon}</span>
-              <span style={{ fontSize: "15px", fontWeight: 550 }}>{item.label}</span>
-            </button>
-          ))}
+                style={{ borderRadius: "8px" }}
+              >
+                <span style={{ fontSize: "18px" }}>{item.icon}</span>
+                <span style={{ fontSize: "15px", fontWeight: 550 }}>{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </aside>
 
       {/* MAIN CONTENT AREA */}
       <main
-        className="p-3"
+        className="theater-owner-main p-2 p-md-3"
         style={{
-          marginLeft: "250px",
           marginTop: "50px",
           backgroundColor: "#f8f9fa",
           height: "calc(100vh - 50px)",
@@ -1937,29 +2016,29 @@ export default function TheaterDashboardLayout() {
       >
         {/* PAGE HEADER (SHOWN ONLY ON OVERVIEW HOME AND SCREENS PAGES) */}
         {(activeTab === "overview" || activeTab === "screens") && (
-          <div className="d-flex align-items-center justify-content-between mb-3 bg-white p-3 rounded-3 shadow-sm border flex-shrink-0">
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border flex-shrink-0">
             <div className="d-flex align-items-center gap-2">
-              <BsFilm size={24} className="text-primary" />
+              <BsFilm size={22} className="text-primary flex-shrink-0" />
               {isEditingCinemaName ? (
                 <input
                   type="text"
-                  className="form-control form-control-sm fw-bold fs-4 text-dark"
+                  className="form-control form-control-sm fw-bold fs-5 text-dark"
                   value={cinemaName}
                   onChange={(e) => setCinemaName(e.target.value)}
                   onBlur={() => setIsEditingCinemaName(false)}
                   autoFocus
                 />
               ) : (
-                <h2 className="fw-bold mb-0 text-dark fs-4 d-flex align-items-center gap-2">
-                  {cinemaName}
+                <h2 className="fw-bold mb-0 text-dark fs-5 d-flex align-items-center gap-2">
+                  <span className="text-truncate" style={{ maxWidth: "220px" }}>{cinemaName}</span>
                   <button className="btn btn-sm text-muted p-0 ms-1" onClick={() => setIsEditingCinemaName(true)} title="Edit Cinema Name">
-                    <BsPencilSquare size={16} />
+                    <BsPencilSquare size={15} />
                   </button>
                 </h2>
               )}
             </div>
-            <button className="btn btn-primary px-3 py-2 rounded-3 fw-bold d-flex align-items-center gap-2" onClick={() => setActiveTab("screens")}>
-              <BsPlusLg /> Add Screen
+            <button className="btn btn-sm btn-primary px-3 py-2 rounded-3 fw-bold d-flex align-items-center gap-2" onClick={() => setActiveTab("screens")}>
+              <BsPlusLg size={14} /> <span>Add Screen</span>
             </button>
           </div>
         )}
@@ -1967,56 +2046,35 @@ export default function TheaterDashboardLayout() {
         {/* --- 1. OVERVIEW DASHBOARD TAB (DYNAMIC DATA ONLY) --- */}
         {activeTab === "overview" && (
           <div className="flex-grow-1 overflow-auto pe-1" style={{ minHeight: 0 }}>
-            <div className="row g-3 mb-4">
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">TOTAL SCREENS</span>
-                    <span className="p-2 bg-light text-primary rounded-3"><BsTv size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">{screens.length} Screens</h3>
-                  <small className="text-muted">Active halls</small>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">TOTAL SEAT CAPACITY</span>
-                    <span className="p-2 bg-light text-success rounded-3"><BsPeople size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">{totalCapacitySum} Seats</h3>
-                  <small className="text-muted">Dynamic seats from customized layouts</small>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">TODAY'S SHOWTIMES</span>
-                    <span className="p-2 bg-light text-warning rounded-3"><BsClockHistory size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">
-                    {todayShowtimesCount} {todayShowtimesCount === 1 ? "Show" : "Shows"}
-                  </h3>
-                  <small className="text-muted">
-                    {totalShowtimesCount} total scheduled shows
-                  </small>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">REAL BOX OFFICE REVENUE</span>
-                    <span className="p-2 bg-light text-info rounded-3"><BsCashCoin size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">₹{realBoxOfficeRevenue.toLocaleString()}</h3>
-                  <small className="text-muted">
-                    {realTicketsSold > 0 ? `${realTicketsSold} tickets sold (Live POS)` : "Real-time ticket sales (₹0)"}
-                  </small>
-                </div>
-              </div>
+            <div className="sa-page-cards four mb-4">
+              <Metric 
+                icon={<BsTv />} 
+                label="Total Screens" 
+                value={screens.length} 
+                subtitle="Active halls"
+                onClick={() => setActiveTab("screens")}
+              />
+              <Metric 
+                icon={<BsPeople />} 
+                label="Total Seat Capacity" 
+                value={Number(totalCapacitySum).toLocaleString("en-IN")} 
+                subtitle="Dynamic seats from customized layouts"
+                onClick={() => setActiveTab("layouts")}
+              />
+              <Metric 
+                icon={<BsClockHistory />} 
+                label="Today's Showtimes" 
+                value={todayShowtimesCount} 
+                subtitle={`${totalShowtimesCount} total scheduled shows`}
+                onClick={() => setActiveTab("showtimes")}
+              />
+              <Metric 
+                icon={<BsCashCoin />} 
+                label="Real Box Office Revenue" 
+                value={`₹${Number(realBoxOfficeRevenue || 0).toLocaleString("en-IN")}`} 
+                subtitle={realTicketsSold > 0 ? `${realTicketsSold} tickets sold (Live POS)` : "Real-time ticket sales (₹0)"}
+                onClick={() => setActiveTab("analytics")}
+              />
             </div>
 
             <div className="card border-0 shadow-sm p-4 bg-white rounded-3 mb-4">
@@ -2072,7 +2130,9 @@ export default function TheaterDashboardLayout() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small text-dark">📽️ Projection Technology *</label>
+                  <label className="form-label fw-bold small text-dark d-flex align-items-center gap-1">
+                    <BsTv className="text-primary" /> Projection Technology *
+                  </label>
                   <select
                     className={`form-select ${!newProjection ? "text-secondary font-normal" : "fw-bold text-dark"}`}
                     value={newProjection}
@@ -2097,7 +2157,9 @@ export default function TheaterDashboardLayout() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small text-dark">🔊 Sound System *</label>
+                  <label className="form-label fw-bold small text-dark d-flex align-items-center gap-1">
+                    <BsVolumeUp className="text-primary" /> Sound System *
+                  </label>
                   <select
                     className={`form-select ${!newSound ? "text-secondary font-normal" : "fw-bold text-dark"}`}
                     value={newSound}
@@ -2122,7 +2184,9 @@ export default function TheaterDashboardLayout() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small text-dark">🎬 Screen Format *</label>
+                  <label className="form-label fw-bold small text-dark d-flex align-items-center gap-1">
+                    <BsFilm className="text-primary" /> Screen Format *
+                  </label>
                   <select
                     className={`form-select ${!newFormat ? "text-secondary font-normal" : "fw-bold text-dark"}`}
                     value={newFormat}
@@ -2174,28 +2238,28 @@ export default function TheaterDashboardLayout() {
                   <div className="col-md-6 col-lg-4" key={scr.id}>
                     <div className="border rounded-3 p-3 bg-white shadow-sm h-100 d-flex flex-column justify-content-between">
                       <div>
-                        <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                          <h5 className="fw-bold text-dark mb-0 text-truncate me-2">{scr.screenName}</h5>
-                          <span className="badge bg-primary-subtle text-primary border border-primary px-2 py-1 small fw-bold text-truncate" style={{ maxWidth: "150px" }} title={getProjectionBadge(scr)}>
+                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                          <h5 className="fw-bold text-dark mb-0 text-truncate" style={{ maxWidth: "160px" }}>{scr.screenName}</h5>
+                          <span className="badge bg-primary-subtle text-primary border border-primary px-2 py-1 small fw-bold text-truncate" style={{ maxWidth: "100%" }} title={getProjectionBadge(scr)}>
                             {getProjectionBadge(scr)}
                           </span>
                         </div>
 
                         <div className="bg-light p-3 rounded-3 border mb-3 small">
                           <div className="d-flex align-items-center gap-2 text-dark mb-2">
-                            <span>📽️</span>
+                            <BsTv className="text-primary flex-shrink-0" />
                             <span className="text-muted">Projection:</span>
-                            <strong className="text-dark">{scr.projectionType || "4K Dual Laser"}</strong>
+                            <strong className="text-dark text-truncate">{scr.projectionType || "4K Dual Laser"}</strong>
                           </div>
                           <div className="d-flex align-items-center gap-2 text-dark mb-2">
-                            <span>🔊</span>
+                            <BsVolumeUp className="text-primary flex-shrink-0" />
                             <span className="text-muted">Sound:</span>
-                            <strong className="text-dark">{scr.soundSystem || "Dolby Digital"}</strong>
+                            <strong className="text-dark text-truncate">{scr.soundSystem || "Dolby Digital"}</strong>
                           </div>
                           <div className="d-flex align-items-center gap-2 text-dark">
-                            <span>🎬</span>
+                            <BsFilm className="text-primary flex-shrink-0" />
                             <span className="text-muted">Format:</span>
-                            <strong className="text-dark">{scr.screenFormat || scr.screenType || "Standard 2D"}</strong>
+                            <strong className="text-dark text-truncate">{scr.screenFormat || scr.screenType || "Standard 2D"}</strong>
                           </div>
                         </div>
 
@@ -2251,13 +2315,13 @@ export default function TheaterDashboardLayout() {
                   <p className="text-muted small mb-0">Each screen has its own isolated layout. Saved layouts persist permanently!</p>
                 </div>
 
-                <div className="d-flex align-items-center gap-2">
-                  <label className="fw-bold text-dark small mb-0">Active Screen Layout:</label>
+                <div className="d-flex flex-wrap align-items-center gap-2 w-100 w-sm-auto justify-content-between justify-content-sm-start">
+                  <label className="fw-bold text-dark small mb-0 text-nowrap">Active Screen Layout:</label>
                   <select
-                    className="form-select form-select-sm fw-bold border-primary"
+                    className="form-select form-select-sm fw-bold border-primary flex-grow-1 flex-sm-grow-0"
                     value={selectedScreen ? selectedScreen.id : ""}
                     onChange={(e) => handleScreenChange(e.target.value)}
-                    style={{ width: "230px" }}
+                    style={{ maxWidth: "100%", width: "230px" }}
                   >
                     {screens.map((scr) => (
                       <option key={scr.id} value={scr.id}>
@@ -2271,8 +2335,12 @@ export default function TheaterDashboardLayout() {
 
             {/* FORM TO ADD PHYSICAL CLASS SECTION */}
             <div className="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
-              <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
-                <BsPlusCircle className="text-primary" /> Add Physical Seat Class for {selectedScreen ? selectedScreen.screenName : "Screen"}
+              <h5 className="fw-bold text-dark mb-3 d-flex flex-wrap align-items-center gap-2">
+                <BsPlusCircle className="text-primary flex-shrink-0" />
+                <span>Add Physical Seat Class for</span>
+                <span className="text-primary text-truncate" style={{ maxWidth: "200px" }}>
+                  {selectedScreen ? selectedScreen.screenName : "Screen"}
+                </span>
               </h5>
 
               <form className="row g-3" onSubmit={handleAddCustomSection}>
@@ -2366,7 +2434,7 @@ export default function TheaterDashboardLayout() {
                   className={`btn btn-sm fw-bold ${isDeleteToolActive ? "btn-danger" : "btn-outline-light"}`}
                   onClick={() => setIsDeleteToolActive(!isDeleteToolActive)}
                 >
-                  ❌ Delete / Restore Seat {isDeleteToolActive && "✓ (Auto-Renumbering Active)"}
+                  <BsTrash className="me-1" /> Delete / Restore Seat {isDeleteToolActive && "✓ (Active)"}
                 </button>
               </div>
 
@@ -2381,9 +2449,9 @@ export default function TheaterDashboardLayout() {
             </div>
 
             {/* SEAT BUILDER PREVIEW */}
-            <div className="card border-0 shadow-sm rounded-3 p-4 bg-white">
-              <div className="text-center bg-dark text-white py-2 mb-4 rounded-3 small fw-bold shadow-sm">
-                SCREEN THIS WAY 🎬 ({selectedScreen ? selectedScreen.screenName : "Screen 1"}) — {selectedScreen ? selectedScreen.screenType : "Dolby Atmos 4K"}
+            <div className="card border-0 shadow-sm rounded-3 p-3 p-md-4 bg-white overflow-auto">
+              <div className="text-center bg-dark text-white py-2 mb-4 rounded-3 small fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                <BsFilm className="text-warning" /> SCREEN THIS WAY ({selectedScreen ? selectedScreen.screenName : "Screen 1"}) — {selectedScreen ? selectedScreen.screenType : "Dolby Atmos 4K"}
               </div>
 
               {customSections.length === 0 ? (
@@ -2933,71 +3001,54 @@ export default function TheaterDashboardLayout() {
 
         {/* --- LIVE SEAT LAYOUT & OCCUPANCY TAB (CLEAN FULL-PAGE VIEW, NO SUB-BOXES) --- */}
         {activeTab === "live-occupancy" && (
-          <LiveSeatBookingMain
-            screens={screens}
-            showtimes={showtimes}
-            selectedScreenId={selectedShowScreenId}
-            onScreenChange={setSelectedShowScreenId}
-            selectedShowtimeId={editingShowtimeId}
-            onShowtimeChange={setEditingShowtimeId}
-            liveMovieSearch={liveMovieSearch}
-            setLiveMovieSearch={setLiveMovieSearch}
-            getLayoutForTargetScreen={getLayoutForTargetScreen}
-            bookedSeatsMap={ownerBookedSeatsMap}
-            formatIndianDate={formatIndianDate}
-            ROW_LETTERS={ROW_LETTERS}
-            getCanonicalSection={getCanonicalSection}
-          />
+          <div className="flex-grow-1 overflow-auto pe-1" style={{ minHeight: 0 }}>
+            <LiveSeatBookingMain
+              screens={screens}
+              showtimes={showtimes}
+              selectedScreenId={selectedShowScreenId}
+              onScreenChange={setSelectedShowScreenId}
+              selectedShowtimeId={editingShowtimeId}
+              onShowtimeChange={setEditingShowtimeId}
+              liveMovieSearch={liveMovieSearch}
+              setLiveMovieSearch={setLiveMovieSearch}
+              getLayoutForTargetScreen={getLayoutForTargetScreen}
+              bookedSeatsMap={ownerBookedSeatsMap}
+              formatIndianDate={formatIndianDate}
+              ROW_LETTERS={ROW_LETTERS}
+              getCanonicalSection={getCanonicalSection}
+            />
+          </div>
         )}
 
         {/* --- 5. BOX OFFICE SALES TAB (DYNAMIC DATA & MOVIE-WISE BREAKDOWN) --- */}
         {activeTab === "analytics" && (
           <div className="flex-grow-1 overflow-auto pe-1" style={{ minHeight: 0 }}>
             {/* KPI SUMMARY CARDS */}
-            <div className="row g-3 mb-4">
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">TODAY'S TICKET SALES</span>
-                    <span className="p-2 bg-light text-warning rounded-3"><BsClockHistory size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">₹{totalTodayRevenue.toLocaleString()}</h3>
-                  <small className="text-muted">{totalTodayTickets} tickets sold today</small>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">OVERALL BOX OFFICE</span>
-                    <span className="p-2 bg-light text-success rounded-3"><BsCashCoin size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">₹{realBoxOfficeRevenue.toLocaleString()}</h3>
-                  <small className="text-muted">{realTicketsSold} total tickets sold in theater</small>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">RUNNING MOVIES</span>
-                    <span className="p-2 bg-light text-primary rounded-3"><BsFilm size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">{movieWiseSales.length} Titles</h3>
-                  <small className="text-muted">{todayShowtimesCount} shows running today</small>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span className="text-muted small fw-bold">THEATER CAPACITY</span>
-                    <span className="p-2 bg-light text-info rounded-3"><BsTv size={20} /></span>
-                  </div>
-                  <h3 className="fw-bold text-dark mb-0">{totalCapacitySum} Seats</h3>
-                  <small className="text-muted">Across {screens.length} active screens</small>
-                </div>
-              </div>
+            <div className="sa-page-cards four mb-4">
+              <Metric 
+                icon={<BsClockHistory />} 
+                label="Today's Ticket Sales" 
+                value={`₹${Number(totalTodayRevenue || 0).toLocaleString("en-IN")}`} 
+                subtitle={`${totalTodayTickets} tickets sold today`}
+              />
+              <Metric 
+                icon={<BsCashCoin />} 
+                label="Overall Box Office" 
+                value={`₹${Number(realBoxOfficeRevenue || 0).toLocaleString("en-IN")}`} 
+                subtitle={`${realTicketsSold} total tickets sold in theater`}
+              />
+              <Metric 
+                icon={<BsFilm />} 
+                label="Running Movies" 
+                value={movieWiseSales.length} 
+                subtitle={`${todayShowtimesCount} shows running today`}
+              />
+              <Metric 
+                icon={<BsCupStraw />} 
+                label="Today's F&B Revenue" 
+                value={`₹${Number(fbTodayRevenue || 0).toLocaleString("en-IN")}`} 
+                subtitle={`${fbTodayOrders} food & beverage orders`}
+              />
             </div>
 
             {/* SECTION 1: MOVIE-WISE SALES BREAKDOWN (TODAY'S SALE & OVERALL SALE) */}
@@ -3399,195 +3450,15 @@ export default function TheaterDashboardLayout() {
         {/* F&B CONCESSIONS TAB */}
         {activeTab === "concessions" && (
           <div className="flex-grow-1 overflow-auto pe-1" style={{ minHeight: 0 }}>
-            <div>
-              {/* TOP HEADER WITH STATS AND LIVE SYNC */}
-              <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                <div>
-                  <h4 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                    <BsCupStraw className="text-primary" /> Food & Beverage (F&B) Management
-                  </h4>
-                  <p className="text-muted small mb-0">
-                    Master snack & drink catalog synced in real-time with Branch Manager & Concession Counters.
-                  </p>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-success-subtle text-success border border-success px-3 py-2 fw-bold">
-                    ● Live Synced with Manager POS
-                  </span>
-                  <span className="badge bg-dark text-white px-3 py-2 fw-bold">
-                    {fnbItems.length} Total Items
-                  </span>
-                </div>
-              </div>
-
-              {/* ADD / EDIT F&B MENU ITEM FORM */}
-              <div className="card border-0 shadow-sm p-4 bg-white rounded-3 mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                    <BsCupStraw className="text-primary" /> {editingFoodId ? "Edit F&B Menu Item" : "Add New F&B Snack / Drink Item"}
-                  </h5>
-                  {editingFoodId && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-secondary fw-bold rounded-pill px-3"
-                      onClick={handleCancelFoodEdit}
-                    >
-                      ✕ Cancel Edit
-                    </button>
-                  )}
-                </div>
-                <form onSubmit={handleAddFoodItem} className="row g-3 align-items-end">
-                  <div className="col-md-4">
-                    <label className="form-label fw-bold small text-dark">Item Name *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. Cheese Popcorn / Cold Coffee"
-                      value={newFoodName}
-                      onChange={(e) => setNewFoodName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-3">
-                    <label className="form-label fw-bold small text-dark">Category</label>
-                    <select
-                      className="form-select"
-                      value={newFoodCategory}
-                      onChange={(e) => setNewFoodCategory(e.target.value)}
-                    >
-                      <option value="Snacks">Snacks</option>
-                      <option value="Popcorn">Popcorn</option>
-                      <option value="Beverages">Beverages</option>
-                      <option value="Combos">Combos</option>
-                      <option value="Desserts">Desserts</option>
-                    </select>
-                  </div>
-                  <div className="col-md-2">
-                    <label className="form-label fw-bold small text-dark">Portion Size</label>
-                    <select
-                      className="form-select"
-                      value={newFoodSize}
-                      onChange={(e) => setNewFoodSize(e.target.value)}
-                    >
-                      <option value="Small">Small</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Large">Large</option>
-                      <option value="Regular">Regular</option>
-                      <option value="500ml">500ml</option>
-                      <option value="Combo Pack">Combo Pack</option>
-                    </select>
-                  </div>
-                  <div className="col-md-2">
-                    <label className="form-label fw-bold small text-dark">Price (₹) *</label>
-                    <input
-                      type="number"
-                      className="form-control fw-bold"
-                      value={newFoodPrice}
-                      onChange={(e) => setNewFoodPrice(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-1 d-flex gap-2">
-                    <button type="submit" className={`btn ${editingFoodId ? "btn-primary" : "btn-success"} w-100 fw-bold`}>
-                      {editingFoodId ? "Save" : "+ Add"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* SEARCH & CATEGORY FILTER BAR */}
-              <div className="card border-0 shadow-sm p-3 bg-white rounded-3 mb-4">
-                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                  <div className="d-flex align-items-center gap-2 flex-wrap">
-                    {["All", "Popcorn", "Snacks", "Beverages", "Combos", "Desserts"].map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        className={`btn btn-sm rounded-pill px-3 fw-bold ${fnbCategoryFilter === cat
-                            ? "btn-primary shadow-sm"
-                            : "btn-outline-secondary"
-                          }`}
-                        onClick={() => setFnbCategoryFilter(cat)}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ maxWidth: "260px" }} className="w-100">
-                    <input
-                      type="text"
-                      className="form-control form-control-sm"
-                      placeholder="Search menu item..."
-                      value={fnbSearchQuery}
-                      onChange={(e) => setFnbSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* ACTIVE MENU GRID */}
-              <div className="card border-0 shadow-sm p-4 bg-white rounded-3">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="fw-bold text-dark mb-0">Active Menu Items</h5>
-                  <span className="text-muted small fw-bold">
-                    Showing {fnbItems.filter((item) => (fnbCategoryFilter === "All" || item.category === fnbCategoryFilter) && (!fnbSearchQuery.trim() || item.name.toLowerCase().includes(fnbSearchQuery.toLowerCase()))).length} items
-                  </span>
-                </div>
-
-                <div className="row g-3">
-                  {fnbItems
-                    .filter((item) => {
-                      const matchCat = fnbCategoryFilter === "All" || item.category === fnbCategoryFilter;
-                      const matchQuery = !fnbSearchQuery.trim() || item.name.toLowerCase().includes(fnbSearchQuery.toLowerCase());
-                      return matchCat && matchQuery;
-                    })
-                    .map((item) => (
-                      <div className="col-md-3 col-sm-6" key={item.id}>
-                        <div className={`border rounded-3 p-3 bg-light text-center h-100 d-flex flex-column justify-content-between shadow-sm transition-all ${editingFoodId === item.id ? "border-primary border-2 shadow" : ""}`}>
-                          <div>
-                            <BsCupStraw size={28} className="text-warning mb-2" />
-                            <h6 className="fw-bold text-dark mb-1">{item.name}</h6>
-                            <div className="d-flex justify-content-center gap-1 mb-2 flex-wrap">
-                              <span className="badge bg-secondary">{item.category}</span>
-                              <span className="badge bg-info text-dark">{item.size || "Regular"}</span>
-                              <span className={`badge ${item.inStock !== false ? "bg-success" : "bg-danger"}`}>
-                                {item.inStock !== false ? "In Stock" : "Out of Stock"}
-                              </span>
-                            </div>
-                            <h5 className="fw-bold text-success mb-0">₹{item.price}</h5>
-                          </div>
-                          <div className="d-flex gap-1 mt-3">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-primary flex-grow-1 fw-bold"
-                              title="Edit item"
-                              onClick={() => handleEditFoodItemClick(item)}
-                            >
-                              <BsPencil size={12} /> Edit
-                            </button>
-                            <button
-                              type="button"
-                              className={`btn btn-sm flex-grow-1 fw-bold ${item.inStock !== false ? "btn-outline-secondary" : "btn-outline-success"}`}
-                              onClick={() => handleToggleFoodStock(item.id)}
-                            >
-                              {item.inStock !== false ? "Out" : "In"}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-danger px-2 fw-bold"
-                              title="Delete item"
-                              onClick={() => handleRemoveFoodItem(item.id)}
-                            >
-                              <BsTrash size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
+            <div className="mb-4">
+              <h4 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <BsCupStraw className="text-primary" /> Food & Beverage (F&B) Management
+              </h4>
+              <p className="text-muted small mb-0">
+                Manage your menu items, stock levels, variants, and pricing from here.
+              </p>
             </div>
+            <TheaterManagerMenuEditor theaterId={selectedTheater?.id || localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2"} />
           </div>
         )}
       </main>

@@ -13,7 +13,15 @@ export default function MovieForm() {
   const [persons, setPersons] = useState([]);
   
   const [formData, setFormData] = useState({
-    language: "", durationMinutes: "", certification: "U", releaseDate: "",
+    title: "",
+    posterUrl: "",
+    trailerUrl: "",
+    synopsis: "",
+    genre: "",
+    language: "",
+    durationMinutes: "",
+    certification: "U",
+    releaseDate: "",
     castAndCrewIds: []
   });
 
@@ -192,8 +200,26 @@ export default function MovieForm() {
         </div>
 
         <div>
-          <label style={{ display: "block", marginBottom: "8px", color: "#475569", fontWeight: "600", fontSize: "0.9rem" }}>Duration (Minutes)</label>
-          <input type="number" name="durationMinutes" value={formData.durationMinutes} onChange={handleInputChange} style={{ width: "100%", padding: "10px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} />
+          <label style={{ display: "block", marginBottom: "8px", color: "#475569", fontWeight: "600", fontSize: "0.9rem" }}>Duration</label>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <input type="number" min="0" value={Math.floor((parseInt(formData.durationMinutes) || 0) / 60) || ""} onChange={(e) => {
+                const h = parseInt(e.target.value) || 0;
+                const m = (parseInt(formData.durationMinutes) || 0) % 60;
+                setFormData(prev => ({ ...prev, durationMinutes: (h * 60) + m }));
+              }} placeholder="0" style={{ width: "100%", padding: "10px 15px", paddingRight: "40px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} />
+              <span style={{ position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "0.85rem", pointerEvents: "none" }}>hrs</span>
+            </div>
+            <div style={{ flex: 1, position: "relative" }}>
+              <input type="number" min="0" max="59" value={(parseInt(formData.durationMinutes) || 0) % 60 || ""} onChange={(e) => {
+                let m = parseInt(e.target.value) || 0;
+                if (m > 59) m = 59;
+                const h = Math.floor((parseInt(formData.durationMinutes) || 0) / 60);
+                setFormData(prev => ({ ...prev, durationMinutes: (h * 60) + m }));
+              }} placeholder="0" style={{ width: "100%", padding: "10px 15px", paddingRight: "40px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} />
+              <span style={{ position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "0.85rem", pointerEvents: "none" }}>min</span>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -210,33 +236,94 @@ export default function MovieForm() {
           <input type="date" name="releaseDate" value={formData.releaseDate} onChange={handleInputChange} style={{ width: "100%", padding: "10px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} />
         </div>
 
-        <div style={{ gridColumn: "1 / -1" }}>
-          <label style={{ display: "block", marginBottom: "8px", color: "#475569", fontWeight: "600", fontSize: "0.9rem" }}>Cast & Crew (Select multiple)</label>
-          <Select 
-            isMulti
-            options={persons.map(p => ({ value: p.id, label: `${p.name} (${p.primaryRole})` }))}
-            value={formData.castAndCrewIds.map(id => {
-              const p = persons.find(person => person.id === id);
-              return p ? { value: p.id, label: `${p.name} (${p.primaryRole})` } : null;
-            }).filter(Boolean)}
-            onChange={(selectedOptions) => {
-              setFormData(prev => ({ 
-                ...prev, 
-                castAndCrewIds: selectedOptions ? selectedOptions.map(o => o.value) : [] 
-              }));
-            }}
-            placeholder="Search and select cast & crew..."
-            styles={{
-              control: (base) => ({
-                ...base,
-                padding: "2px",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                boxShadow: "none",
-                "&:hover": { borderColor: "#94a3b8" }
-              })
-            }}
-          />
+        <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "8px", color: "#475569", fontWeight: "600", fontSize: "0.9rem" }}>Cast (Select multiple)</label>
+            <Select 
+              isMulti
+              options={persons.filter(p => {
+                const role = (p.primaryRole || "").toLowerCase();
+                return role.includes("actor") || role.includes("actress");
+              }).map(p => ({ value: p.id, label: `${p.name} (${p.primaryRole})` }))}
+              value={formData.castAndCrewIds.map(id => {
+                const p = persons.find(person => person.id === id);
+                if (!p) return null;
+                const role = (p.primaryRole || "").toLowerCase();
+                if (role.includes("actor") || role.includes("actress")) {
+                  return { value: p.id, label: `${p.name} (${p.primaryRole})` };
+                }
+                return null;
+              }).filter(Boolean)}
+              onChange={(selectedOptions) => {
+                const selectedIds = selectedOptions ? selectedOptions.map(o => o.value) : [];
+                // Find IDs that are currently selected but belong ONLY to the crew side
+                const crewIdsToKeep = formData.castAndCrewIds.filter(id => {
+                  const p = persons.find(person => person.id === id);
+                  if (!p) return false;
+                  const role = (p.primaryRole || "").toLowerCase();
+                  // Keep if they are NOT cast
+                  return !(role.includes("actor") || role.includes("actress"));
+                });
+                setFormData(prev => ({ 
+                  ...prev, 
+                  castAndCrewIds: [...new Set([...selectedIds, ...crewIdsToKeep])] 
+                }));
+              }}
+              placeholder="Search and select cast..."
+              styles={{
+                control: (base) => ({
+                  ...base, padding: "2px", border: "1px solid #cbd5e1", borderRadius: "8px", boxShadow: "none",
+                  "&:hover": { borderColor: "#94a3b8" }
+                })
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", marginBottom: "8px", color: "#475569", fontWeight: "600", fontSize: "0.9rem" }}>Crew (Select multiple)</label>
+            <Select 
+              isMulti
+              options={persons.filter(p => {
+                const role = (p.primaryRole || "").toLowerCase();
+                const roles = role.split(',').map(r => r.trim());
+                // Include if they have any role that is NOT actor/actress
+                return roles.some(r => !(r.includes("actor") || r.includes("actress")));
+              }).map(p => ({ value: p.id, label: `${p.name} (${p.primaryRole})` }))}
+              value={formData.castAndCrewIds.map(id => {
+                const p = persons.find(person => person.id === id);
+                if (!p) return null;
+                const role = (p.primaryRole || "").toLowerCase();
+                const roles = role.split(',').map(r => r.trim());
+                if (roles.some(r => !(r.includes("actor") || r.includes("actress")))) {
+                  return { value: p.id, label: `${p.name} (${p.primaryRole})` };
+                }
+                return null;
+              }).filter(Boolean)}
+              onChange={(selectedOptions) => {
+                const selectedIds = selectedOptions ? selectedOptions.map(o => o.value) : [];
+                // Find IDs that are currently selected but belong ONLY to the cast side
+                const castIdsToKeep = formData.castAndCrewIds.filter(id => {
+                  const p = persons.find(person => person.id === id);
+                  if (!p) return false;
+                  const role = (p.primaryRole || "").toLowerCase();
+                  const roles = role.split(',').map(r => r.trim());
+                  // Keep if they are ONLY cast (no crew roles)
+                  return !roles.some(r => !(r.includes("actor") || r.includes("actress")));
+                });
+                setFormData(prev => ({ 
+                  ...prev, 
+                  castAndCrewIds: [...new Set([...selectedIds, ...castIdsToKeep])] 
+                }));
+              }}
+              placeholder="Search and select crew..."
+              styles={{
+                control: (base) => ({
+                  ...base, padding: "2px", border: "1px solid #cbd5e1", borderRadius: "8px", boxShadow: "none",
+                  "&:hover": { borderColor: "#94a3b8" }
+                })
+              }}
+            />
+          </div>
         </div>
 
         <div style={{ gridColumn: "1 / -1" }}>

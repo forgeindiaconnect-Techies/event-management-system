@@ -1,9 +1,13 @@
 package com.fic.event_management_system.service;
 
 import com.fic.event_management_system.entity.Movie;
+import com.fic.event_management_system.entity.Showtime;
 import com.fic.event_management_system.repository.MovieRepository;
+import com.fic.event_management_system.repository.ShowtimeRepository;
+import com.fic.event_management_system.repository.ShowtimeSeatBookingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,10 +16,16 @@ import java.util.Optional;
 public class MovieService {
 
     private final MovieRepository movieRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final ShowtimeSeatBookingRepository showtimeSeatBookingRepository;
 
     @Autowired
-    public MovieService(MovieRepository movieRepository) {
+    public MovieService(MovieRepository movieRepository,
+                        ShowtimeRepository showtimeRepository,
+                        ShowtimeSeatBookingRepository showtimeSeatBookingRepository) {
         this.movieRepository = movieRepository;
+        this.showtimeRepository = showtimeRepository;
+        this.showtimeSeatBookingRepository = showtimeSeatBookingRepository;
     }
 
     public List<Movie> getAllMovies() {
@@ -50,7 +60,21 @@ public class MovieService {
     }
 
     @SuppressWarnings("null")
+    @Transactional
     public void deleteMovie(Long id) {
+        Optional<Movie> movieOpt = movieRepository.findById(id);
+        if (movieOpt.isPresent()) {
+            Movie movie = movieOpt.get();
+            List<Showtime> showtimes = showtimeRepository.findByMovieId(id);
+            if (showtimes == null || showtimes.isEmpty()) {
+                showtimes = showtimeRepository.findByMovieTitle(movie.getTitle());
+            }
+            if (showtimes != null && !showtimes.isEmpty()) {
+                List<Long> stIds = showtimes.stream().map(Showtime::getId).toList();
+                showtimeSeatBookingRepository.deleteByShowtimeIdIn(stIds);
+                showtimeRepository.deleteAll(showtimes);
+            }
+        }
         movieRepository.deleteById(id);
     }
 }

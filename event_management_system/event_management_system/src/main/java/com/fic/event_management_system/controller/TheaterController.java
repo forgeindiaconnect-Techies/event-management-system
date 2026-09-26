@@ -2,6 +2,7 @@ package com.fic.event_management_system.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import com.fic.event_management_system.entity.*;
@@ -42,6 +43,12 @@ public class TheaterController {
 
     @Autowired
     private TheaterUserRepository theaterUserRepository;
+
+    @Autowired
+    private com.fic.event_management_system.service.TheaterNotificationService theaterNotificationService;
+
+    @Autowired
+    private com.fic.event_management_system.service.TheaterEmailService theaterEmailService;
 
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
@@ -376,6 +383,7 @@ public class TheaterController {
         return ResponseEntity.notFound().build();
     }
 
+    @Transactional
     @DeleteMapping("/screens/{screenId}")
     public ResponseEntity<?> deleteScreen(@PathVariable Long screenId) {
         if (screenRepository.existsById(screenId)) {
@@ -385,6 +393,8 @@ public class TheaterController {
             }
             List<Showtime> showtimes = showtimeRepository.findByScreenId(screenId);
             if (showtimes != null && !showtimes.isEmpty()) {
+                List<Long> stIds = showtimes.stream().map(Showtime::getId).toList();
+                showtimeSeatBookingRepository.deleteByShowtimeIdIn(stIds);
                 showtimeRepository.deleteAll(showtimes);
             }
             screenRepository.deleteById(screenId);
@@ -634,9 +644,11 @@ public class TheaterController {
         return ResponseEntity.notFound().build();
     }
 
+    @Transactional
     @DeleteMapping("/showtimes/{showtimeId}")
     public ResponseEntity<?> deleteShowtime(@PathVariable Long showtimeId) {
         if (showtimeRepository.existsById(showtimeId)) {
+            showtimeSeatBookingRepository.deleteByShowtimeId(showtimeId);
             showtimeRepository.deleteById(showtimeId);
             return ResponseEntity.ok(Map.of("message", "Showtime deleted"));
         }
@@ -727,20 +739,162 @@ public class TheaterController {
             map.put("ticketId", t.getTicketId());
             map.put("movieTitle", t.getMovieTitle());
             map.put("screenName", t.getScreenName());
-            map.put("date", t.getDate());
-            map.put("time", t.getTime());
+
+            String showDate = t.getDate();
+            String showTime = t.getTime();
+            String theaterName = t.getTheaterName();
+            if (t.getShowtimeId() != null) {
+                try {
+                    Optional<Showtime> stOpt = showtimeRepository.findById(t.getShowtimeId());
+                    if (stOpt.isPresent()) {
+                        Showtime st = stOpt.get();
+                        if ((showDate == null || showDate.isEmpty()) && st.getShowDate() != null) {
+                            showDate = st.getShowDate().toString();
+                        }
+                        if ((showTime == null || showTime.isEmpty()) && st.getStartTime() != null) {
+                            showTime = st.getStartTime().toString();
+                        }
+                        if ((theaterName == null || theaterName.isEmpty()) && st.getTheater() != null && st.getTheater().getName() != null) {
+                            theaterName = st.getTheater().getName();
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            map.put("date", showDate != null ? showDate : (t.getCreatedAt() != null ? t.getCreatedAt().toLocalDate().toString() : ""));
+            map.put("time", showTime != null ? showTime : "09:30 AM");
+            map.put("theaterName", theaterName != null ? theaterName : "Gopal Multiplex");
             map.put("showtimeId", t.getShowtimeId());
             map.put("seats", t.getSeats());
             map.put("amount", t.getAmount());
             map.put("customerName", t.getCustomerName());
             map.put("customerPhone", t.getCustomerPhone());
+            map.put("customerEmail", t.getCustomerEmail());
             map.put("paymentMode", t.getPaymentMode());
-            map.put("status", t.getStatus());
+            map.put("status", t.getStatus() != null ? t.getStatus() : "VALID");
             map.put("source", t.getSource());
             map.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
             response.add(map);
         }
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/sales-history/{id}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> deleteSale(@PathVariable Long id) {
+        if (movieBookedTicketRepository.existsById(id)) {
+            movieBookedTicketRepository.deleteById(id);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Sale deleted"));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/tickets/search")
+    public ResponseEntity<List<Map<String, Object>>> searchMovieTickets(
+            @RequestParam(required = false) String movieTitle,
+            @RequestParam(required = false) String emailOrPhone,
+            @RequestParam(required = false) String query) {
+
+        List<MovieBookedTicket> tickets = movieBookedTicketRepository.findAllByOrderByCreatedAtDesc();
+        List<Map<String, Object>> matched = new java.util.ArrayList<>();
+
+        String cleanTitle = movieTitle != null ? movieTitle.trim().toLowerCase() : "";
+        String cleanContact = emailOrPhone != null ? emailOrPhone.trim().toLowerCase() : "";
+        String cleanQuery = query != null ? query.trim().toLowerCase() : "";
+        String phoneDigits = cleanContact.replaceAll("[^0-9]", "");
+
+        for (MovieBookedTicket t : tickets) {
+            boolean titleMatches = true;
+            boolean contactMatches = true;
+
+            // Check title / ticketId match
+            if (!cleanTitle.isEmpty()) {
+                boolean matchesTitle = t.getMovieTitle() != null && t.getMovieTitle().toLowerCase().contains(cleanTitle);
+                boolean matchesTicketId = t.getTicketId() != null && t.getTicketId().toLowerCase().contains(cleanTitle);
+                if (!matchesTitle && !matchesTicketId) {
+                    titleMatches = false;
+                }
+            }
+
+            // Check contact match against phone, email, customer name, or ticketId
+            if (!cleanContact.isEmpty()) {
+                boolean matchesEmail = t.getCustomerEmail() != null && t.getCustomerEmail().toLowerCase().contains(cleanContact);
+                boolean matchesName = t.getCustomerName() != null && t.getCustomerName().toLowerCase().contains(cleanContact);
+                boolean matchesPhone = false;
+                if (t.getCustomerPhone() != null) {
+                    String tPhone = t.getCustomerPhone().replaceAll("[^0-9]", "");
+                    if (!phoneDigits.isEmpty() && tPhone.contains(phoneDigits)) {
+                        matchesPhone = true;
+                    } else if (t.getCustomerPhone().toLowerCase().contains(cleanContact)) {
+                        matchesPhone = true;
+                    }
+                }
+                boolean matchesTicketId = t.getTicketId() != null && t.getTicketId().toLowerCase().contains(cleanContact);
+
+                if (!matchesEmail && !matchesName && !matchesPhone && !matchesTicketId) {
+                    contactMatches = false;
+                }
+            }
+
+            // Omni-query match
+            if (!cleanQuery.isEmpty()) {
+                boolean qTitle = t.getMovieTitle() != null && t.getMovieTitle().toLowerCase().contains(cleanQuery);
+                boolean qTicketId = t.getTicketId() != null && t.getTicketId().toLowerCase().contains(cleanQuery);
+                boolean qName = t.getCustomerName() != null && t.getCustomerName().toLowerCase().contains(cleanQuery);
+                boolean qEmail = t.getCustomerEmail() != null && t.getCustomerEmail().toLowerCase().contains(cleanQuery);
+                boolean qPhone = t.getCustomerPhone() != null && t.getCustomerPhone().contains(cleanQuery);
+                if (!qTitle && !qTicketId && !qName && !qEmail && !qPhone) {
+                    titleMatches = false;
+                }
+            }
+
+            if (titleMatches && contactMatches) {
+                Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", t.getId());
+                map.put("ticketId", t.getTicketId());
+                map.put("movieTitle", t.getMovieTitle());
+                map.put("screenName", t.getScreenName());
+
+                String showDate = t.getDate();
+                String showTime = t.getTime();
+                String theaterName = t.getTheaterName();
+
+                if (t.getShowtimeId() != null) {
+                    try {
+                        Optional<Showtime> stOpt = showtimeRepository.findById(t.getShowtimeId());
+                        if (stOpt.isPresent()) {
+                            Showtime st = stOpt.get();
+                            if ((showDate == null || showDate.isEmpty()) && st.getShowDate() != null) {
+                                showDate = st.getShowDate().toString();
+                            }
+                            if ((showTime == null || showTime.isEmpty()) && st.getStartTime() != null) {
+                                showTime = st.getStartTime().toString();
+                            }
+                            if ((theaterName == null || theaterName.isEmpty()) && st.getTheater() != null && st.getTheater().getName() != null) {
+                                theaterName = st.getTheater().getName();
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                map.put("date", showDate != null ? showDate : (t.getCreatedAt() != null ? t.getCreatedAt().toLocalDate().toString() : ""));
+                map.put("time", showTime != null ? showTime : "09:30 AM");
+                map.put("theaterName", theaterName != null ? theaterName : "Gopal Multiplex");
+                map.put("showtimeId", t.getShowtimeId());
+                map.put("seats", t.getSeats());
+                map.put("amount", t.getAmount());
+                map.put("customerName", t.getCustomerName());
+                map.put("customerPhone", t.getCustomerPhone());
+                map.put("customerEmail", t.getCustomerEmail());
+                map.put("paymentMode", t.getPaymentMode());
+                map.put("status", t.getStatus() != null ? t.getStatus() : "CONFIRMED");
+                map.put("source", t.getSource());
+                map.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
+                matched.add(map);
+            }
+        }
+
+        return ResponseEntity.ok(matched);
     }
 
     @PostMapping("/sales-history")
@@ -751,13 +905,39 @@ public class TheaterController {
             t.setTicketId((String) sale.get("ticketId"));
             t.setMovieTitle((String) sale.get("movieTitle"));
             t.setScreenName((String) sale.get("screenName"));
-            t.setDate((String) sale.get("date"));
-            t.setTime((String) sale.get("time"));
+
+            String dateVal = (String) (sale.get("date") != null ? sale.get("date") : sale.get("showDate"));
+            t.setDate(dateVal);
+
+            String timeVal = (String) (sale.get("time") != null ? sale.get("time") : (sale.get("showTime") != null ? sale.get("showTime") : sale.get("startTime")));
+            t.setTime(timeVal);
+
+            String emailVal = (String) (sale.get("customerEmail") != null ? sale.get("customerEmail") : sale.get("email"));
+            t.setCustomerEmail(emailVal);
+
+            String thNameVal = (String) (sale.get("theaterName") != null ? sale.get("theaterName") : sale.get("portalName"));
+            t.setTheaterName(thNameVal);
             
             Object stIdObj = sale.get("showtimeId");
             if (stIdObj != null) {
                 try {
-                    t.setShowtimeId(Long.parseLong(String.valueOf(stIdObj)));
+                    Long stId = Long.parseLong(String.valueOf(stIdObj));
+                    t.setShowtimeId(stId);
+                    
+                    // Populate missing date/time/theaterName from Showtime if needed
+                    if (dateVal == null || timeVal == null || thNameVal == null) {
+                        try {
+                            Optional<Showtime> stOpt = showtimeRepository.findById(stId);
+                            if (stOpt.isPresent()) {
+                                Showtime st = stOpt.get();
+                                if (t.getDate() == null && st.getShowDate() != null) t.setDate(st.getShowDate().toString());
+                                if (t.getTime() == null && st.getStartTime() != null) t.setTime(st.getStartTime().toString());
+                                if (t.getTheaterName() == null && st.getTheater() != null && st.getTheater().getName() != null) {
+                                    t.setTheaterName(st.getTheater().getName());
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
                 } catch (NumberFormatException e) {
                     // Ignore
                 }
@@ -791,6 +971,43 @@ public class TheaterController {
             t.setSource((String) sale.get("source"));
 
             movieBookedTicketRepository.save(t);
+
+            // Dispatch in-app notification to Owner, Manager, and Counter Cashier
+            Long portalId = null;
+            Object pIdObj = sale.get("theaterPortalId") != null ? sale.get("theaterPortalId") : sale.get("portalId");
+            if (pIdObj != null) {
+                try {
+                    portalId = Long.parseLong(String.valueOf(pIdObj));
+                } catch (Exception ignored) {}
+            }
+            try {
+                theaterNotificationService.notifyNewBooking(t, portalId);
+            } catch (Exception e) {
+                System.err.println("Notice: Failed to dispatch theater booking notification: " + e.getMessage());
+            }
+
+            // Dispatch digital M-Ticket confirmation email to customer
+            String customerEmail = (String) sale.get("customerEmail");
+            if (customerEmail == null || customerEmail.isBlank()) {
+                customerEmail = (String) sale.get("email");
+            }
+
+            if (customerEmail != null && !customerEmail.isBlank()) {
+                String theaterName = "Thunder Cinemas";
+                if (portalId != null) {
+                    try {
+                        var portalOpt = theaterPortalRepository.findById(portalId);
+                        if (portalOpt.isPresent() && portalOpt.get().getPortalName() != null && !portalOpt.get().getPortalName().isBlank()) {
+                            theaterName = portalOpt.get().getPortalName();
+                        }
+                    } catch (Exception ignored) {}
+                }
+                try {
+                    theaterEmailService.sendTicketConfirmationEmail(t, customerEmail.trim(), theaterName, portalId);
+                } catch (Exception ex) {
+                    System.err.println("Notice: Failed to dispatch theater booking confirmation email: " + ex.getMessage());
+                }
+            }
         }
         return ResponseEntity.ok(Map.of("success", true));
     }
@@ -831,6 +1048,12 @@ public class TheaterController {
     public ResponseEntity<?> getTheaterPortalProfile(@PathVariable Long portalId) {
         Optional<TheaterPortal> portalOpt = theaterPortalRepository.findById(portalId);
         if (!portalOpt.isPresent()) {
+            Optional<Theater> thOpt = theaterRepository.findById(portalId);
+            if (thOpt.isPresent() && thOpt.get().getTheaterPortal() != null) {
+                portalOpt = Optional.of(thOpt.get().getTheaterPortal());
+            }
+        }
+        if (!portalOpt.isPresent()) {
             portalOpt = theaterPortalRepository.findAll().stream().findFirst();
         }
         if (!portalOpt.isPresent()) {
@@ -845,6 +1068,22 @@ public class TheaterController {
             }
         }
 
+        boolean foodBookingEnabled = false;
+        List<Theater> portalTheaters = theaterRepository.findByTheaterPortalId(portal.getId());
+        if (!portalTheaters.isEmpty()) {
+            for (Theater t : portalTheaters) {
+                if (Boolean.TRUE.equals(t.getEnableOnlineFoodBooking())) {
+                    foodBookingEnabled = true;
+                    break;
+                }
+            }
+        } else {
+            Optional<Theater> directTh = theaterRepository.findById(portalId);
+            if (directTh.isPresent()) {
+                foodBookingEnabled = Boolean.TRUE.equals(directTh.get().getEnableOnlineFoodBooking());
+            }
+        }
+
         Map<String, Object> profile = new HashMap<>();
         profile.put("portalId", portal.getId());
         profile.put("portalCode", portal.getPortalCode() != null ? portal.getPortalCode() : ("PORTAL_" + portal.getId()));
@@ -853,6 +1092,7 @@ public class TheaterController {
         profile.put("fullName", admin != null ? ((admin.getFirstName() != null ? admin.getFirstName() : "") + " " + (admin.getLastName() != null ? admin.getLastName() : "")).trim() : "Theater Partner");
         profile.put("email", admin != null ? admin.getEmail() : "");
         profile.put("mobileNumber", admin != null && admin.getPhoneNumber() != null ? admin.getPhoneNumber() : "");
+        profile.put("enableOnlineFoodBooking", foodBookingEnabled);
 
         return ResponseEntity.ok(profile);
     }
@@ -860,6 +1100,12 @@ public class TheaterController {
     @PutMapping("/portal-profile/{portalId}")
     public ResponseEntity<?> updateTheaterPortalProfile(@PathVariable Long portalId, @RequestBody Map<String, Object> payload) {
         Optional<TheaterPortal> portalOpt = theaterPortalRepository.findById(portalId);
+        if (!portalOpt.isPresent()) {
+            Optional<Theater> thOpt = theaterRepository.findById(portalId);
+            if (thOpt.isPresent() && thOpt.get().getTheaterPortal() != null) {
+                portalOpt = Optional.of(thOpt.get().getTheaterPortal());
+            }
+        }
         if (!portalOpt.isPresent()) {
             portalOpt = theaterPortalRepository.findAll().stream().findFirst();
         }
@@ -875,6 +1121,24 @@ public class TheaterController {
             portal.setTheaterType(payload.get("theaterType").toString());
         }
         theaterPortalRepository.save(portal);
+
+        if (payload.containsKey("enableOnlineFoodBooking")) {
+            boolean enableFood = Boolean.parseBoolean(payload.get("enableOnlineFoodBooking").toString());
+            List<Theater> portalTheaters = theaterRepository.findByTheaterPortalId(portal.getId());
+            if (!portalTheaters.isEmpty()) {
+                for (Theater t : portalTheaters) {
+                    t.setEnableOnlineFoodBooking(enableFood);
+                    theaterRepository.save(t);
+                }
+            } else {
+                Optional<Theater> directTh = theaterRepository.findById(portalId);
+                if (directTh.isPresent()) {
+                    Theater t = directTh.get();
+                    t.setEnableOnlineFoodBooking(enableFood);
+                    theaterRepository.save(t);
+                }
+            }
+        }
 
         TheaterUser admin = portal.getAdminUser();
         if (admin == null) {

@@ -61,7 +61,8 @@ function Login() {
       localStorage.setItem("lastName", response.data.lastName || "");
       localStorage.setItem("phoneNumber", response.data.phoneNumber || response.data.phone || "");
 
-      const redirectPath = response.data.redirectPath;
+      const redirectPath = response.data.redirectPath || "";
+      localStorage.setItem("redirectPath", redirectPath);
       const portalCode = response.data.portalCode || "";
       const isTheater =
         (redirectPath && redirectPath.startsWith("/theater")) ||
@@ -80,6 +81,10 @@ function Login() {
         }
         if (role.includes("USHER") || dutyRole.includes("usher") || dutyRole.includes("gate")) {
           navigate("/theater/usher-dashboard");
+          return;
+        }
+        if (role.includes("CONCESSION") || dutyRole.includes("concession") || dutyRole.includes("f&b") || dutyRole.includes("food")) {
+          navigate("/theater-fb");
           return;
         }
         if (role === "THEATER_MANAGER" || role === "BRANCH_MANAGER" || dutyRole.includes("manager")) {

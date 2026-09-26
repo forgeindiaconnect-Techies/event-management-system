@@ -269,6 +269,9 @@ export default function TheaterPartnerSignup() {
                 >
                   {loading ? "Creating Portal..." : <>Create Theater Portal <BsArrowRight /></>}
                 </button>
+                <div className="mt-3 text-center small text-muted">
+                  By creating a portal, you agree to our <Link to="/terms" className="text-decoration-none">Terms of Service</Link>.
+                </div>
               </form>
             </div>
           </div>

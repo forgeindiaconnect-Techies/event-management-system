@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import SuperAdminTheaterDashboard from "./SuperAdminTheaterDashboard";
 import { clearAssistantSession } from "../../utils/assistantSession";
 import { formatIndiaDateTime } from "../../utils/dateTime";
 import {
@@ -29,6 +31,7 @@ import {
   BsXLg,
   BsHeadset,
   BsChatLeftText,
+  BsTicketPerforated,
 } from "react-icons/bs";
 import api from "../../api/axiosConfig";
 import { NotificationBell } from "../../components/Navbar/AdminNavbar";
@@ -61,7 +64,7 @@ const pageDetails = {
 function SuperAdminDashboard({ section = "overview" }) {
   const navigate = useNavigate();
   const profileRef = useRef(null);
-  const [platformMode, setPlatformMode] = useState("ALL");
+  const [platformMode, setPlatformMode] = useState("EVENT");
   const [dashboard, setDashboard] = useState({});
   const [portals, setPortals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -211,22 +214,56 @@ function SuperAdminDashboard({ section = "overview" }) {
         {/* Platform Mode Switcher */}
         <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-pill mx-auto">
           <button 
-            className={`btn btn-sm rounded-pill ${platformMode === 'ALL' ? 'btn-primary' : 'btn-light'}`}
-            onClick={() => setPlatformMode('ALL')}
-          >
-            🌐 All
-          </button>
-          <button 
-            className={`btn btn-sm rounded-pill ${platformMode === 'EVENT' ? 'btn-primary' : 'btn-light'}`}
+            className="btn btn-sm rounded-pill fw-medium"
+            style={{
+              backgroundColor: platformMode === 'EVENT' ? '#e2e8f0' : 'transparent',
+              color: '#0f172a',
+              border: 'none',
+              boxShadow: 'none',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              transform: 'translateY(0)'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#2563eb';
+              e.target.style.color = '#ffffff';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = platformMode === 'EVENT' ? '#e2e8f0' : 'transparent';
+              e.target.style.color = '#0f172a';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }}
             onClick={() => setPlatformMode('EVENT')}
           >
             🎪 Event Platform
           </button>
           <button 
-            className={`btn btn-sm rounded-pill ${platformMode === 'CINEMA' ? 'btn-primary' : 'btn-light'}`}
-            onClick={() => setPlatformMode('CINEMA')}
+            className="btn btn-sm rounded-pill fw-medium"
+            style={{
+              backgroundColor: platformMode === 'THEATER' ? '#e2e8f0' : 'transparent',
+              color: '#0f172a',
+              border: 'none',
+              boxShadow: 'none',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              transform: 'translateY(0)'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#2563eb';
+              e.target.style.color = '#ffffff';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = platformMode === 'THEATER' ? '#e2e8f0' : 'transparent';
+              e.target.style.color = '#0f172a';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }}
+            onClick={() => setPlatformMode('THEATER')}
           >
-            🎬 Cinema Platform
+            🎬 Theater Platform
           </button>
         </div>
 
@@ -260,7 +297,11 @@ function SuperAdminDashboard({ section = "overview" }) {
         </div>
       </header>
 
-      <div className="super-admin-page">
+      {platformMode === 'THEATER' ? (
+        <SuperAdminTheaterDashboard />
+      ) : (
+        <>
+          <div className="super-admin-page">
         <button className="sa-mobile-menu-button" type="button" onClick={() => setShowMobileMenu(true)} aria-label="Open navigation"><BsList /></button>
         <aside className={`super-admin-sidebar ${showMobileMenu ? "mobile-open" : ""}`}>
           <nav aria-label="Super admin navigation">
@@ -301,6 +342,8 @@ function SuperAdminDashboard({ section = "overview" }) {
             </footer>
           </section>
         </div>
+      )}
+      </>
       )}
     </div>
   );
@@ -1159,7 +1202,9 @@ function AuditModal({ audit, onClose }) {
 }
 
 function SupportRequestManagement() {
-  const [requests, setRequests] = useState([]);
+  const [subTab, setSubTab] = useState("organizer"); // "organizer" | "attendee"
+  const [organizerRequests, setOrganizerRequests] = useState([]);
+  const [attendeeRequests, setAttendeeRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -1167,34 +1212,63 @@ function SupportRequestManagement() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [selected, setSelected] = useState(null);
-  const [edit, setEdit] = useState({ status: "OPEN", priority: "MEDIUM", adminResponse: "" });
+  const [edit, setEdit] = useState({ status: "OPEN", priority: "MEDIUM", adminResponse: "", refundProcessed: false });
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
-    try { const { data } = await api.get("/support-requests"); setRequests(Array.isArray(data) ? data : []); }
-    catch (requestError) { setError(responseMessage(requestError, "Unable to load support requests.")); }
-    finally { setLoading(false); }
+    try {
+      const [orgRes, attRes] = await Promise.all([
+        api.get("/support-requests"),
+        api.get("/super-admin/theaters/public-support?bookingType=EVENT")
+      ]);
+      setOrganizerRequests(Array.isArray(orgRes.data) ? orgRes.data : []);
+      setAttendeeRequests(Array.isArray(attRes.data) ? attRes.data : []);
+    } catch (requestError) {
+      setError(responseMessage(requestError, "Unable to load support requests."));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = useMemo(() => requests.filter((request) => {
+  // Active requests based on sub-tab
+  const currentList = subTab === "organizer" ? organizerRequests : attendeeRequests;
+
+  const filtered = useMemo(() => currentList.filter((request) => {
     const text = search.trim().toLowerCase();
-    const matchesSearch = !text || [request.referenceCode, request.subject, request.description, request.requesterName, request.contactEmail].some((value) => String(value || "").toLowerCase().includes(text));
-    return matchesSearch && (typeFilter === "ALL" || request.type === typeFilter) && (statusFilter === "ALL" || request.status === statusFilter);
-  }), [requests, search, typeFilter, statusFilter]);
+    let matchesSearch = false;
+    if (subTab === "organizer") {
+      matchesSearch = !text || [request.referenceCode, request.subject, request.description, request.requesterName, request.contactEmail].some((value) => String(value || "").toLowerCase().includes(text));
+    } else {
+      matchesSearch = !text || [request.referenceCode, request.bookingReference, request.titleOrVenueName, request.customerName, request.customerEmail, request.customerPhone, request.subject, request.description].some((value) => String(value || "").toLowerCase().includes(text));
+    }
+    const matchesType = typeFilter === "ALL" || (subTab === "organizer" ? request.type === typeFilter : request.category === typeFilter);
+    const matchesStatus = statusFilter === "ALL" || request.status === statusFilter;
+    const matchesPriority = priorityFilter === "ALL" || request.priority === priorityFilter;
+    return matchesSearch && matchesType && matchesStatus && matchesPriority;
+  }), [currentList, subTab, search, typeFilter, statusFilter, priorityFilter]);
 
   const counts = useMemo(() => ({
-    total: requests.length,
-    open: requests.filter((request) => request.status === "OPEN").length,
-    progress: requests.filter((request) => request.status === "IN_PROGRESS").length,
-    resolved: requests.filter((request) => ["RESOLVED", "CLOSED"].includes(request.status)).length,
-  }), [requests]);
+    total: currentList.length,
+    open: currentList.filter((r) => r.status === "OPEN").length,
+    progress: currentList.filter((r) => r.status === "IN_PROGRESS").length,
+    resolved: currentList.filter((r) => ["RESOLVED", "CLOSED"].includes(r.status)).length,
+  }), [currentList]);
+
+  const openOrganizerCount = useMemo(() => organizerRequests.filter((r) => r.status === "OPEN").length, [organizerRequests]);
+  const openAttendeeCount = useMemo(() => attendeeRequests.filter((r) => r.status === "OPEN").length, [attendeeRequests]);
 
   const openRequest = (request) => {
     setSelected(request);
-    setEdit({ status: request.status || "OPEN", priority: request.priority || "MEDIUM", adminResponse: request.adminResponse || "" });
+    setEdit({
+      status: request.status || "OPEN",
+      priority: request.priority || "MEDIUM",
+      adminResponse: request.adminResponse || "",
+      refundProcessed: Boolean(request.refundProcessed)
+    });
     setMessage(""); setError("");
   };
 
@@ -1202,50 +1276,333 @@ function SupportRequestManagement() {
     if (!selected) return;
     setWorking(true); setError(""); setMessage("");
     try {
-      const { data } = await api.patch(`/support-requests/${selected.id}`, edit);
-      setRequests((current) => current.map((item) => item.id === data.id ? data : item));
-      setSelected(data);
-      setEdit({ status: data.status, priority: data.priority, adminResponse: data.adminResponse || "" });
-      setMessage("Support request updated successfully.");
-    } catch (requestError) { setError(responseMessage(requestError, "Unable to update this support request.")); }
-    finally { setWorking(false); }
+      if (subTab === "organizer") {
+        const { data } = await api.patch(`/support-requests/${selected.id}`, {
+          status: edit.status,
+          priority: edit.priority,
+          adminResponse: edit.adminResponse
+        });
+        setOrganizerRequests((current) => current.map((item) => item.id === data.id ? data : item));
+        setSelected(data);
+      } else {
+        const { data } = await api.patch(`/super-admin/theaters/public-support/${selected.id}`, {
+          status: edit.status,
+          priority: edit.priority,
+          adminResponse: edit.adminResponse,
+          refundProcessed: edit.refundProcessed
+        });
+        setAttendeeRequests((current) => current.map((item) => item.id === data.id ? data : item));
+        setSelected(data);
+      }
+      setMessage("Support ticket updated successfully.");
+    } catch (requestError) {
+      setError(responseMessage(requestError, "Unable to update this support request."));
+    } finally {
+      setWorking(false);
+    }
   };
 
   const label = (value) => String(value || "Not available").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
-  return <div className="sa-support-page">
-    <div className="sa-support-metrics">
-      <Metric icon={<BsHeadset />} label="Total Requests" value={counts.total} />
-      <Metric icon={<BsEnvelope />} label="Open" value={counts.open} />
-      <Metric icon={<BsClockHistory />} label="In Progress" value={counts.progress} />
-      <Metric icon={<BsCheckCircle />} label="Resolved / Closed" value={counts.resolved} />
+
+  return (
+    <div className="sa-support-page">
+      {/* Sub-tab switcher */}
+      <div className="sa-support-subtabs">
+        <button
+          type="button"
+          className={subTab === "organizer" ? "active" : ""}
+          onClick={() => { setSubTab("organizer"); setSearch(""); setTypeFilter("ALL"); setStatusFilter("ALL"); setPriorityFilter("ALL"); }}
+        >
+          <BsBuilding /> Event Organizer Tickets
+          {openOrganizerCount > 0 && <span className="sa-subtab-badge">{openOrganizerCount} open</span>}
+        </button>
+        <button
+          type="button"
+          className={subTab === "attendee" ? "active" : ""}
+          onClick={() => { setSubTab("attendee"); setSearch(""); setTypeFilter("ALL"); setStatusFilter("ALL"); setPriorityFilter("ALL"); }}
+        >
+          <BsTicketPerforated /> Public Attendee Tickets
+          {openAttendeeCount > 0 && <span className="sa-subtab-badge" style={{ backgroundColor: "#e0e7ff", color: "#4338ca" }}>{openAttendeeCount} open</span>}
+        </button>
+      </div>
+
+      <div className="sa-support-metrics">
+        <Metric icon={<BsHeadset />} label="Total Requests" value={counts.total} />
+        <Metric icon={<BsEnvelope />} label="Open Tickets" value={counts.open} />
+        <Metric icon={<BsClockHistory />} label="In Progress" value={counts.progress} />
+        <Metric icon={<BsCheckCircle />} label="Resolved / Closed" value={counts.resolved} />
+      </div>
+
+      {error && <div className="alert alert-danger">{error}</div>}
+      {message && <div className="alert alert-success">{message}</div>}
+
+      <section className="admin-bento-card sa-support-card">
+        <div className="sa-support-tools">
+          <label>
+            <BsSearch />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={subTab === "organizer" ? "Search reference, user or subject..." : "Search ref, booking ID, attendee or event..."}
+            />
+          </label>
+          {subTab === "organizer" ? (
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="ALL">All request types</option>
+              <option value="FEEDBACK">Feedback</option>
+              <option value="PROBLEM">Problems</option>
+              <option value="FEATURE_REQUEST">Feature requests</option>
+              <option value="PAYMENT_SUBSCRIPTION">Payment / subscription</option>
+              <option value="ACCOUNT_ACCESS">Account / access</option>
+              <option value="GENERAL">General support</option>
+            </select>
+          ) : (
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="ALL">All issue categories</option>
+              <option value="PAYMENT_DEBITED_NO_TICKET">Payment Debited / No Ticket</option>
+              <option value="TICKET_NOT_RECEIVED">Ticket / QR Not Received</option>
+              <option value="GATE_SCAN_FAILURE">Gate Scan Failure</option>
+              <option value="CANCEL_REFUND_REQUEST">Cancel / Refund Tracking</option>
+              <option value="SEAT_ISSUE">Seat / VIP Pass Conflict</option>
+              <option value="REGISTRATION_DETAILS_CHANGE">Attendee Details Correction</option>
+              <option value="GENERAL">General Inquiries</option>
+            </select>
+          )}
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="ALL">All statuses</option>
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+          <button type="button" onClick={load}><BsArrowClockwise /> Refresh</button>
+        </div>
+
+        {subTab === "organizer" ? (
+          <div className="table-responsive">
+            <table className="sa-native-table sa-support-table">
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>Organizer / Requester</th>
+                  <th>Type</th>
+                  <th>Subject</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((request) => (
+                  <tr key={request.id}>
+                    <td><strong>{request.referenceCode || `SUP-${request.id}`}</strong></td>
+                    <td><strong>{request.requesterName || "Organizer"}</strong><small>{request.contactEmail}</small></td>
+                    <td>{label(request.type)}</td>
+                    <td><strong>{request.subject}</strong><small>{String(request.description || "").slice(0, 70)}</small></td>
+                    <td><span className={`sa-support-priority ${String(request.priority).toLowerCase()}`}>{label(request.priority)}</span></td>
+                    <td><span className={`status ${String(request.status).toLowerCase()}`}>{label(request.status)}</span></td>
+                    <td>{shortDateTime(request.createdAt)}</td>
+                    <td><button className="sa-support-view" type="button" onClick={() => openRequest(request)}><BsEye /> View</button></td>
+                  </tr>
+                ))}
+                {!loading && !filtered.length && <tr><td colSpan="8"><Empty text="No organizer support requests match these filters." /></td></tr>}
+                {loading && <tr><td colSpan="8"><Empty text="Loading organizer requests..." /></td></tr>}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="sa-native-table sa-support-table">
+              <thead>
+                <tr>
+                  <th>Ticket Ref</th>
+                  <th>Attendee Contact</th>
+                  <th>Booking / Reg ID</th>
+                  <th>Event Name</th>
+                  <th>Issue Category</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Refund Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((ticket) => (
+                  <tr key={ticket.id}>
+                    <td><strong style={{ color: "#4f46e5" }}>{ticket.referenceCode || `PUB-${ticket.id}`}</strong></td>
+                    <td>
+                      <strong>{ticket.customerName || "Attendee"}</strong>
+                      <small>{ticket.customerEmail}</small>
+                      {ticket.customerPhone && <small style={{ color: "#64748b" }}>📞 {ticket.customerPhone}</small>}
+                    </td>
+                    <td>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#0f172a" }}>
+                        {ticket.bookingReference || "—"}
+                      </span>
+                    </td>
+                    <td><strong>{ticket.titleOrVenueName || "General Event"}</strong></td>
+                    <td>{label(ticket.category)}</td>
+                    <td><span className={`sa-support-priority ${String(ticket.priority).toLowerCase()}`}>{label(ticket.priority)}</span></td>
+                    <td><span className={`status ${String(ticket.status).toLowerCase()}`}>{label(ticket.status)}</span></td>
+                    <td>
+                      {ticket.refundProcessed ? (
+                        <span style={{ color: "#16a34a", fontWeight: 700, fontSize: "0.82rem" }}>✓ Refunded</span>
+                      ) : (
+                        <span style={{ color: "#94a3b8", fontSize: "0.82rem" }}>—</span>
+                      )}
+                    </td>
+                    <td><button className="sa-support-view" type="button" onClick={() => openRequest(ticket)}><BsEye /> Resolve</button></td>
+                  </tr>
+                ))}
+                {!loading && !filtered.length && <tr><td colSpan="9"><Empty text="No public attendee support requests match these filters." /></td></tr>}
+                {loading && <tr><td colSpan="9"><Empty text="Loading public attendee requests..." /></td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Organizer Ticket Modal */}
+      {selected && subTab === "organizer" && (
+        <div className="sa-sub-modal-backdrop" onMouseDown={() => setSelected(null)}>
+          <div className="sa-support-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span>{selected.referenceCode || `SUP-${selected.id}`}</span>
+                <h2>{selected.subject}</h2>
+              </div>
+              <button onClick={() => setSelected(null)}><BsXLg /></button>
+            </header>
+            <div className="sa-support-modal-body">
+              <section>
+                <div className="sa-support-requester">
+                  <BsChatLeftText />
+                  <div><b>{selected.requesterName}</b><span>{selected.contactEmail}</span></div>
+                </div>
+                <dl>
+                  <div><dt>Type</dt><dd>{label(selected.type)}</dd></div>
+                  <div><dt>Portal ID</dt><dd>{selected.portalId || "Not linked"}</dd></div>
+                  <div><dt>Submitted</dt><dd>{shortDateTime(selected.createdAt)}</dd></div>
+                  <div><dt>Current page</dt><dd>{selected.currentPage ? <a href={selected.currentPage} target="_blank" rel="noreferrer">Open page</a> : "Not provided"}</dd></div>
+                  <div><dt>Screenshot</dt><dd>{selected.screenshotUrl ? <a href={selected.screenshotUrl} target="_blank" rel="noreferrer">View screenshot</a> : "Not provided"}</dd></div>
+                </dl>
+                <article>
+                  <b>Description</b>
+                  <p>{selected.description}</p>
+                </article>
+              </section>
+              <aside>
+                <label>Status
+                  <select value={edit.status} onChange={(event) => setEdit((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="OPEN">Open</option>
+                    <option value="IN_PROGRESS">In progress</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="CLOSED">Closed</option>
+                  </select>
+                </label>
+                <label>Priority
+                  <select value={edit.priority} onChange={(event) => setEdit((current) => ({ ...current, priority: event.target.value }))}>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </label>
+                <label>Response to user
+                  <textarea value={edit.adminResponse} onChange={(event) => setEdit((current) => ({ ...current, adminResponse: event.target.value }))} placeholder="Write an update or resolution for the user..." />
+                </label>
+                <button onClick={save} disabled={working}>{working ? "Saving..." : "Save Response & Status"}</button>
+                {selected.resolvedAt && <small>Resolved {shortDateTime(selected.resolvedAt)}</small>}
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Public Attendee Ticket Modal */}
+      {selected && subTab === "attendee" && (
+        <div className="sa-sub-modal-backdrop" onMouseDown={() => setSelected(null)}>
+          <div className="sa-support-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span style={{ color: "#4f46e5" }}>{selected.referenceCode || `PUB-${selected.id}`} • Public Attendee Issue</span>
+                <h2>{selected.subject || label(selected.category)}</h2>
+              </div>
+              <button onClick={() => setSelected(null)}><BsXLg /></button>
+            </header>
+            <div className="sa-support-modal-body">
+              <section>
+                <div className="sa-support-requester" style={{ background: "#eef2ff", color: "#312e81" }}>
+                  <BsTicketPerforated style={{ fontSize: "24px" }} />
+                  <div>
+                    <b>{selected.customerName || "Public Attendee"}</b>
+                    <span>{selected.customerEmail} • {selected.customerPhone || "No phone"}</span>
+                  </div>
+                </div>
+                <dl>
+                  <div><dt>Registration / Booking Ref</dt><dd style={{ fontFamily: "monospace", color: "#4f46e5" }}>{selected.bookingReference || "None provided"}</dd></div>
+                  <div><dt>Event / Summit</dt><dd>{selected.titleOrVenueName || "Unspecified Event"}</dd></div>
+                  <div><dt>Issue Category</dt><dd>{label(selected.category)}</dd></div>
+                  <div><dt>Submitted At</dt><dd>{shortDateTime(selected.createdAt)}</dd></div>
+                </dl>
+                <article>
+                  <b>Attendee Statement / Problem Report</b>
+                  <p>{selected.description}</p>
+                </article>
+              </section>
+              <aside>
+                <label>Status
+                  <select value={edit.status} onChange={(event) => setEdit((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="OPEN">Open</option>
+                    <option value="IN_PROGRESS">In progress</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="CLOSED">Closed</option>
+                  </select>
+                </label>
+                <label>Priority
+                  <select value={edit.priority} onChange={(event) => setEdit((current) => ({ ...current, priority: event.target.value }))}>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "4px 0" }}>
+                  <input
+                    type="checkbox"
+                    id="attRefundCheckbox"
+                    checked={edit.refundProcessed}
+                    onChange={(e) => setEdit((current) => ({ ...current, refundProcessed: e.target.checked }))}
+                    style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                  />
+                  <label htmlFor="attRefundCheckbox" style={{ margin: 0, cursor: "pointer", fontSize: "0.85rem", fontWeight: 700 }}>
+                    Mark Refund as Processed / Credited
+                  </label>
+                </div>
+                <label>Resolution Note to Attendee
+                  <textarea value={edit.adminResponse} onChange={(event) => setEdit((current) => ({ ...current, adminResponse: event.target.value }))} placeholder="Provide resolution details or pass re-issuance notes..." />
+                </label>
+                <button onClick={save} disabled={working} style={{ backgroundColor: "#4f46e5" }}>
+                  {working ? "Saving..." : "Update Attendee Ticket"}
+                </button>
+                {selected.resolvedAt && <small>Resolved {shortDateTime(selected.resolvedAt)}</small>}
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{supportStyles}</style>
     </div>
-    {error && <div className="alert alert-danger">{error}</div>}
-    {message && <div className="alert alert-success">{message}</div>}
-    <section className="admin-bento-card sa-support-card">
-      <div className="sa-support-tools">
-        <label><BsSearch /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reference, user or subject..." /></label>
-        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="ALL">All request types</option><option value="FEEDBACK">Feedback</option><option value="PROBLEM">Problems</option><option value="FEATURE_REQUEST">Feature requests</option><option value="PAYMENT_SUBSCRIPTION">Payment / subscription</option><option value="ACCOUNT_ACCESS">Account / access</option><option value="GENERAL">General support</option></select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option><option value="OPEN">Open</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select>
-        <button type="button" onClick={load}><BsArrowClockwise /> Refresh</button>
-      </div>
-      <div className="table-responsive"><table className="sa-native-table sa-support-table"><thead><tr><th>Reference</th><th>Requester</th><th>Type</th><th>Subject</th><th>Priority</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
-        {filtered.map((request) => <tr key={request.id}><td><strong>{request.referenceCode || `SUP-${request.id}`}</strong></td><td><strong>{request.requesterName || "Unknown user"}</strong><small>{request.contactEmail}</small></td><td>{label(request.type)}</td><td><strong>{request.subject}</strong><small>{String(request.description || "").slice(0, 70)}</small></td><td><span className={`sa-support-priority ${String(request.priority).toLowerCase()}`}>{label(request.priority)}</span></td><td><span className={`status ${String(request.status).toLowerCase()}`}>{label(request.status)}</span></td><td>{shortDateTime(request.createdAt)}</td><td><button className="sa-support-view" type="button" onClick={() => openRequest(request)}><BsEye /> View</button></td></tr>)}
-        {!loading && !filtered.length && <tr><td colSpan="8"><Empty text="No support requests match these filters." /></td></tr>}
-        {loading && <tr><td colSpan="8"><Empty text="Loading support requests..." /></td></tr>}
-      </tbody></table></div>
-    </section>
-    {selected && <div className="sa-sub-modal-backdrop" onMouseDown={() => setSelected(null)}><div className="sa-support-modal" onMouseDown={(event) => event.stopPropagation()}>
-      <header><div><span>{selected.referenceCode || `SUP-${selected.id}`}</span><h2>{selected.subject}</h2></div><button onClick={() => setSelected(null)}><BsXLg /></button></header>
-      <div className="sa-support-modal-body">
-        <section><div className="sa-support-requester"><BsChatLeftText /><div><b>{selected.requesterName}</b><span>{selected.contactEmail}</span></div></div><dl><div><dt>Type</dt><dd>{label(selected.type)}</dd></div><div><dt>Portal ID</dt><dd>{selected.portalId || "Not linked"}</dd></div><div><dt>Submitted</dt><dd>{shortDateTime(selected.createdAt)}</dd></div><div><dt>Current page</dt><dd>{selected.currentPage ? <a href={selected.currentPage} target="_blank" rel="noreferrer">Open page</a> : "Not provided"}</dd></div><div><dt>Screenshot</dt><dd>{selected.screenshotUrl ? <a href={selected.screenshotUrl} target="_blank" rel="noreferrer">View screenshot</a> : "Not provided"}</dd></div></dl><article><b>Description</b><p>{selected.description}</p></article></section>
-        <aside><label>Status<select value={edit.status} onChange={(event) => setEdit((current) => ({ ...current, status: event.target.value }))}><option value="OPEN">Open</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select></label><label>Priority<select value={edit.priority} onChange={(event) => setEdit((current) => ({ ...current, priority: event.target.value }))}><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="URGENT">Urgent</option></select></label><label>Response to user<textarea value={edit.adminResponse} onChange={(event) => setEdit((current) => ({ ...current, adminResponse: event.target.value }))} placeholder="Write an update or resolution for the user..." /></label><button onClick={save} disabled={working}>{working ? "Saving..." : "Save Response & Status"}</button>{selected.resolvedAt && <small>Resolved {shortDateTime(selected.resolvedAt)}</small>}</aside>
-      </div>
-    </div></div>}
-    <style>{supportStyles}</style>
-  </div>;
+  );
 }
 
 const supportStyles = `
+.sa-support-subtabs{display:flex;gap:10px;margin-bottom:18px;background:#f1f5f9;padding:6px;border-radius:12px;width:fit-content}
+.sa-support-subtabs button{display:flex;align-items:center;gap:8px;padding:9px 18px;border:none;border-radius:9px;background:transparent;color:#64748b;font-weight:700;font-size:0.88rem;cursor:pointer;transition:all 0.18s ease}
+.sa-support-subtabs button.active{background:#fff;color:#5548d9;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.sa-subtab-badge{padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:800;background:#fee2e2;color:#b91c1c}
 .sa-support-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:22px}.sa-support-card{overflow:hidden;padding:0}.sa-support-tools{display:grid;grid-template-columns:minmax(260px,1fr) 210px 170px auto;gap:10px;padding:18px}.sa-support-tools label{display:flex;align-items:center;gap:9px;padding:0 12px;border:1px solid #d8dde6;border-radius:9px}.sa-support-tools input{width:100%;padding:10px 0;border:0;outline:0}.sa-support-tools select{padding:10px;border:1px solid #d8dde6;border-radius:9px;background:#fff}.sa-support-tools>button{display:flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #5548d9;border-radius:9px;background:#fff;color:#5548d9}.sa-support-table td{vertical-align:middle}.sa-support-table td small{display:block;max-width:260px;margin-top:3px;color:#8a94a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sa-support-priority{padding:5px 8px;border-radius:20px;background:#eef0f4;font-size:11px;font-weight:750}.sa-support-priority.high,.sa-support-priority.urgent{background:#fee8e9;color:#bd2631}.sa-support-priority.low{background:#e7f7ef;color:#147a4e}.sa-support-view{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid #d8d5ff;border-radius:7px;background:#f7f6ff;color:#5548d9}.sa-support-modal{width:min(940px,94vw);max-height:90vh;overflow:auto;border-radius:18px;background:#fff;box-shadow:0 30px 80px rgba(16,24,40,.3)}.sa-support-modal>header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 23px;border-bottom:1px solid #e9ecf1}.sa-support-modal header span{color:#6557ed;font-size:11px;font-weight:800;letter-spacing:.08em}.sa-support-modal header h2{margin:4px 0 0;font-size:22px}.sa-support-modal header button{padding:7px;border:0;background:transparent}.sa-support-modal-body{display:grid;grid-template-columns:1.25fr .75fr}.sa-support-modal-body>section{padding:22px}.sa-support-requester{display:flex;align-items:center;gap:11px;padding:13px;border-radius:10px;background:#f5f4ff;color:#302a79}.sa-support-requester>svg{font-size:25px}.sa-support-requester div{display:grid}.sa-support-requester span{font-size:12px}.sa-support-modal dl{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:16px 0;border:1px solid #e4e7ec;border-radius:10px}.sa-support-modal dl>div{padding:11px;border-bottom:1px solid #e4e7ec}.sa-support-modal dt{color:#8a94a6;font-size:11px}.sa-support-modal dd{margin:3px 0 0;font-weight:700}.sa-support-modal article{padding:15px;border-radius:10px;background:#f8f9fb}.sa-support-modal article p{margin:7px 0 0;white-space:pre-wrap}.sa-support-modal-body>aside{display:flex;flex-direction:column;gap:13px;padding:22px;background:#f8f9fb}.sa-support-modal aside label{display:grid;gap:6px;font-size:12px;font-weight:750}.sa-support-modal aside select,.sa-support-modal aside textarea{padding:10px;border:1px solid #d8dde6;border-radius:8px;background:#fff}.sa-support-modal aside textarea{min-height:170px;resize:vertical}.sa-support-modal aside>button{padding:11px;border:0;border-radius:9px;background:#5548d9;color:#fff;font-weight:750}.sa-support-modal aside>button:disabled{opacity:.6}.sa-support-modal aside>small{text-align:center;color:#667085}@media(max-width:1050px){.sa-support-metrics{grid-template-columns:repeat(2,1fr)}.sa-support-tools{grid-template-columns:1fr 1fr}.sa-support-modal-body{grid-template-columns:1fr}}@media(max-width:650px){.sa-support-metrics,.sa-support-tools{grid-template-columns:1fr}.sa-support-modal-body>section,.sa-support-modal-body>aside{padding:15px}.sa-support-modal dl{grid-template-columns:1fr}}
 `;
 

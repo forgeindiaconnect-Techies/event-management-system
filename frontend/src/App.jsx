@@ -26,6 +26,7 @@ import TheaterDashboardLayout from "./pages/theater/TheaterDashboardLayout";
 import TheaterManagerDashboard from "./pages/theater/TheaterManagerDashboard";
 import TheaterCashierDashboard from "./pages/theater/TheaterCashierDashboard";
 import TheaterUsherDashboard from "./pages/theater/TheaterUsherDashboard";
+import TheaterFBDashboard from "./pages/theater/TheaterFBDashboard";
 import StaffWebWorkspace from "./pages/staff/StaffWebWorkspace";
 
 import ManageLayout from "./layouts/ManageLayout";
@@ -102,6 +103,8 @@ import JudgeWork from "./pages/Judge/JudgeWork";
 import MentorDashboard from "./pages/Mentor/MentorDashboard";
 import MentorTeams from "./pages/Mentor/MentorTeams";
 import MentorSchedule from "./pages/Mentor/MentorSchedule";
+import TermsOfService from "./pages/public/TermsOfService";
+import PrivacyPolicy from "./pages/public/PrivacyPolicy";
 import PublicTicket from "./pages/public/PublicTicket";
 import MobileSelectEnhancer from "./components/MobileSelectEnhancer";
 import HorizontalMenuArrows from "./components/HorizontalMenuArrows";
@@ -127,8 +130,8 @@ const SubscriptionPayment = lazy(() => import("./pages/SubscriptionPayment"));
 function App() {
   return (
     <BrowserRouter>
-      <MobileSelectEnhancer />
       <HorizontalMenuArrows />
+      <MobileSelectEnhancer />
       <Suspense fallback={<RouteLoader />}>
       <Routes>
       
@@ -294,6 +297,8 @@ function App() {
         <Route path="/mentor/schedule" element={<ProtectedRoute roles={["TRAINER"]}><MentorSchedule /></ProtectedRoute>} />
 
         {/* Public */}
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/find-events" element={<PublicDashboard />} /> 
         <Route path="/find-my-ticket" element={<FindMyTicket />} />
         <Route path="/public/events/:id" element={<PublicEventDetails />} />
@@ -340,6 +345,8 @@ function App() {
 <Route path="/theater-cashier" element={<TheaterCashierDashboard />} />
 <Route path="/theater/usher-dashboard" element={<TheaterUsherDashboard />} />
 <Route path="/theater-usher" element={<TheaterUsherDashboard />} />
+<Route path="/theater/fb-dashboard" element={<TheaterFBDashboard />} />
+<Route path="/theater-fb" element={<TheaterFBDashboard />} />
 <Route path="/staff/workspace" element={<StaffWebWorkspace />} />
 
       </Routes>

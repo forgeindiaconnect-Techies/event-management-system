@@ -41,6 +41,8 @@ public class Theater {
 
     private Boolean active = true;
 
+    private Boolean enableOnlineFoodBooking = false;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -132,6 +134,14 @@ public class Theater {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public Boolean getEnableOnlineFoodBooking() {
+        return enableOnlineFoodBooking;
+    }
+
+    public void setEnableOnlineFoodBooking(Boolean enableOnlineFoodBooking) {
+        this.enableOnlineFoodBooking = enableOnlineFoodBooking;
     }
 
     public LocalDateTime getCreatedAt() {

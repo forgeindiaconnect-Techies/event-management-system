@@ -62,19 +62,20 @@ export default function LiveSeatBookingMap({
           }}
         >
           <span className="fw-bold text-secondary" style={{ fontSize: "10px", letterSpacing: "3px" }}>
-            🎥 CINEMA SCREEN PROJECTION THIS WAY 🎥
+            CINEMA SCREEN PROJECTION THIS WAY
           </span>
         </div>
       </div>
 
-      <div className="p-3 bg-white rounded-3 border overflow-auto text-center flex-grow-1" style={{ minHeight: 0 }}>
+      <div className="p-3 bg-white rounded-3 border overflow-auto text-center flex-grow-1 live-seat-map-box" style={{ minHeight: "440px" }}>
         <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top center", transition: "transform 0.2s ease" }}>
           {(() => {
             const targetScrId = selectedScreenId || screens[0]?.id;
             const targetLayout = getLayoutForTargetScreen(targetScrId);
             const targetSections = targetLayout.sections || [];
             const targetDeletedSeats = targetLayout.deletedSeats || {};
-            const targetStId = selectedShowtimeId || (showtimes.find((s) => String(s.screen?.id || s.screenId) === String(selectedScreenId || screens[0]?.id))?.id);
+            const todayIso = new Date().toISOString().split("T")[0];
+            const targetStId = selectedShowtimeId || (showtimes.find((s) => (!s.showDate || s.showDate >= todayIso) && String(s.screen?.id || s.screenId) === String(selectedScreenId || screens[0]?.id))?.id);
             const targetShow = showtimes.find((s) => String(s.id) === String(targetStId));
             const targetScr = screens.find((s) => String(s.id) === String(selectedScreenId || targetShow?.screen?.id || targetShow?.screenId));
             const mClean = (targetShow?.movieTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");

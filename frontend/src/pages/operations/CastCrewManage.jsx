@@ -103,27 +103,75 @@ export default function CastCrewManage() {
       {loading ? (
         <div style={{ textAlign: "center", padding: "3rem", color: "#64748b" }}>Loading people...</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "25px" }}>
-          {persons.map(person => (
-            <div key={person.id} style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", position: "relative" }}>
-              <div style={{ position: "absolute", top: "10px", right: "10px", display: "flex", gap: "5px" }}>
-                <button onClick={() => openEditModal(person)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: "5px" }}><BsPencil /></button>
-                <button onClick={() => handleDelete(person.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: "5px" }}><BsTrash /></button>
-              </div>
-              
-              <div style={{ width: "100px", height: "100px", margin: "0 auto 15px", borderRadius: "50%", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {person.profileImageUrl ? (
-                  <img src={person.profileImageUrl} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <BsPerson size={40} color="#cbd5e1" />
-                )}
-              </div>
-              
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", margin: "0 0 5px 0" }}>{person.name}</h3>
-              <p style={{ color: "#64748b", margin: 0, fontSize: "0.9rem", fontWeight: "500" }}>{person.primaryRole}</p>
+        <>
+          <div style={{ marginBottom: "40px" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#334155", marginBottom: "15px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" }}>Cast (Actors & Actresses)</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "25px" }}>
+              {persons.filter(p => {
+                const role = (p.primaryRole || "").toLowerCase();
+                return role.includes("actor") || role.includes("actress");
+              }).map(person => (
+                <div key={person.id} style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", position: "relative" }}>
+                  <div style={{ position: "absolute", top: "10px", right: "10px", display: "flex", gap: "5px" }}>
+                    <button onClick={() => openEditModal(person)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: "5px" }}><BsPencil /></button>
+                    <button onClick={() => handleDelete(person.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: "5px" }}><BsTrash /></button>
+                  </div>
+                  
+                  <div style={{ width: "100px", height: "100px", margin: "0 auto 15px", borderRadius: "50%", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {person.profileImageUrl ? (
+                      <img src={person.profileImageUrl} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <BsPerson size={40} color="#cbd5e1" />
+                    )}
+                  </div>
+                  
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", margin: "0 0 5px 0" }}>{person.name}</h3>
+                  <p style={{ color: "#64748b", margin: 0, fontSize: "0.9rem", fontWeight: "500" }}>{person.primaryRole}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+            {persons.filter(p => {
+              const role = (p.primaryRole || "").toLowerCase();
+              return role.includes("actor") || role.includes("actress");
+            }).length === 0 && (
+              <p style={{ color: "#94a3b8", fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>No cast members found.</p>
+            )}
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#334155", marginBottom: "15px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" }}>Crew (Directors, Composers, etc.)</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "25px" }}>
+              {persons.filter(p => {
+                const role = (p.primaryRole || "").toLowerCase();
+                return !(role.includes("actor") || role.includes("actress"));
+              }).map(person => (
+                <div key={person.id} style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", position: "relative" }}>
+                  <div style={{ position: "absolute", top: "10px", right: "10px", display: "flex", gap: "5px" }}>
+                    <button onClick={() => openEditModal(person)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: "5px" }}><BsPencil /></button>
+                    <button onClick={() => handleDelete(person.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: "5px" }}><BsTrash /></button>
+                  </div>
+                  
+                  <div style={{ width: "100px", height: "100px", margin: "0 auto 15px", borderRadius: "50%", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {person.profileImageUrl ? (
+                      <img src={person.profileImageUrl} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <BsPerson size={40} color="#cbd5e1" />
+                    )}
+                  </div>
+                  
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", margin: "0 0 5px 0" }}>{person.name}</h3>
+                  <p style={{ color: "#64748b", margin: 0, fontSize: "0.9rem", fontWeight: "500" }}>{person.primaryRole}</p>
+                </div>
+              ))}
+            </div>
+            {persons.filter(p => {
+              const role = (p.primaryRole || "").toLowerCase();
+              return !(role.includes("actor") || role.includes("actress"));
+            }).length === 0 && (
+              <p style={{ color: "#94a3b8", fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>No crew members found.</p>
+            )}
+          </div>
+        </>
       )}
 
       {isModalOpen && (

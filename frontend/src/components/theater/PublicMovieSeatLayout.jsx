@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import api from "../../api/axiosConfig";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { formatIndianDate, formatIndianTime } from "../../utils/dateTime";
 import {
   BsArrowLeft,
@@ -8,9 +10,23 @@ import {
   BsTicketPerforated,
   BsQrCode,
   BsDownload,
+  BsPrinter,
   BsXCircle,
   BsInfoCircle,
+  BsPlus,
+  BsDash,
+  BsBagCheckFill,
+  BsCupStraw,
+  BsCheck2Circle,
 } from "react-icons/bs";
+
+const DEFAULT_FALLBACK_SNACKS = [
+  { id: "snack-1", name: "Classic Salted Popcorn (Regular)", category: "Popcorn", price: 180, description: "Freshly popped warm golden cinema popcorn", imageUrl: "https://images.unsplash.com/photo-1578849278619-e73505e9610f?w=400&q=80" },
+  { id: "snack-2", name: "Caramel Gourmet Popcorn (Large)", category: "Popcorn", price: 240, description: "Crispy sweet glazed gourmet caramel popcorn", imageUrl: "https://images.unsplash.com/photo-1585647347483-22b66260dfff?w=400&q=80" },
+  { id: "snack-3", name: "Blockbuster Combo (Popcorn + Soda)", category: "Combo", price: 299, description: "1 Large Butter Popcorn + 1 Chilled Fountain Beverage", imageUrl: "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&q=80" },
+  { id: "snack-4", name: "Chilled Pepsi Fountain Drink (500ml)", category: "Beverage", price: 120, description: "Refreshing sparkling fountain soda served chilled", imageUrl: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80" },
+  { id: "snack-5", name: "Crispy Nachos with Warm Cheese Dip", category: "Snack", price: 190, description: "Crispy tortilla chips served with rich jalapeño cheese", imageUrl: "https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=400&q=80" },
+];
 
 // Helper to extract tier price from classPrices string (e.g. "balcony(190),gold(190),silver(160)")
 function getSectionPrice(secName, classPricesStr, fallback = 160) {
@@ -51,6 +67,44 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(null);
+  const ticketCardRef = useRef(null);
+  const [isDownloadingTicket, setIsDownloadingTicket] = useState(false);
+
+  const handleDownloadTicketPdf = async () => {
+    if (!ticketCardRef.current || isDownloadingTicket) return;
+    try {
+      setIsDownloadingTicket(true);
+      const element = ticketCardRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth - 30; // 15mm margins on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const yOffset = imgHeight < pdfHeight - 30 ? 15 : 10;
+      pdf.addImage(imgData, "PNG", 15, yOffset, imgWidth, imgHeight);
+      pdf.save(`MovieTicket-${bookingConfirmed?.bookingId || "Booking"}.pdf`);
+    } catch (err) {
+      console.error("Failed to download PDF ticket:", err);
+      alert("Failed to generate PDF ticket. Please use the Print option.");
+    } finally {
+      setIsDownloadingTicket(false);
+    }
+  };
+
+  // Online Food Pre-booking Facility & Menu State
+  const currentTheaterId = showtime?.theater?.theaterPortal?.id || showtime?.theaterPortalId || showtime?.theater?.id || localStorage.getItem("portalId") || "2";
+  const [theaterOnlineFoodEnabled, setTheaterOnlineFoodEnabled] = useState(false);
+  const [availableSnacks, setAvailableSnacks] = useState([]);
+  const [selectedSnacks, setSelectedSnacks] = useState({}); // { [itemId]: { item, quantity } }
+  const [isSnackModalOpen, setIsSnackModalOpen] = useState(false);
+  const [selectedSnackCategory, setSelectedSnackCategory] = useState("All");
 
   // Customer Contact Info
   const [customerName, setCustomerName] = useState(() => {
@@ -98,9 +152,115 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
       .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
   }, [movie, showtime]);
 
-  // Clear selected seats when showtime changes
+  // Fetch Theater Online F&B Facility & Active Menu
+  useEffect(() => {
+    const fetchTheaterFBSettings = async () => {
+      const candidateIds = [
+        showtime?.theater?.id,
+        showtime?.theaterId,
+        showtime?.theaterPortalId,
+        showtime?.theater?.theaterPortal?.id,
+        currentTheaterId,
+        localStorage.getItem("portalId"),
+        localStorage.getItem("userPortalId"),
+      ].filter(Boolean);
+
+      // 1. Check local storage across candidate IDs
+      let localVal = null;
+      for (const cid of candidateIds) {
+        const item = localStorage.getItem(`theater_online_fb_enabled_${cid}`);
+        if (item !== null) {
+          localVal = item === "true";
+          break;
+        }
+      }
+      if (localVal === null) {
+        const latestGlobal = localStorage.getItem("theater_online_fb_enabled_latest") || localStorage.getItem("theater_online_fb_enabled_global");
+        if (latestGlobal !== null) {
+          localVal = latestGlobal === "true";
+        }
+      }
+
+      // 2. Fetch from backend portal profile API
+      let apiVal = null;
+      for (const cid of candidateIds) {
+        try {
+          const profileRes = await api.get(`/theater/portal-profile/${cid}`);
+          if (profileRes.data && profileRes.data.enableOnlineFoodBooking !== undefined) {
+            apiVal = Boolean(profileRes.data.enableOnlineFoodBooking);
+            break;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // 3. Resolve status: API > Local > showtime.theater.enableOnlineFoodBooking > default FALSE
+      let isEnabled = false;
+      if (apiVal !== null) {
+        isEnabled = apiVal;
+      } else if (localVal !== null) {
+        isEnabled = localVal;
+      } else if (showtime?.theater?.enableOnlineFoodBooking !== undefined) {
+        isEnabled = Boolean(showtime.theater.enableOnlineFoodBooking);
+      } else {
+        isEnabled = false; // Strictly default to false so disabled option is respected
+      }
+
+      setTheaterOnlineFoodEnabled(isEnabled);
+
+      // 4. If facility is enabled, fetch active items
+      if (isEnabled) {
+        try {
+          let foundItems = null;
+          for (const cid of candidateIds) {
+            try {
+              const menuRes = await api.get(`/fb/menu/${cid}`);
+              if (Array.isArray(menuRes.data) && menuRes.data.length > 0) {
+                foundItems = menuRes.data.filter((item) => item.isAvailable !== false);
+                break;
+              }
+            } catch (err) {}
+          }
+          setAvailableSnacks(foundItems && foundItems.length > 0 ? foundItems : DEFAULT_FALLBACK_SNACKS);
+        } catch (e) {
+          setAvailableSnacks(DEFAULT_FALLBACK_SNACKS);
+        }
+      } else {
+        setAvailableSnacks([]);
+        setSelectedSnacks({});
+        setIsSnackModalOpen(false);
+      }
+    };
+
+    fetchTheaterFBSettings();
+
+    const handleToggleEvent = (e) => {
+      if (e?.detail?.enabled !== undefined) {
+        const en = Boolean(e.detail.enabled);
+        setTheaterOnlineFoodEnabled(en);
+        if (!en) {
+          setIsSnackModalOpen(false);
+          setAvailableSnacks([]);
+          setSelectedSnacks({});
+        }
+      } else {
+        fetchTheaterFBSettings();
+      }
+    };
+
+    window.addEventListener("theater_online_fb_changed", handleToggleEvent);
+    window.addEventListener("theater_online_fb_status_update", handleToggleEvent);
+    return () => {
+      window.removeEventListener("theater_online_fb_changed", handleToggleEvent);
+      window.removeEventListener("theater_online_fb_status_update", handleToggleEvent);
+    };
+  }, [currentTheaterId, showtime?.id]);
+
+  // Clear selected seats & snacks when showtime changes
   useEffect(() => {
     setSelectedSeats([]);
+    setSelectedSnacks({});
   }, [showtime?.id]);
 
   // 1. Fetch Hall Layout and Booked Seats with Real-Time Sync
@@ -258,11 +418,7 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
                   booked[`${showtimeId}-${rawSec.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${seatN}`] = true;
                 }
                 booked[`${showtimeContextKey}-${cSec}-${seatN}`] = true;
-                booked[`MV_${sMovieClean}_${cSec}_${seatN}`] = true;
-                booked[`MV_${curMovieClean}_${cSec}_${seatN}`] = true;
-                booked[`${sMovieClean}_${cSec}_${seatN}`] = true;
-                booked[`${curMovieClean}_${cSec}_${seatN}`] = true;
-                booked[`${cSec}_${seatN}`] = true;
+                booked[`${showtimeContextKey}-${rawSec.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${seatN}`] = true;
               }
             }
           });
@@ -288,6 +444,36 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
     }
   };
 
+  // Snack helper functions
+  const handleUpdateSnackQty = (snackItem, delta) => {
+    setSelectedSnacks((prev) => {
+      const currentQty = prev[snackItem.id]?.quantity || 0;
+      const nextQty = Math.max(0, currentQty + delta);
+      if (nextQty === 0) {
+        const next = { ...prev };
+        delete next[snackItem.id];
+        return next;
+      }
+      return {
+        ...prev,
+        [snackItem.id]: {
+          item: snackItem,
+          quantity: nextQty,
+        },
+      };
+    });
+  };
+
+  const snackTotal = useMemo(() => {
+    return Object.values(selectedSnacks).reduce((sum, entry) => {
+      return sum + (Number(entry.item.price || 0) * entry.quantity);
+    }, 0);
+  }, [selectedSnacks]);
+
+  const snackItemsCount = useMemo(() => {
+    return Object.values(selectedSnacks).reduce((sum, entry) => sum + entry.quantity, 0);
+  }, [selectedSnacks]);
+
   // Pricing calculations
   const subtotal = useMemo(() => {
     return selectedSeats.reduce((sum, s) => sum + (s.price || 0), 0);
@@ -296,7 +482,7 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
   // Nominal Internet Convenience Fee & GST (Standard Indian Cinema Structure)
   const convenienceFee = selectedSeats.length > 0 ? selectedSeats.length * 20 : 0; // ₹20 per ticket
   const gstAmount = Number((convenienceFee * 0.18).toFixed(2)); // 18% GST on convenience fee
-  const grandTotal = Number((subtotal + convenienceFee + gstAmount).toFixed(2));
+  const grandTotal = Number((subtotal + snackTotal + convenienceFee + gstAmount).toFixed(2));
 
   // Confirm booking & synchronize sold seats
   const handleConfirmBooking = async () => {
@@ -329,11 +515,6 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
         currentBooked[`${showtimeContextKey}-${secClean}-${s.num}`] = true;
         currentBooked[`${showtimeContextKey}-${cSec}-${s.num}`] = true;
         currentBooked[`${showtimeContextKey}-${s.key}`] = true;
-        currentBooked[`MV_${movieClean}_${cSec}_${s.num}`] = true;
-        currentBooked[`${movieClean}_${cSec}_${s.num}`] = true;
-        currentBooked[`${cSec}_${s.num}`] = true;
-
-
       });
 
       setBookedSeats(currentBooked);
@@ -369,9 +550,19 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
         createdAt: new Date().toISOString(),
         status: "VALID",
         source: "ONLINE_BOOKING",
+        theaterPortalId: showtime?.theater?.theaterPortal?.id || showtime?.theaterPortalId || localStorage.getItem("portalId") || 2,
+        portalId: showtime?.theater?.theaterPortal?.id || showtime?.theaterPortalId || localStorage.getItem("portalId") || 2,
+        snacks: Object.values(selectedSnacks).map((s) => ({
+          id: s.item.id,
+          name: s.item.name,
+          category: s.item.category,
+          price: s.item.price,
+          quantity: s.quantity,
+          subtotal: Number(s.item.price || 0) * s.quantity,
+        })),
+        snackTotal: snackTotal,
+        snackCount: snackItemsCount,
       };
-
-
 
       // 3. Post to backend
       try {
@@ -386,6 +577,32 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
         }).catch((e) => console.warn("Public book-seats backend error:", e));
 
         await api.post("/theater/sales-history", ticketRecord).catch((e) => console.warn("Public sales-history post error:", e));
+
+        // If snacks were pre-ordered, post to F&B order management
+        if (snackItemsCount > 0) {
+          try {
+            const validSnackItems = Object.values(selectedSnacks)
+              .filter((s) => !isNaN(Number(s.item.id)))
+              .map((s) => ({
+                menuItemId: Number(s.item.id),
+                quantity: s.quantity,
+                modifiers: `Ticket #${bookingId}`,
+              }));
+
+            if (validSnackItems.length > 0) {
+              await api.post("/fb/orders", {
+                theaterId: Number(showtime?.theater?.id || showtime?.theaterPortalId || localStorage.getItem("portalId") || 2),
+                paymentMode: paymentMode,
+                deliveryLocation: `Seat ${selectedSeats.map((s) => s.num).join(", ")}`,
+                source: "ONLINE_TICKET_BUNDLE",
+                totalAmount: snackTotal,
+                items: validSnackItems,
+              }).catch((e) => console.warn("FB order sync notice:", e));
+            }
+          } catch (e) {
+            // non-blocking
+          }
+        }
       } catch (err) {
         console.warn("Backend booking sync notice:", err);
       }
@@ -402,9 +619,16 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
         customerName,
         customerPhone,
         paymentMode,
+        snacks: Object.values(selectedSnacks).map((s) => ({
+          name: s.item.name,
+          quantity: s.quantity,
+          price: s.item.price,
+        })),
+        snackTotal: snackTotal,
       });
 
       setIsCheckoutOpen(false);
+      setIsSnackModalOpen(false);
     } catch (err) {
       alert("Payment processing error. Please try again.");
     } finally {
@@ -453,21 +677,19 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
     <div className="public-seat-selection pb-5" style={{ backgroundColor: "#f8fafc", minHeight: "100vh", color: "#0f172a" }}>
       {/* 1. TOP HEADER & MOVIE CONTEXT BAR */}
       <div className="sticky-top" style={{ zIndex: 110 }}>
-        <div className="bg-white border-bottom shadow-sm py-2.5 px-4">
-          <div className="container d-flex align-items-center justify-content-between flex-wrap gap-2 position-relative">
-          <div className="d-flex align-items-center gap-3 ps-lg-4">
-            {/* Absolute Back Button pushed to the left edge */}
-            <button
-              type="button"
-              className="btn btn-link text-dark text-decoration-none p-0 d-flex align-items-center gap-2 position-absolute d-none d-lg-flex transition-all"
-              onClick={onBack}
-              style={{ fontSize: "15px", fontWeight: "600", left: "0", top: "50%", transform: "translateY(-50%)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              <BsArrowLeft size={18} /> Back
-            </button>
+        <div className="bg-white border-bottom shadow-sm py-2.5 px-4 position-relative">
+          {/* Desktop Back Button (Far Left Edge) */}
+          <button
+            type="button"
+            className="btn btn-outline-dark btn-sm d-none d-lg-flex align-items-center gap-2 rounded-3 px-3 fw-semibold transition-all position-absolute"
+            onClick={onBack}
+            style={{ left: "25px", top: "50%", transform: "translateY(-50%)", zIndex: 10 }}
+          >
+            <BsArrowLeft size={16} /> Back
+          </button>
 
+          <div className="container d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div className="d-flex align-items-center gap-3">
             {/* Mobile Back Button */}
             <button
               type="button"
@@ -480,7 +702,7 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
               <BsArrowLeft size={18} />
             </button>
 
-            <div>
+            <div className="ms-lg-5 ps-lg-3">
               <div className="d-flex align-items-center gap-2">
                 <h5 className="fw-bolder mb-0 text-dark" style={{ fontSize: "18px" }}>
                   {movie.title}
@@ -501,44 +723,46 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
             </div>
           </div>
 
-          {/* Seat Status Legend */}
-          <div className="d-flex align-items-center gap-3 small">
-            <div className="d-flex align-items-center gap-1.5">
-              <span
-                style={{
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "4px",
-                  border: "1px solid #94a3b8",
-                  backgroundColor: "#ffffff",
-                  display: "inline-block",
-                }}
-              ></span>
-              <span className="text-muted">Available</span>
-            </div>
-            <div className="d-flex align-items-center gap-1.5">
-              <span
-                style={{
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "4px",
-                  backgroundColor: "#10b981",
-                  display: "inline-block",
-                }}
-              ></span>
-              <span className="fw-semibold text-success">Selected</span>
-            </div>
-            <div className="d-flex align-items-center gap-1.5">
-              <span
-                style={{
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "4px",
-                  backgroundColor: "#cbd5e1",
-                  display: "inline-block",
-                }}
-              ></span>
-              <span className="text-muted">Sold</span>
+          <div className="d-flex align-items-center gap-4">
+            {/* Seat Status Legend */}
+            <div className="d-flex align-items-center gap-3 small">
+              <div className="d-flex align-items-center gap-1.5">
+                <span
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "4px",
+                    border: "1px solid #94a3b8",
+                    backgroundColor: "#ffffff",
+                    display: "inline-block",
+                  }}
+                ></span>
+                <span className="text-muted">Available</span>
+              </div>
+              <div className="d-flex align-items-center gap-1.5">
+                <span
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "4px",
+                    backgroundColor: "#10b981",
+                    display: "inline-block",
+                  }}
+                ></span>
+                <span className="fw-semibold text-success">Selected</span>
+              </div>
+              <div className="d-flex align-items-center gap-1.5">
+                <span
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "4px",
+                    backgroundColor: "#cbd5e1",
+                    display: "inline-block",
+                  }}
+                ></span>
+                <span className="text-muted">Sold</span>
+              </div>
             </div>
           </div>
         </div>
@@ -672,10 +896,7 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
                                   bookedSeats[`${showtimeContextKey}-${key2}`] ||
                                   bookedSeats[`${showtimeContextKey}-${sec.id}-${seatNumDisplay}`] ||
                                   bookedSeats[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`] ||
-                                  bookedSeats[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`] ||
-                                  bookedSeats[`MV_${movieClean}_${cSec}_${seatNumDisplay}`] ||
-                                  bookedSeats[`${movieClean}_${cSec}_${seatNumDisplay}`] ||
-                                  bookedSeats[`${cSec}_${seatNumDisplay}`]
+                                  bookedSeats[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`]
                                 );
                                 const isSelected = selectedSeats.some((s) => s.key === seatKey);
 
@@ -773,10 +994,7 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
                                   bookedSeats[`${showtimeContextKey}-${key2}`] ||
                                   bookedSeats[`${showtimeContextKey}-${sec.id}-${seatNumDisplay}`] ||
                                   bookedSeats[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`] ||
-                                  bookedSeats[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`] ||
-                                  bookedSeats[`MV_${movieClean}_${cSec}_${seatNumDisplay}`] ||
-                                  bookedSeats[`${movieClean}_${cSec}_${seatNumDisplay}`] ||
-                                  bookedSeats[`${cSec}_${seatNumDisplay}`]
+                                  bookedSeats[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`]
                                 );
                                 const isSelected = selectedSeats.some((s) => s.key === seatKey);
 
@@ -919,10 +1137,211 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
               <button
                 type="button"
                 className="btn btn-primary px-4 py-2.5 rounded-pill fw-bold d-flex align-items-center gap-2 shadow"
-                onClick={() => setIsCheckoutOpen(true)}
+                onClick={() => {
+                  if (theaterOnlineFoodEnabled && availableSnacks.length > 0) {
+                    setIsSnackModalOpen(true);
+                  } else {
+                    setIsCheckoutOpen(true);
+                  }
+                }}
               >
                 <BsTicketPerforated size={18} /> Proceed to Pay
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3.5 OPTIONAL ONLINE FOOD & BEVERAGES PRE-ORDER MODAL */}
+      {isSnackModalOpen && theaterOnlineFoodEnabled && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", zIndex: 1045 }}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div className="modal-content rounded-4 border-0 shadow-2xl overflow-hidden bg-white">
+              {/* Header */}
+              <div 
+                className="modal-header px-4 py-3 border-bottom d-flex align-items-center justify-content-between"
+                style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", color: "#fff" }}
+              >
+                <div>
+                  <h5 className="modal-title fw-bold d-flex align-items-center gap-2 mb-0 text-white">
+                    🍿 Add Food & Refreshments
+                    <span className="badge bg-warning text-dark text-uppercase ms-1" style={{ fontSize: "10px", letterSpacing: "0.5px" }}>Optional</span>
+                  </h5>
+                  <p className="small text-white-50 mb-0 mt-0.5">
+                    Pre-order snacks for swift counter pickup during interval
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-light rounded-pill px-3 py-1 text-white border-white-50"
+                  onClick={() => {
+                    setIsSnackModalOpen(false);
+                    setIsCheckoutOpen(true);
+                  }}
+                  title="Skip refreshments and continue directly to payment"
+                >
+                  Skip Snacks &gt;
+                </button>
+              </div>
+
+              {/* Category Pills & Item Cards */}
+              <div className="modal-body p-3 p-md-4" style={{ maxHeight: "62vh", overflowY: "auto" }}>
+                {/* Category Nav */}
+                <div className="d-flex gap-2 overflow-auto pb-2 mb-3">
+                  {["All", "Popcorn", "Beverage", "Combo", "Snack", "Candy"].map((cat) => {
+                    const count = cat === "All" ? availableSnacks.length : availableSnacks.filter(s => s.category?.toLowerCase() === cat.toLowerCase()).length;
+                    if (count === 0 && cat !== "All") return null;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        className={`btn btn-sm rounded-pill px-3 py-1.5 fw-semibold text-nowrap transition-all ${
+                          selectedSnackCategory === cat
+                            ? "btn-dark shadow-sm text-white"
+                            : "btn-light text-secondary border"
+                        }`}
+                        onClick={() => setSelectedSnackCategory(cat)}
+                      >
+                        {cat === "All" && "🍿 "}
+                        {cat === "Popcorn" && "🍿 "}
+                        {cat === "Beverage" && "🥤 "}
+                        {cat === "Combo" && "✨ "}
+                        {cat === "Snack" && "🥨 "}
+                        {cat === "Candy" && "🍫 "}
+                        {cat} <span className="opacity-75 ms-1" style={{ fontSize: "11px" }}>({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Items Grid */}
+                <div className="row g-3">
+                  {availableSnacks
+                    .filter((item) => selectedSnackCategory === "All" || item.category?.toLowerCase() === selectedSnackCategory.toLowerCase())
+                    .map((item) => {
+                      const qty = selectedSnacks[item.id]?.quantity || 0;
+                      return (
+                        <div key={item.id} className="col-12 col-sm-6">
+                          <div 
+                            className={`card h-100 border rounded-3 overflow-hidden shadow-xs ${
+                              qty > 0 ? "border-primary bg-primary bg-opacity-10" : "border-light-subtle"
+                            }`}
+                          >
+                            <div className="card-body p-3 d-flex gap-3 align-items-center">
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.name}
+                                  className="rounded-3 flex-shrink-0"
+                                  style={{ width: "72px", height: "72px", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <div 
+                                  className="rounded-3 bg-light d-flex align-items-center justify-content-center flex-shrink-0 text-muted"
+                                  style={{ width: "72px", height: "72px", fontSize: "28px" }}
+                                >
+                                  {item.category === "Beverage" ? "🥤" : item.category === "Popcorn" ? "🍿" : "🥨"}
+                                </div>
+                              )}
+
+                              <div className="flex-grow-1 min-w-0">
+                                <div className="d-flex align-items-center justify-content-between mb-0.5">
+                                  <span className="badge bg-secondary bg-opacity-25 text-secondary border rounded-pill px-2 py-0.5" style={{ fontSize: "10px" }}>
+                                    {item.category || "Refreshment"}
+                                  </span>
+                                  <span className="fw-bolder text-dark fs-6">₹{item.price}</span>
+                                </div>
+                                <h6 className="fw-bold mb-1 text-truncate text-dark" title={item.name} style={{ fontSize: "14px" }}>
+                                  {item.name}
+                                </h6>
+                                <p className="text-muted small mb-2 text-truncate" style={{ fontSize: "12px" }}>
+                                  {item.description || "Fresh cinema refreshment"}
+                                </p>
+
+                                <div className="d-flex align-items-center justify-content-end">
+                                  {qty > 0 ? (
+                                    <div className="input-group input-group-sm w-auto rounded-pill overflow-hidden border border-primary shadow-xs">
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline-primary px-2.5 py-1 border-0"
+                                        onClick={() => handleUpdateSnackQty(item, -1)}
+                                      >
+                                        <BsDash size={14} />
+                                      </button>
+                                      <span className="input-group-text bg-white border-0 fw-bold px-3 py-1 text-primary">
+                                        {qty}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="btn btn-primary px-2.5 py-1 border-0"
+                                        onClick={() => handleUpdateSnackQty(item, 1)}
+                                      >
+                                        <BsPlus size={14} />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1"
+                                      onClick={() => handleUpdateSnackQty(item, 1)}
+                                    >
+                                      <BsPlus size={16} /> Add
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Bottom Sticky Footer */}
+              <div className="modal-footer bg-light border-top px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                  <div className="small text-muted fw-semibold">
+                    {snackItemsCount > 0 ? (
+                      <span className="text-dark fw-bold">
+                        {snackItemsCount} snack{snackItemsCount > 1 ? "s" : ""} added (+₹{snackTotal.toFixed(2)})
+                      </span>
+                    ) : (
+                      "No refreshments added yet"
+                    )}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: "11px" }}>
+                    Total (Tickets + Snacks): <strong className="text-primary fs-6">₹{grandTotal.toFixed(2)}</strong>
+                  </div>
+                </div>
+
+                <div className="d-flex align-items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-semibold small"
+                    onClick={() => {
+                      setIsSnackModalOpen(false);
+                      setIsCheckoutOpen(true);
+                    }}
+                  >
+                    Skip Snacks
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm"
+                    onClick={() => {
+                      setIsSnackModalOpen(false);
+                      setIsCheckoutOpen(true);
+                    }}
+                  >
+                    Continue to Pay ₹{grandTotal.toFixed(2)}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -975,6 +1394,19 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
                     <span className="text-secondary">Real Ticket Price ({selectedSeats.length} Ticket{selectedSeats.length > 1 ? "s" : ""}):</span>
                     <span className="fw-bold text-dark">₹{subtotal.toFixed(2)}</span>
                   </div>
+                  {snackTotal > 0 && (
+                    <div className="d-flex justify-content-between align-items-start mb-1.5 small bg-light p-2 rounded border border-light-subtle">
+                      <div>
+                        <span className="fw-semibold text-dark d-flex align-items-center gap-1">
+                          🍿 Snacks & Refreshments ({snackItemsCount}):
+                        </span>
+                        <div className="text-muted mt-0.5" style={{ fontSize: "11px" }}>
+                          {Object.values(selectedSnacks).map(s => `${s.quantity}x ${s.item.name}`).join(", ")}
+                        </div>
+                      </div>
+                      <span className="fw-bold text-success">+₹{snackTotal.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="d-flex justify-content-between align-items-center mb-1.5 small">
                     <span className="text-secondary">Convenience / Handling Fee:</span>
                     <span className="fw-semibold text-dark">₹{convenienceFee.toFixed(2)}</span>
@@ -1096,72 +1528,111 @@ export default function PublicMovieSeatLayout({ movie, showtime, onBack, onBooki
         >
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden bg-white text-dark">
-              {/* Top Green Accent */}
-              <div className="bg-success text-white p-4 text-center">
-                <div
-                  className="rounded-circle bg-white text-success d-inline-flex align-items-center justify-content-center mb-2 shadow"
-                  style={{ width: "54px", height: "54px" }}
-                >
-                  <BsCheckCircleFill size={28} />
-                </div>
-                <h4 className="fw-bolder mb-1">Booking Confirmed!</h4>
-                <div className="text-white text-opacity-90 small">
-                  Reference ID: <strong>{bookingConfirmed.bookingId}</strong>
-                </div>
-              </div>
-
-              {/* Ticket Details */}
-              <div className="p-4">
-                <div
-                  className="p-3.5 rounded-3 border mb-3"
-                  style={{
-                    backgroundColor: "#f8fafc",
-                    borderLeft: "4px solid #16a34a",
-                  }}
-                >
-                  <h5 className="fw-bolder mb-1 text-dark">{bookingConfirmed.movieTitle}</h5>
-                  <div className="text-muted small mb-2">
-                    {bookingConfirmed.theaterName} • {bookingConfirmed.screenName}
+              <div ref={ticketCardRef} className="bg-white">
+                {/* Top Green Accent */}
+                <div className="bg-success text-white p-4 text-center">
+                  <div
+                    className="rounded-circle bg-white text-success d-inline-flex align-items-center justify-content-center mb-2 shadow"
+                    style={{ width: "54px", height: "54px" }}
+                  >
+                    <BsCheckCircleFill size={28} />
                   </div>
-
-                  <div className="row g-2 pt-2 border-top text-secondary small">
-                    <div className="col-6">
-                      <span className="text-muted">Date:</span>{" "}
-                      <strong>{formatIndianDate(bookingConfirmed.showDate)}</strong>
-                    </div>
-                    <div className="col-6">
-                      <span className="text-muted">Time:</span>{" "}
-                      <strong>{formatIndianTime(bookingConfirmed.startTime)}</strong>
-                    </div>
-                    <div className="col-12 mt-2">
-                      <span className="text-muted">Seats:</span>{" "}
-                      <span className="badge bg-success text-white px-2.5 py-1 rounded-pill ms-1 fw-bold fs-6">
-                        {bookingConfirmed.seats.join(", ")}
-                      </span>
-                    </div>
+                  <h4 className="fw-bolder mb-1">Booking Confirmed!</h4>
+                  <div className="text-white text-opacity-90 small">
+                    Reference ID: <strong>{bookingConfirmed.bookingId}</strong>
                   </div>
                 </div>
 
-                {/* QR Code Simulation & M-Ticket Verification */}
-                <div className="p-3 rounded-3 bg-light border text-center mb-3">
-                  <BsQrCode size={64} className="text-dark mb-1" />
-                  <div className="small text-muted">Scan at cinema entry counter for instant admission</div>
-                </div>
+                {/* Ticket Details */}
+                <div className="p-4">
+                  <div
+                    className="p-3.5 rounded-3 border mb-3"
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      borderLeft: "4px solid #16a34a",
+                    }}
+                  >
+                    <h5 className="fw-bolder mb-1 text-dark">{bookingConfirmed.movieTitle}</h5>
+                    <div className="text-muted small mb-2">
+                      {bookingConfirmed.theaterName} • {bookingConfirmed.screenName}
+                    </div>
 
-                <div className="d-flex align-items-center justify-content-between text-muted small">
-                  <span>Guest: <strong>{bookingConfirmed.customerName}</strong></span>
-                  <span>Amount Paid: <strong className="text-dark fs-6">₹{bookingConfirmed.totalAmount}</strong></span>
+                    <div className="row g-2 pt-2 border-top text-secondary small">
+                      <div className="col-6">
+                        <span className="text-muted">Date:</span>{" "}
+                        <strong>{formatIndianDate(bookingConfirmed.showDate)}</strong>
+                      </div>
+                      <div className="col-6">
+                        <span className="text-muted">Time:</span>{" "}
+                        <strong>{formatIndianTime(bookingConfirmed.startTime)}</strong>
+                      </div>
+                      <div className="col-12 mt-2">
+                        <span className="text-muted">Seats:</span>{" "}
+                        <span className="badge bg-success text-white px-2.5 py-1 rounded-pill ms-1 fw-bold fs-6">
+                          {bookingConfirmed.seats.join(", ")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pre-Ordered Snacks (If Any) */}
+                  {bookingConfirmed.snacks && bookingConfirmed.snacks.length > 0 && (
+                    <div 
+                      className="p-3 rounded-3 border mb-3" 
+                      style={{ backgroundColor: "#fffbeb", borderColor: "#fde68a", borderLeft: "4px solid #f59e0b" }}
+                    >
+                      <div className="d-flex align-items-center justify-content-between mb-1.5">
+                        <span className="fw-bold text-dark small d-flex align-items-center gap-1.5">
+                          🍿 Pre-Ordered Refreshments
+                        </span>
+                        <span className="badge bg-warning text-dark fw-bold" style={{ fontSize: "11px" }}>
+                          Paid ₹{bookingConfirmed.snackTotal.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="d-flex flex-wrap gap-1 mb-2">
+                        {bookingConfirmed.snacks.map((snk, idx) => (
+                          <span key={idx} className="badge bg-white text-dark border px-2 py-1 shadow-xs fw-semibold">
+                            {snk.quantity}x {snk.name}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-secondary small" style={{ fontSize: "11px" }}>
+                        ℹ️ Present this M-Ticket at Concession Counter for immediate pickup during interval!
+                      </div>
+                    </div>
+                  )}
+
+                  {/* QR Code Simulation & M-Ticket Verification */}
+                  <div className="p-3 rounded-3 bg-light border text-center mb-3">
+                    <BsQrCode size={64} className="text-dark mb-1" />
+                    <div className="small text-muted">Scan at cinema entry counter for instant admission</div>
+                  </div>
+
+                  <div className="d-flex align-items-center justify-content-between text-muted small">
+                    <span>Guest: <strong>{bookingConfirmed.customerName}</strong></span>
+                    <span>Amount Paid: <strong className="text-dark fs-6">₹{bookingConfirmed.totalAmount}</strong></span>
+                  </div>
                 </div>
               </div>
 
-              <div className="modal-footer bg-light border-top px-4 py-3 d-flex justify-content-between">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary rounded-pill px-3.5 fw-semibold d-flex align-items-center gap-1.5"
-                  onClick={() => window.print()}
-                >
-                  <BsDownload size={14} /> Print / Save
-                </button>
+              <div className="modal-footer bg-light border-top px-4 py-3 d-flex justify-content-between flex-wrap gap-2">
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-success rounded-pill px-3.5 fw-semibold d-flex align-items-center gap-1.5 shadow-sm"
+                    onClick={handleDownloadTicketPdf}
+                    disabled={isDownloadingTicket}
+                  >
+                    <BsDownload size={14} /> {isDownloadingTicket ? "Downloading..." : "Download Ticket"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary rounded-pill px-3.5 fw-semibold d-flex align-items-center gap-1.5"
+                    onClick={() => window.print()}
+                  >
+                    <BsPrinter size={14} /> Print
+                  </button>
+                </div>
                 <button
                   type="button"
                   className="btn btn-primary rounded-pill px-4 fw-bold"

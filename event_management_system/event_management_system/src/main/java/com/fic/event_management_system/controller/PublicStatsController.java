@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fic.event_management_system.repository.ShowtimeRepository;
+import com.fic.event_management_system.repository.MovieBookedTicketRepository;
+import com.fic.event_management_system.repository.TheaterPortalRepository;
+import com.fic.event_management_system.repository.TheaterUserRepository;
+
 @RestController
 @RequestMapping("/api/public-stats")
 public class PublicStatsController {
@@ -20,27 +25,50 @@ public class PublicStatsController {
     private final RegistrationRepository registrationRepository;
     private final UserRepository userRepository;
     private final PortalRepository portalRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final MovieBookedTicketRepository movieBookedTicketRepository;
+    private final TheaterPortalRepository theaterPortalRepository;
+    private final TheaterUserRepository theaterUserRepository;
 
     public PublicStatsController(
             EventRepository eventRepository,
             RegistrationRepository registrationRepository,
             UserRepository userRepository,
-            PortalRepository portalRepository) {
+            PortalRepository portalRepository,
+            ShowtimeRepository showtimeRepository,
+            MovieBookedTicketRepository movieBookedTicketRepository,
+            TheaterPortalRepository theaterPortalRepository,
+            TheaterUserRepository theaterUserRepository) {
         this.eventRepository = eventRepository;
         this.registrationRepository = registrationRepository;
         this.userRepository = userRepository;
         this.portalRepository = portalRepository;
+        this.showtimeRepository = showtimeRepository;
+        this.movieBookedTicketRepository = movieBookedTicketRepository;
+        this.theaterPortalRepository = theaterPortalRepository;
+        this.theaterUserRepository = theaterUserRepository;
     }
 
     @GetMapping
     public Map<String, Object> getPublicStats() {
+        long events = eventRepository.countByStatusIn(List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED)) 
+                      + showtimeRepository.count();
+                      
+        long registrations = registrationRepository.count() 
+                             + movieBookedTicketRepository.count();
+                             
+        long users = userRepository.count() 
+                     + theaterUserRepository.count();
+                     
+        long portals = portalRepository.countByDeletedFalseOrDeletedIsNull() 
+                       + theaterPortalRepository.count();
+
         return Map.of(
-                "events", eventRepository.countByStatusIn(
-                        List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED)),
-                "registrations", registrationRepository.count(),
+                "events", events,
+                "registrations", registrations,
                 "organizers", userRepository.countByRole_RoleName(RoleName.ORGANIZER),
-                "users", userRepository.count(),
-                "portals", portalRepository.countByDeletedFalseOrDeletedIsNull()
+                "users", users,
+                "portals", portals
         );
     }
 }

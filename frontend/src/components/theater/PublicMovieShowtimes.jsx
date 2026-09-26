@@ -1,14 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import api from "../../api/axiosConfig";
 import {
   BsArrowLeft,
   BsClock,
   BsInfoCircle,
   BsPhone,
   BsCupHot,
-  BsChevronDown,
   BsSearch,
 } from "react-icons/bs";
-import { formatIndianDate, formatIndianTime } from "../../utils/dateTime";
+import { formatIndianTime } from "../../utils/dateTime";
 
 // Accurate screen technology resolver based on screen projection, sound system, format, and name
 export function getScreenTech(st) {
@@ -59,19 +59,110 @@ export function getScreenTech(st) {
   return "2D";
 }
 
+// Seat availability and color resolver according to exact rules:
+// - 100% full -> "Sold Out" (#64748b, disabled)
+// - >= 70% full -> "Fast Filling" (#ef4444 RED)
+// - booking continuously / moderate occupancy -> "Fast Filling" (#f59e0b ORANGE)
+// - Plenty available (< 10%) -> "Available" (#10b981 GREEN)
+export function getShowtimeAvailability(bookedCount = 0, capacity = 418) {
+  const cap = capacity > 0 ? capacity : 100;
+  const percent = Math.min(100, Math.round((bookedCount / cap) * 100));
+
+  if (bookedCount >= cap || percent >= 100) {
+    return {
+      status: "SOLD_OUT",
+      label: "Sold Out",
+      color: "#64748b",
+      badgeClass: "bg-secondary",
+      isSoldOut: true,
+      occupancyPercent: 100,
+    };
+  }
+
+  // >= 70% full -> RED
+  if (percent >= 70) {
+    return {
+      status: "ALMOST_FULL",
+      label: "70%+ Full",
+      color: "#ef4444",
+      badgeClass: "bg-danger",
+      isSoldOut: false,
+      occupancyPercent: percent,
+    };
+  }
+
+  // 40% - 69% -> ORANGE (Fast Filling)
+  if (percent >= 40) {
+    return {
+      status: "FAST_FILLING",
+      label: "Fast Filling",
+      color: "#f59e0b",
+      badgeClass: "bg-warning",
+      isSoldOut: false,
+      occupancyPercent: percent,
+    };
+  }
+
+  // Available -> GREEN
+  return {
+    status: "AVAILABLE",
+    label: "Available",
+    color: "#10b981",
+    badgeClass: "bg-success",
+    isSoldOut: false,
+    occupancyPercent: percent,
+  };
+}
+
 export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }) {
   const [selectedDate, setSelectedDate] = useState("ALL");
   const [selectedFormat, setSelectedFormat] = useState("ALL");
   const [selectedPriceRange, setSelectedPriceRange] = useState("ALL");
   const [selectedTime, setSelectedTime] = useState("ALL");
   const [selectedSort, setSelectedSort] = useState("ALL");
+  const [occupancyMap, setOccupancyMap] = useState({});
 
-  // Distinct dates available for this movie
+  // Fetch real-time sales history to calculate live seat occupancy
+  useEffect(() => {
+    let isMounted = true;
+    const loadOccupancy = async () => {
+      try {
+        const res = await api.get("/theater/sales-history");
+        if (isMounted && Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach((sale) => {
+            if (!sale || sale.status === "CANCELLED" || sale.status === "REFUNDED") return;
+            const sId = sale.showtimeId;
+            if (!sId) return;
+            const seats = Array.isArray(sale.seats)
+              ? sale.seats
+              : typeof sale.seats === "string"
+              ? sale.seats.split(",").filter(Boolean)
+              : [];
+            map[sId] = (map[sId] || 0) + (seats.length || 1);
+          });
+          setOccupancyMap(map);
+        }
+      } catch (e) {
+        console.warn("Failed to load occupancy from sales history:", e);
+      }
+    };
+    loadOccupancy();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Distinct upcoming dates available for this movie (strictly Today onwards)
   const availableDates = useMemo(() => {
     if (!movie || !movie.showtimes) return [];
     const dates = new Set();
+    const todayStr = new Date().toISOString().split("T")[0];
     movie.showtimes.forEach((st) => {
-      if (st.showDate) dates.add(st.showDate);
+      // Exclude past dates
+      if (st.showDate && st.showDate >= todayStr) {
+        dates.add(st.showDate);
+      }
     });
     return Array.from(dates).sort();
   }, [movie]);
@@ -89,11 +180,15 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
     return Array.from(set);
   }, [movie]);
 
-  // Filter showtimes by selected date, format, price, and time
+  // Filter showtimes by selected date, format, price, and time (excluding past dates)
   const filteredShowtimes = useMemo(() => {
     if (!movie || !movie.showtimes) return [];
+    const todayStr = new Date().toISOString().split("T")[0];
     
     let filtered = movie.showtimes.filter((st) => {
+      // 0. Exclude past shows
+      if (st.showDate && st.showDate < todayStr) return false;
+
       // 1. Date Filter
       if (selectedDate !== "ALL" && st.showDate !== selectedDate) return false;
       
@@ -249,14 +344,22 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
             </div>
 
             {/* Quick Status Legend */}
-            <div className="d-flex align-items-center gap-3 small text-secondary">
+            <div className="d-flex align-items-center gap-3 small text-secondary flex-wrap">
               <span className="d-flex align-items-center gap-1.5">
-                <span className="badge bg-success rounded-circle p-1" style={{ width: "8px", height: "8px" }}></span>
+                <span className="badge bg-success rounded-circle p-1" style={{ width: "8px", height: "8px", backgroundColor: "#10b981" }}></span>
                 Available
               </span>
               <span className="d-flex align-items-center gap-1.5">
-                <span className="badge bg-warning rounded-circle p-1" style={{ width: "8px", height: "8px" }}></span>
-                Filling Fast
+                <span className="badge rounded-circle p-1" style={{ width: "8px", height: "8px", backgroundColor: "#f59e0b" }}></span>
+                Fast Filling
+              </span>
+              <span className="d-flex align-items-center gap-1.5">
+                <span className="badge rounded-circle p-1" style={{ width: "8px", height: "8px", backgroundColor: "#ef4444" }}></span>
+                70%+ Full
+              </span>
+              <span className="d-flex align-items-center gap-1.5">
+                <span className="badge rounded-circle p-1" style={{ width: "8px", height: "8px", backgroundColor: "#64748b" }}></span>
+                Sold Out
               </span>
             </div>
           </div>
@@ -467,50 +570,78 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
 
                 {/* 3. SHOWTIME PILL BUTTONS WITH ACCURATE SCREEN TECH */}
                 <div className="d-flex align-items-center gap-3 flex-wrap">
-                  {th.showtimes.map((st) => (
-                    <button
-                      key={st.id || Math.random()}
-                      type="button"
-                      className="btn bg-white px-3.5 py-2 text-center transition-all position-relative d-flex flex-column align-items-center justify-content-center"
-                      style={{
-                        minWidth: "128px",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.borderColor = "#3b82f6";
-                        e.currentTarget.style.color = "#3b82f6";
-                        e.currentTarget.style.boxShadow = "0 4px 6px rgba(59, 130, 246, 0.1)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.borderColor = "#cbd5e1";
-                        e.currentTarget.style.color = "initial";
-                        e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
-                      }}
-                      onClick={() => onSelectShowtime(st)}
-                      title={`Click to select seats & book (${st.screenTech || "2D"})`}
-                    >
-                      <span
-                        className="fw-bold"
-                        style={{ fontSize: "15px", letterSpacing: "0.2px" }}
-                      >
-                        {formatIndianTime(st.startTime || "10:00:00")}
-                      </span>
-                      <span
-                        className="text-muted fw-semibold"
+                  {th.showtimes.map((st) => {
+                    const bookedCount = occupancyMap[st.id] || 0;
+                    const capacity = st.screen?.totalCapacity || 418;
+                    const avail = getShowtimeAvailability(bookedCount, capacity);
+
+                    return (
+                      <button
+                        key={st.id || Math.random()}
+                        type="button"
+                        disabled={avail.isSoldOut}
+                        className="btn bg-white px-3.5 py-2 text-center transition-all position-relative d-flex flex-column align-items-center justify-content-center"
                         style={{
-                          fontSize: "10.5px",
-                          letterSpacing: "0.5px",
-                          textTransform: "uppercase",
-                          marginTop: "2px",
+                          minWidth: "128px",
+                          border: `1px solid ${avail.isSoldOut ? "#e2e8f0" : avail.status === "ALMOST_FULL" ? "#fca5a5" : "#cbd5e1"}`,
+                          borderRadius: "8px",
+                          cursor: avail.isSoldOut ? "not-allowed" : "pointer",
+                          backgroundColor: avail.isSoldOut ? "#f8fafc" : "#ffffff",
+                          opacity: avail.isSoldOut ? 0.7 : 1,
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
                         }}
+                        onMouseOver={(e) => {
+                          if (avail.isSoldOut) return;
+                          e.currentTarget.style.borderColor = "#3b82f6";
+                          e.currentTarget.style.boxShadow = "0 4px 6px rgba(59, 130, 246, 0.1)";
+                        }}
+                        onMouseOut={(e) => {
+                          if (avail.isSoldOut) return;
+                          e.currentTarget.style.borderColor = avail.status === "ALMOST_FULL" ? "#fca5a5" : "#cbd5e1";
+                          e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
+                        }}
+                        onClick={() => !avail.isSoldOut && onSelectShowtime(st)}
+                        title={
+                          avail.isSoldOut
+                            ? `Showtime is completely sold out`
+                            : `Click to select seats & book (${avail.label} • ${st.screenTech || "2D"})`
+                        }
                       >
-                        {st.screenTech || "2D"}
-                      </span>
-                    </button>
-                  ))}
+                        <span
+                          className="fw-bold"
+                          style={{
+                            fontSize: "15px",
+                            letterSpacing: "0.2px",
+                            textDecoration: avail.isSoldOut ? "line-through" : "none",
+                            color: avail.isSoldOut ? "#94a3b8" : "#0f172a",
+                          }}
+                        >
+                          {formatIndianTime(st.startTime || "10:00:00")}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: "700",
+                            color: avail.color,
+                            marginTop: "2px",
+                          }}
+                        >
+                          {avail.label}
+                        </span>
+                        <span
+                          className="text-muted fw-semibold"
+                          style={{
+                            fontSize: "9.5px",
+                            letterSpacing: "0.5px",
+                            textTransform: "uppercase",
+                            marginTop: "1px",
+                          }}
+                        >
+                          {st.screenTech || "2D"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))

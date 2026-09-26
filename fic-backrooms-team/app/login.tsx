@@ -61,7 +61,7 @@ export default function LoginScreen() {
           <Ionicons name="arrow-back" size={22} color="#22166f" />
         </TouchableOpacity>
         <View style={styles.heading}>
-          <Image source={require('../assets/images/fic-logo.png')} style={styles.logoImage} />
+          <Image source={require('../assets/images/fic_logo.png')} style={styles.logoImage} />
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in with your existing FIC BackRooms team account.</Text>
         </View>

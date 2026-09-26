@@ -32,6 +32,10 @@ public class MovieBookedTicket {
 
     private String customerPhone;
 
+    private String customerEmail;
+
+    private String theaterName;
+
     private String paymentMode;
 
     private String status;
@@ -131,6 +135,22 @@ public class MovieBookedTicket {
 
     public void setCustomerPhone(String customerPhone) {
         this.customerPhone = customerPhone;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
+    }
+
+    public String getTheaterName() {
+        return theaterName;
+    }
+
+    public void setTheaterName(String theaterName) {
+        this.theaterName = theaterName;
     }
 
     public String getPaymentMode() {

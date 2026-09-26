@@ -137,6 +137,10 @@ function PublicWelcome() {
           <Link to="/" className="text-decoration-none">
             Back to home
           </Link>
+          <span className="mx-2 text-muted">|</span>
+          <Link to="/terms" className="text-decoration-none text-muted small">
+            Terms of Service
+          </Link>
         </div>
 
         <div className="d-flex justify-content-end mt-2">

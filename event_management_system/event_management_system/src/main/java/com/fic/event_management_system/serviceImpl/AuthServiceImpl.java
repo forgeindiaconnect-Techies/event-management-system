@@ -93,6 +93,10 @@ public class AuthServiceImpl implements AuthService {
                         redirectPath = "/theater/usher-dashboard";
                         userRole = "THEATER_STAFF";
                         if (dutyRole.isBlank()) dutyRole = "Gate Entry Usher";
+                    } else if (dutyRole.toLowerCase().contains("concession") || dutyRole.toLowerCase().contains("f&b") || dutyRole.toLowerCase().contains("food")) {
+                        redirectPath = "/theater-fb";
+                        userRole = "THEATER_STAFF";
+                        if (dutyRole.isBlank()) dutyRole = "F&B Concession Staff";
                     } else if (userRole.contains("MANAGER") || dutyRole.toLowerCase().contains("manager")) {
                         redirectPath = "/theater/manager-dashboard";
                         userRole = "THEATER_MANAGER";

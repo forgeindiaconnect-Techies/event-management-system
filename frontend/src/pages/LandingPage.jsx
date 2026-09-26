@@ -25,6 +25,10 @@ import {
   BsArrowUp,
   BsPauseFill,
   BsPlayFill,
+  BsFacebook,
+  BsInstagram,
+  BsTwitterX,
+  BsLinkedin,
 } from "react-icons/bs";
 
 function formatStatNumber(num) {
@@ -83,7 +87,9 @@ function LandingPage() {
 
   let targetDashboardPath = "/admin";
   if (isTheater) {
-    if (role.includes("CASHIER") || dutyRole.includes("cashier") || role === "THEATER_STAFF" || dutyRole.includes("staff")) {
+    if (redirectPath === "/theater-fb" || role.includes("CONCESSION") || dutyRole.includes("concession") || dutyRole.includes("f&b") || dutyRole.includes("food") || dutyRole.includes("beverage")) {
+      targetDashboardPath = "/theater-fb";
+    } else if (role.includes("CASHIER") || dutyRole.includes("cashier") || role === "THEATER_STAFF" || dutyRole.includes("staff")) {
       targetDashboardPath = "/theater/cashier-dashboard";
     } else if (role.includes("USHER") || dutyRole.includes("usher") || dutyRole.includes("gate")) {
       targetDashboardPath = "/theater/usher-dashboard";
@@ -194,7 +200,7 @@ function LandingPage() {
 
       setStatsData({
         events: Number(stats.events || 0),
-        registrations: Number(stats.registrations || 0),
+        attendees: Number(stats.registrations || 0),
         users: Number(stats.users ?? stats.organizers ?? 15),
         portals: Number(stats.portals ?? 1),
       });
@@ -764,24 +770,58 @@ function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-contact-section">
+      {/* LANDING PAGE FOOTER */}
+      <footer style={{ backgroundColor: "rgb(51, 51, 51)", color: "#f8f9fa", padding: "40px 0 30px" }} className="mt-auto">
         <div className="container">
-          <div className="landing-contact-card landing-reveal">
-            <div>
-              <p className="landing-kicker">Contact</p>
-              <h2>Start managing your events with FIC BackRooms</h2>
-              <p>
-                For support or setup questions, contact our system team at{" "}
-                <a href="mailto:support@ficbackrooms.com">support@ficbackrooms.com</a>.
-              </p>
+          
+          {/* LOGO DIVIDER */}
+          <div className="d-flex align-items-center justify-content-center mb-5">
+            <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(255,255,255,0.1)" }}></div>
+            <div className="px-4 text-center">
+              <div className="d-flex align-items-center justify-content-center fw-bold" style={{ gap: "12px", fontFamily: "sans-serif" }}>
+                <img src={logo} alt="FIC Logo" style={{ height: "32px", width: "auto" }} />
+                <span className="text-white fs-4" style={{ letterSpacing: "1px" }}>FIC BackRooms</span>
+              </div>
             </div>
+            <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(255,255,255,0.1)" }}></div>
+          </div>
 
-            <Link to="/create-portal" className="landing-primary-btn">
-              Create Portal <BsArrowRight className="ms-2" />
-            </Link>
+          <div className="row g-4 text-center text-md-start">
+            <div className="col-md-4">
+              <h5 className="fw-bold mb-3 text-white">Event Management System</h5>
+              <p className="small text-white-50 mb-4" style={{ lineHeight: "1.8" }}>
+                The ultimate all-in-one platform for theaters, event organizers, and seamless ticket booking experiences.
+              </p>
+              <div className="d-flex gap-3">
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsFacebook size={20} /></a>
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsInstagram size={20} /></a>
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsTwitterX size={20} /></a>
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsLinkedin size={20} /></a>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <h5 className="fw-bold mb-3 text-white">Information & Conditions</h5>
+              <ul className="list-unstyled small mb-0" style={{ lineHeight: "2" }}>
+                <li><a href="/terms" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Terms of Service</a></li>
+                <li><a href="/privacy" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Privacy Policy</a></li>
+                <li><a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Refund & Cancellation Policy</a></li>
+              </ul>
+            </div>
+            <div className="col-md-4">
+              <h5 className="fw-bold mb-3 text-white">Quick Links</h5>
+              <ul className="list-unstyled small mb-0" style={{ lineHeight: "2" }}>
+                <li><a href="/create-portal" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>List your events</a></li>
+                <li><a href="/create-portal" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>List your showtimes</a></li>
+                <li><a href="/find-events" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Book the shows</a></li>
+              </ul>
+            </div>
+          </div>
+          <hr className="border-secondary opacity-50 my-4" />
+          <div className="text-center small text-white-50">
+            &copy; {new Date().getFullYear()} Event Management System. All rights reserved.
           </div>
         </div>
-      </section>
+      </footer>
 
       <div className="landing-scroll-controls" aria-label="Page navigation">
         <button

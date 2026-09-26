@@ -6,8 +6,8 @@ import heroImage from "../../assets/images/hero-event.jpg";
 import { getDefaultBanner } from "../../utils/bannerUtils";
 import UserProfileMenu from "../../components/Public/UserProfileMenu";
 import PublicMovieDiscovery from "../../components/theater/PublicMovieDiscovery";
-import PublicForYouFeed from "../../components/public/PublicForYouFeed";
-import LocationSelectionModal from "../../components/public/LocationSelectionModal";
+import PublicForYouFeed from "../../components/Public/PublicForYouFeed";
+import LocationSelectionModal from "../../components/Public/LocationSelectionModal";
 import {
   BsSearch,
   BsGeoAlt,
@@ -31,7 +31,14 @@ import {
   BsTicketPerforated,
   BsInfoCircle,
   BsBook,
+  BsFacebook,
+  BsInstagram,
+  BsTwitterX,
+  BsLinkedin,
+  BsHeadset,
+  BsStars,
 } from "react-icons/bs";
+import PublicMovieSupportModal from "../../components/public/PublicMovieSupportModal";
 
 const EVENT_CATEGORIES = [
   { label: "All Events", icon: <BsGrid />, keywords: [] },
@@ -218,6 +225,7 @@ function PublicDashboard() {
     }
   }, [searchParams, locationObj.pathname]);
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const hamburgerBtnRef = useRef(null);
   const hamburgerPopupRef = useRef(null);
 
@@ -959,6 +967,47 @@ function PublicDashboard() {
 
                 {/* Items with icons */}
                 <div className="d-flex flex-column gap-1">
+                  <button
+                    type="button"
+                    className="popup-nav-item border-0 bg-transparent text-start w-100"
+                    onClick={() => {
+                      setActiveNavTab("foryou");
+                      setSearchParams({ tab: "foryou" });
+                      setIsHamburgerOpen(false);
+                    }}
+                  >
+                    <BsStars size={17} className="text-warning" />
+                    <span>For You</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="popup-nav-item border-0 bg-transparent text-start w-100"
+                    onClick={() => {
+                      setActiveNavTab("events");
+                      setSearchParams({ tab: "events" });
+                      setIsHamburgerOpen(false);
+                    }}
+                  >
+                    <BsCalendarEvent size={17} className="text-primary" />
+                    <span>Events</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="popup-nav-item border-0 bg-transparent text-start w-100"
+                    onClick={() => {
+                      setActiveNavTab("movie");
+                      setSearchParams({ tab: "movie" });
+                      setIsHamburgerOpen(false);
+                    }}
+                  >
+                    <BsFilm size={17} className="text-danger" />
+                    <span>Movies</span>
+                  </button>
+
+                  <div style={{ height: "1px", backgroundColor: "rgba(255, 255, 255, 0.08)", margin: "4px 0" }} />
+
                   <Link
                     to="/find-my-ticket"
                     className="popup-nav-item"
@@ -967,6 +1016,19 @@ function PublicDashboard() {
                     <BsTicketPerforated size={17} className="text-info" />
                     <span>Find My Ticket</span>
                   </Link>
+
+                  <button
+                    type="button"
+                    className="popup-nav-item border-0 bg-transparent text-start w-100"
+                    onClick={() => {
+                      setIsHamburgerOpen(false);
+                      setShowSupportModal(true);
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <BsHeadset size={17} style={{ color: "#f43f5e" }} />
+                    <span>Customer Support</span>
+                  </button>
 
                   <a
                     href="/#about"
@@ -1013,9 +1075,63 @@ function PublicDashboard() {
                 </div>
               </div>
             )}
+
+            <PublicMovieSupportModal
+              isOpen={showSupportModal}
+              onClose={() => setShowSupportModal(false)}
+            />
           </div>
         </div>
       </nav>
+
+      {/* MOBILE TOP TAB BAR (NORMAL FLOW, NON-STICKY) */}
+      <div className="d-flex d-md-none bg-white border-bottom px-3 py-2 justify-content-center align-items-center gap-2">
+        <button
+          type="button"
+          className={`btn btn-sm px-3 py-1.5 fw-bold rounded-pill transition-all ${
+            activeNavTab === "foryou"
+              ? "btn-dark text-white shadow-sm"
+              : "btn-light text-secondary border-0"
+          }`}
+          style={{ fontSize: "12.5px" }}
+          onClick={() => {
+            setActiveNavTab("foryou");
+            setSearchParams({ tab: "foryou" });
+          }}
+        >
+          For You
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm px-3 py-1.5 fw-bold rounded-pill transition-all ${
+            activeNavTab === "events"
+              ? "btn-dark text-white shadow-sm"
+              : "btn-light text-secondary border-0"
+          }`}
+          style={{ fontSize: "12.5px" }}
+          onClick={() => {
+            setActiveNavTab("events");
+            setSearchParams({ tab: "events" });
+          }}
+        >
+          Events
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm px-3 py-1.5 fw-bold rounded-pill transition-all ${
+            activeNavTab === "movie"
+              ? "btn-dark text-white shadow-sm"
+              : "btn-light text-secondary border-0"
+          }`}
+          style={{ fontSize: "12.5px" }}
+          onClick={() => {
+            setActiveNavTab("movie");
+            setSearchParams({ tab: "movie" });
+          }}
+        >
+          Movie
+        </button>
+      </div>
 
       {activeNavTab === "movie" && (
         <PublicMovieDiscovery globalSearchQuery={globalMovieSearch} locationFilter={location} />
@@ -1257,6 +1373,59 @@ function PublicDashboard() {
           </div>
         </div>
       )}
+      {/* PUBLIC DASHBOARD FOOTER */}
+      <footer style={{ backgroundColor: "rgb(51, 51, 51)", color: "#f8f9fa", padding: "40px 0 30px" }} className="mt-auto">
+        <div className="container">
+          
+          {/* LOGO DIVIDER */}
+          <div className="d-flex align-items-center justify-content-center mb-5">
+            <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(255,255,255,0.1)" }}></div>
+            <div className="px-4 text-center">
+              <div className="d-flex align-items-center justify-content-center fw-bold" style={{ gap: "12px", fontFamily: "sans-serif" }}>
+                <img src={logo} alt="FIC Logo" style={{ height: "32px", width: "auto" }} />
+                <span className="text-white fs-4" style={{ letterSpacing: "1px" }}>FIC BackRooms</span>
+              </div>
+            </div>
+            <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(255,255,255,0.1)" }}></div>
+          </div>
+
+          <div className="row g-4 text-center text-md-start">
+            <div className="col-md-4">
+              <h5 className="fw-bold mb-3 text-white">Event Management System</h5>
+              <p className="small text-white-50 mb-4" style={{ lineHeight: "1.8" }}>
+                The ultimate all-in-one platform for theaters, event organizers, and seamless ticket booking experiences.
+              </p>
+              <div className="d-flex gap-3 justify-content-center justify-content-md-start">
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsFacebook size={20} /></a>
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsInstagram size={20} /></a>
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsTwitterX size={20} /></a>
+                <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsLinkedin size={20} /></a>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <h5 className="fw-bold mb-3 text-white">Information & Conditions</h5>
+              <ul className="list-unstyled small mb-0" style={{ lineHeight: "2" }}>
+                <li><a href="/terms" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Terms of Service</a></li>
+                <li><a href="/privacy" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Privacy Policy</a></li>
+                <li><a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Refund & Cancellation Policy</a></li>
+                <li><a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Help Center & Support</a></li>
+              </ul>
+            </div>
+            <div className="col-md-4">
+              <h5 className="fw-bold mb-3 text-white">Quick Links</h5>
+              <ul className="list-unstyled small mb-0" style={{ lineHeight: "2" }}>
+                <li><a href="/create-portal" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>List your events</a></li>
+                <li><a href="/create-portal" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>List your showtimes</a></li>
+                <li><a href="/find-events" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Book the shows</a></li>
+              </ul>
+            </div>
+          </div>
+          <hr className="border-secondary opacity-50 my-4" />
+          <div className="text-center small text-white-50">
+            &copy; {new Date().getFullYear()} Event Management System. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

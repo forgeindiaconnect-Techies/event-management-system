@@ -1,5 +1,6 @@
 import React from "react";
 import { BsSearch } from "react-icons/bs";
+import { formatIndianTime } from "../../../utils/dateTime";
 
 export default function LiveSeatBookingFilters({
   screens,
@@ -12,6 +13,16 @@ export default function LiveSeatBookingFilters({
   setLiveMovieSearch,
   formatIndianDate
 }) {
+  const todayIso = new Date().toISOString().split("T")[0];
+  const activeScreenId = selectedScreenId || screens[0]?.id;
+
+  const filteredShowtimes = (showtimes || []).filter((st) => {
+    const isFutureOrToday = !st.showDate || st.showDate >= todayIso;
+    const scrMatch = String(st.screen?.id || st.screenId) === String(activeScreenId);
+    const titleMatch = !liveMovieSearch.trim() || (st.movieTitle || "").toLowerCase().includes(liveMovieSearch.toLowerCase());
+    return isFutureOrToday && scrMatch && titleMatch;
+  });
+
   return (
     <div className="row g-2 align-items-center mb-3 pb-3 border-bottom flex-shrink-0">
       <div className="col-md-5">
@@ -21,7 +32,7 @@ export default function LiveSeatBookingFilters({
         <input
           type="text"
           className="form-control form-control-sm"
-          placeholder="e.g. Mandadi / Avatar / 09:30:00..."
+          placeholder="e.g. Mandadi / Avatar / 09:30 AM..."
           value={liveMovieSearch}
           onChange={(e) => setLiveMovieSearch(e.target.value)}
         />
@@ -31,12 +42,16 @@ export default function LiveSeatBookingFilters({
         <label className="fw-bold text-dark mb-1 d-block" style={{ fontSize: "11px" }}>Target Screen Hall:</label>
         <select
           className="form-select form-select-sm fw-bold border-primary"
-          value={selectedScreenId || (screens[0]?.id || "")}
+          value={activeScreenId || ""}
           onChange={(e) => {
             const sId = e.target.value;
             onScreenChange(sId);
-            const sShows = showtimes.filter((s) => String(s.screen?.id || s.screenId) === String(sId));
-            if (sShows.length > 0) onShowtimeChange(sShows[0].id);
+            const sShows = (showtimes || []).filter((s) => (!s.showDate || s.showDate >= todayIso) && String(s.screen?.id || s.screenId) === String(sId));
+            if (sShows.length > 0) {
+              onShowtimeChange(sShows[0].id);
+            } else {
+              onShowtimeChange("");
+            }
           }}
         >
           {screens.map((scr) => (
@@ -51,20 +66,18 @@ export default function LiveSeatBookingFilters({
         <label className="fw-bold text-dark mb-1 d-block" style={{ fontSize: "11px" }}>Scheduled Showtime:</label>
         <select
           className="form-select form-select-sm fw-bold border-success"
-          value={selectedShowtimeId || (showtimes.find((s) => String(s.screen?.id || s.screenId) === String(selectedScreenId || screens[0]?.id))?.id || "")}
+          value={selectedShowtimeId || (filteredShowtimes[0]?.id || "")}
           onChange={(e) => onShowtimeChange(e.target.value)}
         >
-          {showtimes
-            .filter((st) => {
-              const scrMatch = String(st.screen?.id || st.screenId) === String(selectedScreenId || screens[0]?.id);
-              const titleMatch = !liveMovieSearch.trim() || (st.movieTitle || "").toLowerCase().includes(liveMovieSearch.toLowerCase());
-              return scrMatch && titleMatch;
-            })
-            .map((st) => (
+          {filteredShowtimes.length === 0 ? (
+            <option value="">No active scheduled showtimes</option>
+          ) : (
+            filteredShowtimes.map((st) => (
               <option key={st.id} value={st.id}>
-                {st.movieTitle} ({st.startTime}) — {formatIndianDate(st.showDate) || "Today"}
+                {st.movieTitle} ({formatIndianTime(st.startTime) || st.startTime}) — {formatIndianDate(st.showDate) || "Today"}
               </option>
-            ))}
+            ))
+          )}
         </select>
       </div>
     </div>

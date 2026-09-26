@@ -7,11 +7,14 @@ import {
   BsPersonCircle,
   BsPhone,
   BsSpeedometer2,
+  BsHeadset,
 } from "react-icons/bs";
+import PublicMovieSupportModal from "./PublicMovieSupportModal";
 
 function UserProfileMenu({ dark = false, mode = "public" }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -71,7 +74,10 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
       let roleLabel = "User Profile";
 
       if (isTheater) {
-        if (role.includes("CASHIER") || dutyRole.includes("cashier") || role === "THEATER_STAFF" || dutyRole.includes("staff")) {
+        if (redirectPath === "/theater-fb" || role.includes("CONCESSION") || dutyRole.includes("concession") || dutyRole.includes("f&b") || dutyRole.includes("food") || dutyRole.includes("beverage")) {
+          targetDashboardPath = "/theater-fb";
+          roleLabel = "F&B Staff";
+        } else if (role.includes("CASHIER") || dutyRole.includes("cashier") || role === "THEATER_STAFF" || dutyRole.includes("staff")) {
           targetDashboardPath = "/theater/cashier-dashboard";
           roleLabel = "Cashier Portal";
         } else if (role.includes("USHER") || dutyRole.includes("usher") || dutyRole.includes("gate")) {
@@ -210,8 +216,27 @@ function UserProfileMenu({ dark = false, mode = "public" }) {
               </button>
             </div>
           )}
+
+          <div className="pt-2 border-top mt-2">
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
+              style={{ fontSize: "12px", fontWeight: 600 }}
+              onClick={() => {
+                setOpen(false);
+                setShowSupportModal(true);
+              }}
+            >
+              <BsHeadset /> Need Ticket Support?
+            </button>
+          </div>
         </div>
       )}
+
+      <PublicMovieSupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </div>
   );
 }

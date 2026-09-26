@@ -11,4 +11,6 @@ import java.util.List;
 public interface ShowtimeSeatBookingRepository extends JpaRepository<ShowtimeSeatBooking, Long> {
     List<ShowtimeSeatBooking> findByShowtimeId(Long showtimeId);
     void deleteByShowtimeIdAndSeatKeyIn(Long showtimeId, List<String> seatKeys);
+    void deleteByShowtimeId(Long showtimeId);
+    void deleteByShowtimeIdIn(List<Long> showtimeIds);
 }

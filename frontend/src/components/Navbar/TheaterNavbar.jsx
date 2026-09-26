@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
-import HelpMenu from "../Help/HelpMenu";
+import TheaterSupportModal from "../theater/TheaterSupportModal";
 import { clearAssistantSession } from "../../utils/assistantSession";
 import {
   BsBox,
@@ -14,103 +14,76 @@ import {
   BsBell,
   BsCheck2All,
   BsTrash,
+  BsHeadset,
+  BsList,
 } from "react-icons/bs";
 
+function formatNotifTime(dateStr) {
+  if (!dateStr) return "Just now";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now - d) / 1000);
+    if (diffSec < 60) return "Just now";
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return d.toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return dateStr;
+  }
+}
+
 function TheaterNotificationBell() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
 
+  const getPortalId = () => localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2";
+
+  const loadUnreadCount = async () => {
+    try {
+      const pId = getPortalId();
+      const res = await api.get("/theaters/notifications/unread-count", { params: { portalId: pId } });
+      setUnreadCount(Number(res.data?.unreadCount || 0));
+    } catch {
+      // Keep silent on background polling
+    }
+  };
+
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const portalId = localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2";
-      const userRole = (localStorage.getItem("userRole") || localStorage.getItem("role") || "").toUpperCase();
-      const dutyRole = (localStorage.getItem("dutyRole") || "").toLowerCase();
-      const currentPath = window.location.pathname.toLowerCase();
-
-      const isCashier = currentPath.includes("cashier") || dutyRole.includes("cashier") || userRole.includes("CASHIER");
-      const isUsher = currentPath.includes("usher") || dutyRole.includes("usher") || dutyRole.includes("gate") || userRole.includes("USHER");
-      const isManager = currentPath.includes("manager") || userRole.includes("MANAGER");
-
-      if (isCashier) {
-        // Cashier-specific operational notifications
-        const firstName = localStorage.getItem("firstName") || "Cashier";
-        const cashierNotifs = [
-          {
-            id: 101,
-            title: "Shift Active & POS Ready",
-            message: `Welcome ${firstName}! Morning shift POS is active and ready for Box Office ticket bookings.`,
-            createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            read: false,
-          },
-          {
-            id: 102,
-            title: "Movies & Pricing Synced",
-            message: "All live screens, seating layouts, and ticket prices are synchronized.",
-            createdAt: "Live",
-            read: false,
-          }
-        ];
-        setNotifications(cashierNotifs);
-        setUnreadCount(cashierNotifs.length);
-        return;
-      }
-
-      if (isUsher) {
-        // Usher-specific operational notifications
-        const firstName = localStorage.getItem("firstName") || "Usher";
-        const usherNotifs = [
-          {
-            id: 201,
-            title: "Gate Entry Scanner Active",
-            message: `Welcome ${firstName}! QR code ticket scanner is connected and ready for audience entry.`,
-            createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            read: false,
-          }
-        ];
-        setNotifications(usherNotifs);
-        setUnreadCount(usherNotifs.length);
-        return;
-      }
-
-      const res = await api.get(`/theater-invitations/portal/${portalId}`);
-      if (res.data && Array.isArray(res.data)) {
-        let filtered = res.data;
-        if (isManager) {
-          // Managers ONLY receive notifications for Theater Staff invited by them
-          filtered = res.data.filter((inv) => (inv.roleName && inv.roleName.startsWith("THEATER_STAFF")) || (inv.dutyRole && !inv.dutyRole.includes("Manager")));
-        }
-
-        const theaterNotifs = filtered.map((inv) => {
-          const roleLabel = inv.dutyRole || (inv.roleName === "THEATER_MANAGER" ? "Branch Manager" : "Theater Staff");
-          return {
-            id: inv.id,
-            title: `Staff Invitation (${roleLabel})`,
-            message: `Invitation for ${inv.speakerName || inv.email} (${inv.email}) — Status: ${inv.status}`,
-            createdAt: inv.createdAt ? new Date(inv.createdAt).toLocaleString() : "Recently",
-            read: false,
-          };
-        });
-        setNotifications(theaterNotifs);
-        setUnreadCount(theaterNotifs.length);
-      } else {
-        setNotifications([]);
-        setUnreadCount(0);
-      }
+      const pId = getPortalId();
+      const res = await api.get("/theaters/notifications", { params: { portalId: pId, page: 0, size: 30 } });
+      const data = Array.isArray(res.data) ? res.data : [];
+      setNotifications(data);
+      const unread = data.filter((n) => !n.read).length;
+      setUnreadCount(unread);
     } catch (e) {
-      setNotifications([]);
-      setUnreadCount(0);
+      console.warn("Failed to load theater notifications:", e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 12000);
+
+    const onPosBooking = () => {
+      loadUnreadCount();
+      if (open) loadNotifications();
+    };
+    window.addEventListener("pos_booking_updated", onPosBooking);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("pos_booking_updated", onPosBooking);
+    };
+  }, [open]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -122,14 +95,50 @@ function TheaterNotificationBell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const clearAll = () => {
-    setNotifications([]);
-    setUnreadCount(0);
+  const handleOpenBell = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      loadNotifications();
+    }
   };
 
-  const removeOne = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+  const markAllRead = async () => {
+    try {
+      const pId = getPortalId();
+      await api.patch("/theaters/notifications/read-all", null, { params: { portalId: pId } });
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (e) {
+      console.warn("Failed to mark all notifications read:", e);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.read) {
+      try {
+        await api.patch(`/theaters/notifications/${notif.id}/read`);
+        setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n));
+        setUnreadCount((c) => Math.max(0, c - 1));
+      } catch (e) {
+        console.warn("Failed to mark notification read:", e);
+      }
+    }
+    setOpen(false);
+    if (notif.actionUrl && notif.actionUrl.startsWith("/")) {
+      navigate(notif.actionUrl);
+    }
+  };
+
+  const removeOne = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await api.delete(`/theaters/notifications/${id}`);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      loadUnreadCount();
+    } catch (e) {
+      console.warn("Failed to delete notification:", e);
+    }
   };
 
   return (
@@ -138,11 +147,8 @@ function TheaterNotificationBell() {
         type="button"
         className="border-0 bg-transparent text-white d-flex align-items-center justify-content-center"
         style={{ width: 34, height: 34, position: "relative" }}
-        onClick={() => {
-          setOpen(!open);
-          if (!open) loadNotifications();
-        }}
-        title="Theater Notifications"
+        onClick={handleOpenBell}
+        title="Theater Live Notifications"
       >
         <BsBell size={18} />
         {unreadCount > 0 && (
@@ -150,13 +156,14 @@ function TheaterNotificationBell() {
             className="badge rounded-pill bg-danger"
             style={{
               position: "absolute",
-              top: 0,
-              right: 0,
+              top: -2,
+              right: -4,
               fontSize: "10px",
               padding: "2px 5px",
+              boxShadow: "0 0 8px rgba(225, 29, 72, 0.6)"
             }}
           >
-            {unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -168,42 +175,95 @@ function TheaterNotificationBell() {
             position: "absolute",
             top: "42px",
             right: 0,
-            width: "360px",
+            width: "380px",
             zIndex: 1100,
             color: "#333",
+            overflow: "hidden"
           }}
         >
-          <div className="d-flex align-items-center justify-content-between p-3 border-bottom bg-light rounded-top-3">
-            <h6 className="fw-bold mb-0 text-dark">Theater Notifications</h6>
+          <div className="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
+            <div className="d-flex align-items-center gap-2">
+              <span style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>Cinema In-App Alerts</span>
+              {unreadCount > 0 && (
+                <span className="badge bg-danger rounded-pill" style={{ fontSize: "10px" }}>
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
             {notifications.length > 0 && (
               <button
                 className="btn btn-sm btn-link text-decoration-none p-0 fw-semibold text-primary"
-                onClick={clearAll}
+                style={{ fontSize: "12px" }}
+                onClick={markAllRead}
               >
-                <BsCheck2All /> Clear All
+                <BsCheck2All /> Mark All Read
               </button>
             )}
           </div>
 
-          <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+          <div style={{ maxHeight: "380px", overflowY: "auto" }}>
             {loading ? (
-              <p className="text-muted text-center py-4 mb-0">Loading notifications...</p>
+              <div className="text-muted text-center py-4 small">Fetching notifications...</div>
             ) : notifications.length === 0 ? (
-              <p className="text-muted text-center py-4 mb-0">No new theater notifications.</p>
+              <div className="text-muted text-center py-4 small">
+                <div style={{ fontSize: "24px", marginBottom: "4px" }}>🔔</div>
+                No new theater notifications yet.<br />
+                <span style={{ fontSize: "11px", color: "#94a3b8" }}>New bookings & alerts will show here in real-time.</span>
+              </div>
             ) : (
               notifications.map((n) => (
-                <div key={n.id} className="p-3 border-bottom d-flex justify-content-between align-items-start gap-2">
-                  <div>
-                    <h6 className="fw-bold mb-1 small text-dark">{n.title}</h6>
-                    <p className="mb-1 text-muted" style={{ fontSize: "13px" }}>{n.message}</p>
-                    <small className="text-secondary" style={{ fontSize: "11px" }}>{n.createdAt}</small>
+                <div
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  className="p-3 border-bottom d-flex justify-content-between align-items-start gap-2"
+                  style={{
+                    cursor: "pointer",
+                    backgroundColor: n.read ? "#ffffff" : "#f0fdf4",
+                    transition: "background 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = n.read ? "#f8fafc" : "#dcfce7"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = n.read ? "#ffffff" : "#f0fdf4"; }}
+                >
+                  <div className="d-flex gap-2 align-items-start" style={{ minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: "8px",
+                        backgroundColor: n.type === "TICKET_BOOKED" ? "#dcfce7" : "#e0e7ff",
+                        color: n.type === "TICKET_BOOKED" ? "#16a34a" : "#4f46e5",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: "14px",
+                        flexShrink: 0
+                      }}
+                    >
+                      {n.type === "TICKET_BOOKED" ? "🎟️" : "📢"}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="d-flex align-items-center justify-content-between gap-1 mb-1">
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>
+                          {n.title}
+                        </span>
+                        {!n.read && (
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#16a34a", flexShrink: 0 }} />
+                        )}
+                      </div>
+                      <p className="mb-1 text-secondary" style={{ fontSize: "12px", lineHeight: "1.35", wordBreak: "break-word" }}>
+                        {n.message}
+                      </p>
+                      <small className="text-muted" style={{ fontSize: "11px" }}>
+                        {formatNotifTime(n.createdAt)}
+                      </small>
+                    </div>
                   </div>
                   <button
-                    className="btn btn-sm border-0 text-danger p-0"
-                    onClick={() => removeOne(n.id)}
-                    title="Remove"
+                    className="btn btn-sm border-0 text-muted p-1"
+                    onClick={(e) => removeOne(e, n.id)}
+                    title="Delete"
+                    style={{ fontSize: "12px" }}
                   >
-                    <BsTrash size={14} />
+                    <BsTrash />
                   </button>
                 </div>
               ))
@@ -215,9 +275,10 @@ function TheaterNotificationBell() {
   );
 }
 
-export default function TheaterNavbar({ theaterName }) {
+export default function TheaterNavbar({ theaterName, onToggleSidebar }) {
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -337,7 +398,7 @@ export default function TheaterNavbar({ theaterName }) {
   return (
     <>
       <nav
-        className="organizer-navbar d-flex align-items-center justify-content-between px-4"
+        className="organizer-navbar d-flex align-items-center justify-content-between px-3 px-md-4"
         style={{
           height: "50px",
           width: "100%",
@@ -345,22 +406,58 @@ export default function TheaterNavbar({ theaterName }) {
           color: "#fff",
         }}
       >
-        <button
-          className="organizer-navbar-brand border-0 bg-transparent text-white d-flex align-items-center gap-2"
-          onClick={() => navigate("/")}
-        >
-          <BsBox size={22} />
-          <span className="fw-bold" style={{ fontSize: "18px" }}>BackRooms</span>
-          <span style={{ opacity: 0.65, fontSize: "18px" }}>|</span>
-          <BsFilm className="text-warning ms-1" />
-          <span className="fw-semibold" style={{ fontSize: "16px" }}>
-            {name} {!isManagerOrStaff && <span className="text-info ms-2" style={{ fontSize: "14px" }}>- Owner Console</span>}
-          </span>
-        </button>
+        <div className="d-flex align-items-center gap-2">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              className="d-md-none border-0 bg-transparent text-white p-1 d-flex align-items-center justify-content-center"
+              onClick={onToggleSidebar}
+              aria-label="Toggle navigation menu"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "8px",
+                cursor: "pointer",
+                background: "rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <BsList size={22} />
+            </button>
+          )}
 
-        <div className="organizer-navbar-actions d-flex align-items-center gap-4">
+          <button
+            className="organizer-navbar-brand border-0 bg-transparent text-white d-flex align-items-center gap-2 p-0 text-start text-truncate"
+            onClick={() => navigate("/")}
+            style={{ maxWidth: "calc(100vw - 190px)" }}
+          >
+            <BsBox size={22} className="flex-shrink-0" />
+            <span className="fw-bold d-none d-sm-inline" style={{ fontSize: "18px" }}>BackRooms</span>
+            <span className="d-none d-sm-inline" style={{ opacity: 0.65, fontSize: "18px" }}>|</span>
+            <BsFilm className="text-warning ms-1 flex-shrink-0" />
+            <span className="fw-semibold text-truncate" style={{ fontSize: "15px" }}>
+              {name} {!isManagerOrStaff && <span className="ms-2 d-none d-lg-inline" style={{ fontSize: "14px", fontWeight: "normal" }}>- Owner Console</span>}
+            </span>
+          </button>
+        </div>
+
+        <div className="organizer-navbar-actions d-flex align-items-center gap-2 gap-md-4">
           <TheaterNotificationBell />
-          <HelpMenu hideFloating={true} />
+          
+          <button
+            type="button"
+            className="border-0 bg-transparent text-white d-flex align-items-center gap-2"
+            style={{ cursor: "pointer", opacity: 0.9, fontSize: "14px", fontWeight: 600, padding: "6px 12px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            onClick={() => setShowSupportModal(true)}
+            title="Theater Support & Helpdesk"
+          >
+            <BsHeadset size={16} />
+            <span>Support</span>
+          </button>
+          
+          <TheaterSupportModal
+            isOpen={showSupportModal}
+            onClose={() => setShowSupportModal(false)}
+          />
 
           <button
             className="organizer-navbar-profile border-0 bg-transparent text-white d-flex align-items-center gap-2"

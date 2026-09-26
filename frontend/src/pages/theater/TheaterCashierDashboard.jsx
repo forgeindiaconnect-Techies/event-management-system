@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import TheaterNavbar from "../../components/Navbar/TheaterNavbar";
 import api from "../../api/axiosConfig";
 import { formatIndianDate, formatIndianTime } from "../../utils/dateTime";
@@ -14,6 +16,7 @@ import {
   BsReceipt,
   BsCheckCircle,
   BsPrinter,
+  BsDownload,
   BsPerson,
   BsCreditCard,
   BsPhone,
@@ -30,6 +33,8 @@ import {
   BsTv,
   BsTicketPerforated,
   BsPower,
+  BsPeople,
+  BsXLg,
 } from "react-icons/bs";
 
 export function getCanonicalSection(str) {
@@ -53,6 +58,7 @@ export default function TheaterCashierDashboard() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("live-movies"); // Default first page: "live-movies"
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [cinemaName, setCinemaName] = useState("Gopal Multiplex");
   const [screens, setScreens] = useState([]);
   const [selectedScreenId, setSelectedScreenId] = useState("");
@@ -82,6 +88,36 @@ export default function TheaterCashierDashboard() {
 
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [lastIssuedTicket, setLastIssuedTicket] = useState(null);
+  const cashierTicketRef = useRef(null);
+  const [isDownloadingCashierTicket, setIsDownloadingCashierTicket] = useState(false);
+
+  const handleDownloadCashierTicketPdf = async () => {
+    if (!cashierTicketRef.current || isDownloadingCashierTicket) return;
+    try {
+      setIsDownloadingCashierTicket(true);
+      const element = cashierTicketRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = Math.min(120, pdfWidth - 30);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const xOffset = (pdfWidth - imgWidth) / 2;
+      const yOffset = imgHeight < pdfHeight - 30 ? 20 : 10;
+      pdf.addImage(imgData, "PNG", xOffset, yOffset, imgWidth, imgHeight);
+      pdf.save(`Ticket-${lastIssuedTicket?.ticketId || "Receipt"}.pdf`);
+    } catch (err) {
+      console.error("Failed to download cashier ticket PDF:", err);
+      alert("Failed to generate PDF ticket. Please use Print Ticket.");
+    } finally {
+      setIsDownloadingCashierTicket(false);
+    }
+  };
 
   // Counter Active / Inactive Manual Toggle State (Persisted)
   const [isCounterActive, setIsCounterActive] = useState(() => {
@@ -216,14 +252,12 @@ export default function TheaterCashierDashboard() {
                 const rawSec = (match[1] || "").trim();
                 const cSec = getCanonicalSection(rawSec) || (rawSec.toLowerCase().includes("gold") ? "gold" : rawSec.toLowerCase().includes("silver") ? "silver" : rawSec.toLowerCase().includes("balcony") ? "balcony" : "");
                 const seatN = `${match[2]}${match[3]}`;
-                if (cSec) {
                   if (selectedShowtimeId) {
                     currentMap[`${selectedShowtimeId}-${cSec}-${seatN}`] = true;
                     currentMap[`${selectedShowtimeId}-${rawSec.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${seatN}`] = true;
                   }
                   currentMap[`${showtimeContextKey}-${cSec}-${seatN}`] = true;
-                  currentMap[`${cSec}_${seatN}`] = true;
-                }
+                  currentMap[`${showtimeContextKey}-${rawSec.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${seatN}`] = true;
               }
             });
           }
@@ -294,7 +328,11 @@ export default function TheaterCashierDashboard() {
 
       setShowtimes(allShows);
       setSelectedMovieTitle("");
-      if (allShows.length > 0) {
+      const todayIso = new Date().toISOString().split("T")[0];
+      const validShows = allShows.filter((s) => !s.showDate || s.showDate >= todayIso);
+      if (validShows.length > 0) {
+        setSelectedShowtimeId(validShows[0].id);
+      } else if (allShows.length > 0) {
         setSelectedShowtimeId(allShows[0].id);
       }
     } catch (err) {
@@ -528,6 +566,8 @@ export default function TheaterCashierDashboard() {
       issuedAt: new Date().toISOString(),
       status: "VALID",
       source: "COUNTER_POS",
+      theaterPortalId: localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2",
+      portalId: localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2",
     };
 
     const newBooked = { ...bookedSeatsMap };
@@ -624,11 +664,13 @@ export default function TheaterCashierDashboard() {
   };
 
   // Filter showtimes for Page 1 based on Movie Title, Date, and Time search
+  const todayIso = new Date().toISOString().split("T")[0];
   const filteredShowtimesForPage1 = showtimes.filter((st) => {
+    const isFutureOrToday = !st.showDate || st.showDate >= todayIso;
     const titleMatch = !page1SearchTitle.trim() || (st.movieTitle || "").toLowerCase().includes(page1SearchTitle.toLowerCase());
     const dateMatch = !page1SearchDate || (st.showDate || "").includes(page1SearchDate);
     const timeMatch = !page1SearchTime || (st.startTime || "").includes(page1SearchTime);
-    return titleMatch && dateMatch && timeMatch;
+    return isFutureOrToday && titleMatch && dateMatch && timeMatch;
   });
 
   // Group filtered showtimes by movie title
@@ -670,10 +712,12 @@ export default function TheaterCashierDashboard() {
     });
 
   const filteredShowtimesForPos = showtimes.filter((st) => {
+    const isFutureOrToday = !st.showDate || st.showDate >= todayIso;
     const screenMatch = (st.screen?.id && String(st.screen.id) === String(selectedScreenId)) || (st.screenId && String(st.screenId) === String(selectedScreenId));
-    if (!movieSearchQuery.trim()) return screenMatch;
+    if (!movieSearchQuery.trim()) return isFutureOrToday && screenMatch;
     const q = movieSearchQuery.toLowerCase();
     return (
+      isFutureOrToday &&
       screenMatch &&
       ((st.movieTitle || "").toLowerCase().includes(q) ||
         (st.showDate || "").toLowerCase().includes(q) ||
@@ -695,55 +739,98 @@ export default function TheaterCashierDashboard() {
     <div style={{ backgroundColor: "#f8fafc", height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* TOP NAVBAR */}
       <div className="organizer-layout-navbar" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1050 }}>
-        <TheaterNavbar theaterName={`${cinemaName} — Box Office Cashier Console`} />
+        <TheaterNavbar 
+          theaterName={`${cinemaName} — Box Office Cashier Console`} 
+          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
+        />
       </div>
 
-      {/* LEFT SIDEBAR NAVIGATION */}
-      <div
-        className="bg-white border-end"
+      {/* MOBILE BACKDROP */}
+      {isMobileSidebarOpen && (
+        <div
+          className="d-md-none"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1040,
+            transition: "opacity 0.25s ease",
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* LEFT SIDEBAR NAVIGATION (DESKTOP FIXED + MOBILE SLIDE-OVER DRAWER) */}
+      <aside
+        className={`bg-white border-end theater-owner-sidebar ${isMobileSidebarOpen ? "theater-owner-sidebar-open" : ""}`}
         style={{
           position: "fixed",
-          top: "65px",
+          top: "50px",
           left: 0,
           width: "250px",
-          height: "calc(100vh - 65px)",
-          zIndex: 999,
+          height: "calc(100vh - 50px)",
+          zIndex: 1050,
           overflowY: "auto",
+          transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: isMobileSidebarOpen ? "4px 0 24px rgba(0, 0, 0, 0.18)" : "none",
         }}
       >
-        <div className="pt-3">
-          {sidebarMenuItems.map((item) => (
+        <div className="pt-3 pb-4">
+          <div className="px-3 pb-3 mb-2 border-bottom d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-2 text-truncate">
+              <BsFilm size={22} className="text-primary flex-shrink-0" />
+              <span className="fw-bold text-dark fs-6 text-truncate">{cinemaName}</span>
+            </div>
+            {/* Mobile close button */}
             <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`organizer-sidebar-item w-100 border-0 bg-transparent text-start d-flex align-items-center gap-3 px-3 py-2 mb-2 ${activeTab === item.id ? "active mx-3" : "text-dark mx-3"
-                }`}
-              style={{ borderRadius: "8px" }}
+              type="button"
+              className="d-md-none btn btn-sm btn-light border-0 p-1 text-muted"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close menu"
             >
-              <span style={{ fontSize: "18px" }}>{item.icon}</span>
-              <span style={{ fontSize: "14px", fontWeight: 550 }}>{item.label}</span>
+              <BsXLg size={16} />
             </button>
-          ))}
+          </div>
+
+          <div className="px-2">
+            {sidebarMenuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={`organizer-sidebar-item w-100 border-0 bg-transparent text-start d-flex align-items-center gap-3 px-3 py-2 mb-2 ${
+                  activeTab === item.id ? "active" : "text-dark"
+                }`}
+                style={{ borderRadius: "8px" }}
+              >
+                <span style={{ fontSize: "18px" }}>{item.icon}</span>
+                <span style={{ fontSize: "14px", fontWeight: 550 }}>{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </aside>
 
       {/* MAIN CASHIER CONTENT AREA */}
       <main
+        className="theater-owner-main p-2 p-md-3"
         style={{
-          marginLeft: "250px",
-          marginTop: "65px",
-          height: "calc(100vh - 65px)",
-          maxHeight: "calc(100vh - 65px)",
+          marginTop: "50px",
+          height: "calc(100vh - 50px)",
+          maxHeight: "calc(100vh - 50px)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
           boxSizing: "border-box",
         }}
-        className="p-3"
       >
         {/* COUNTER ACTIVE / INACTIVE TOGGLE BAR */}
-        <div className="bg-white border rounded-3 p-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-shrink-0 shadow-sm">
-          <div className="d-flex align-items-center gap-3">
+        <div className="bg-white border rounded-3 p-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 flex-shrink-0 shadow-sm">
+          <div className="d-flex flex-wrap align-items-center gap-2">
             {isCounterActive ? (
               <span className="badge bg-success-subtle text-success border border-success px-3 py-2 d-flex align-items-center gap-2 fs-6 fw-bold">
                 <span className="spinner-grow spinner-grow-sm text-success" style={{ width: "8px", height: "8px" }}></span>
@@ -1020,9 +1107,9 @@ export default function TheaterCashierDashboard() {
             </div>
 
             {/* MAIN POS TWO-COLUMN SCROLLABLE AREA */}
-            <div className="row g-3 flex-grow-1 overflow-hidden" style={{ minHeight: 0 }}>
-              {/* LEFT COLUMN: 4-STATE LIVE PHYSICAL SEAT MAP (INDEPENDENTLY SCROLLABLE) */}
-              <div className="col-lg-8 h-100 overflow-auto">
+            <div className="row g-3 flex-grow-1 overflow-auto pe-1" style={{ minHeight: 0 }}>
+              {/* LEFT COLUMN: 4-STATE LIVE PHYSICAL SEAT MAP */}
+              <div className="col-lg-8 mb-3 mb-lg-0">
                 <div className="card border-0 shadow-sm p-4 bg-white rounded-3">
                   <div className="border-bottom pb-3 mb-3">
                     <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
@@ -1063,7 +1150,7 @@ export default function TheaterCashierDashboard() {
                   </div>
 
                   {/* SEAT GRID RENDERER */}
-                  <div className="p-3 bg-light rounded-3 border overflow-auto text-center">
+                  <div className="p-3 bg-light rounded-3 border overflow-auto text-center" style={{ minHeight: "380px" }}>
                     {(() => {
                       let cashierFloorRowOffset = 0;
                       const sId = String(selectedScreenId);
@@ -1098,12 +1185,15 @@ export default function TheaterCashierDashboard() {
 
                             {Array.from({ length: secRows }).map((_, rIdx) => {
                               const rowLetter = sectionRowLabels[rIdx] || String.fromCharCode(65 + rIdx);
-                              const halfSeats = Math.ceil((sec.seatsPerRow || 16) / 2);
+                              const halfSeats = Math.floor((sec.seatsPerRow || 16) / 2);
                               let activeSeatCounter = 1;
 
                               return (
-                                <div key={rIdx} className="d-flex align-items-center justify-content-center gap-2 mb-2">
-                                  <span className="fw-bold text-muted me-2" style={{ fontSize: "11px", width: "16px" }}>
+                                <div
+                                  className="d-flex align-items-center justify-content-center gap-2 mb-2"
+                                  key={`${sec.id}-${rIdx}`}
+                                >
+                                  <span className="fw-bold small text-dark me-2" style={{ width: "25px" }}>
                                     {rowLetter}
                                   </span>
 
@@ -1130,27 +1220,18 @@ export default function TheaterCashierDashboard() {
                                       const cSec = getCanonicalSection(sec.name || sec.id);
 
                                       const isSold = Boolean(
-                                        bookedSeatsMap[`${selectedShowtimeId}-${key1}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${key2}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${sec.id}-${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${secClean}-${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${cSec}-${seatNumDisplay}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${key1}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${key2}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${sec.id}-${seatNumDisplay}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`MV_${movieClean}_${cSec}_${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${movieClean}_${cSec}_${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${cSec}_${seatNumDisplay}`]
+                                        bookedSeatsMap[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`]
                                       );
                                       const isHeld = Boolean(
-                                        heldSeatsMap[`${selectedShowtimeId}-${key1}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${key2}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${sec.id}-${seatNumDisplay}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${sec.name}-${seatNumDisplay}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${secClean}-${seatNumDisplay}`] ||
-                                        heldSeatsMap[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`]
+                                        heldSeatsMap[`${showtimeContextKey}-${key1}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${key2}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${sec.id}-${seatNumDisplay}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`]
                                       );
                                       const isSelected = selectedSeats.some((s) => s.key === seatKey);
 
@@ -1228,11 +1309,6 @@ export default function TheaterCashierDashboard() {
                                       const cSec = getCanonicalSection(sec.name || sec.id);
 
                                       const isSold = Boolean(
-                                        bookedSeatsMap[`${selectedShowtimeId}-${key1}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${key2}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${sec.id}-${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${secClean}-${seatNumDisplay}`] ||
-                                        bookedSeatsMap[`${selectedShowtimeId}-${cSec}-${seatNumDisplay}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${key1}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${key2}`] ||
                                         bookedSeatsMap[`${showtimeContextKey}-${sec.id}-${seatNumDisplay}`] ||
@@ -1240,12 +1316,11 @@ export default function TheaterCashierDashboard() {
                                         bookedSeatsMap[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`]
                                       );
                                       const isHeld = Boolean(
-                                        heldSeatsMap[`${selectedShowtimeId}-${key1}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${key2}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${sec.id}-${seatNumDisplay}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${sec.name}-${seatNumDisplay}`] ||
-                                        heldSeatsMap[`${selectedShowtimeId}-${secClean}-${seatNumDisplay}`] ||
-                                        heldSeatsMap[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`]
+                                        heldSeatsMap[`${showtimeContextKey}-${key1}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${key2}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${sec.id}-${seatNumDisplay}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${secClean}-${seatNumDisplay}`] ||
+                                        heldSeatsMap[`${showtimeContextKey}-${cSec}-${seatNumDisplay}`]
                                       );
                                       const isSelected = selectedSeats.some((s) => s.key === seatKey);
 
@@ -1300,8 +1375,8 @@ export default function TheaterCashierDashboard() {
 
                             {(sec.hasAisleBelow || sec.aisleBelow) && (
                               <div className="w-100 text-center my-3 py-1.5 bg-white rounded border border-dashed shadow-xs">
-                                <small className="text-muted fw-bold" style={{ fontSize: "10px", letterSpacing: "2px" }}>
-                                  🚶 HORIZONTAL AISLE WALKWAY 🚶
+                                <small className="text-muted fw-bold d-flex align-items-center justify-content-center gap-1" style={{ fontSize: "10px", letterSpacing: "2px" }}>
+                                  <BsPeople /> HORIZONTAL AISLE WALKWAY <BsPeople />
                                 </small>
                               </div>
                             )}
@@ -1337,8 +1412,8 @@ export default function TheaterCashierDashboard() {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: POS TICKET CART (INDEPENDENTLY SCROLLABLE) */}
-              <div className="col-lg-4 h-100 overflow-auto">
+              {/* RIGHT COLUMN: POS TICKET CART */}
+              <div className="col-lg-4 mb-4 mb-lg-0">
                 <div className="card border-0 shadow-sm p-3 bg-white rounded-3">
                   <h6 className="fw-bold text-dark mb-2 d-flex align-items-center gap-2 border-bottom pb-2">
                     <BsReceipt className="text-primary" /> Counter Ticket Summary
@@ -1414,7 +1489,7 @@ export default function TheaterCashierDashboard() {
                         onClick={() => setPaymentMode("Cash")}
                         disabled={selectedSeats.length === 0}
                       >
-                        💵 Cash
+                        <BsCashCoin className="me-1" /> Cash
                       </button>
                       <button
                         type="button"
@@ -1422,7 +1497,7 @@ export default function TheaterCashierDashboard() {
                         onClick={() => setPaymentMode("UPI")}
                         disabled={selectedSeats.length === 0}
                       >
-                        📱 UPI / QR
+                        <BsQrCodeScan className="me-1" /> UPI / QR
                       </button>
                       <button
                         type="button"
@@ -1430,7 +1505,7 @@ export default function TheaterCashierDashboard() {
                         onClick={() => setPaymentMode("Card")}
                         disabled={selectedSeats.length === 0}
                       >
-                        💳 Card
+                        <BsCreditCard className="me-1" /> Card
                       </button>
                     </div>
                   </div>
@@ -1507,7 +1582,7 @@ export default function TheaterCashierDashboard() {
 
                 <div className="col-md-3">
                   <div className="card border-0 shadow-sm p-4 bg-white rounded-3">
-                    <small className="text-muted fw-bold">💵 Cash Sales Total</small>
+                    <small className="text-muted fw-bold d-flex align-items-center"><BsCashCoin className="text-success me-1" /> Cash Sales Total</small>
                     <h3 className="fw-bold text-dark mt-2 mb-0">₹{cashSalesTotal}</h3>
                     <small className="text-muted">Physically in Cash Drawer</small>
                   </div>
@@ -1515,7 +1590,7 @@ export default function TheaterCashierDashboard() {
 
                 <div className="col-md-3">
                   <div className="card border-0 shadow-sm p-4 bg-white rounded-3">
-                    <small className="text-muted fw-bold">📱 UPI Sales Total</small>
+                    <small className="text-muted fw-bold d-flex align-items-center"><BsQrCodeScan className="text-primary me-1" /> UPI Sales Total</small>
                     <h3 className="fw-bold text-primary mt-2 mb-0">₹{upiSalesTotal}</h3>
                     <small className="text-muted">Instant Bank Transfers</small>
                   </div>
@@ -1523,7 +1598,7 @@ export default function TheaterCashierDashboard() {
 
                 <div className="col-md-3">
                   <div className="card border-0 shadow-sm p-4 bg-white rounded-3">
-                    <small className="text-muted fw-bold">💳 Card Sales Total</small>
+                    <small className="text-muted fw-bold d-flex align-items-center"><BsCreditCard className="text-info me-1" /> Card Sales Total</small>
                     <h3 className="fw-bold text-info-emphasis mt-2 mb-0">₹{cardSalesTotal}</h3>
                     <small className="text-muted">POS Machine Sales</small>
                   </div>
@@ -1756,7 +1831,7 @@ export default function TheaterCashierDashboard() {
                 <p className="text-muted small mb-3">Counter Walk-In Thermal Receipt</p>
 
                 {/* THERMAL TICKET SLIP SIMULATION */}
-                <div className="p-3 bg-light border border-dark border-dashed rounded-3 text-start mb-3 font-monospace small">
+                <div ref={cashierTicketRef} className="p-3 bg-light border border-dark border-dashed rounded-3 text-start mb-3 font-monospace small">
                   <div className="text-center fw-bold text-dark border-bottom pb-2 mb-2">
                     <h5>{cinemaName}</h5>
                     <small>BOX OFFICE RECEIPT</small>
@@ -1786,11 +1861,25 @@ export default function TheaterCashierDashboard() {
                   </div>
                 </div>
 
-                <div className="d-flex gap-2">
-                  <button className="btn btn-primary w-100 fw-bold d-flex align-items-center justify-content-center gap-1" onClick={() => window.print()}>
-                    <BsPrinter /> Print Ticket
-                  </button>
-                  <button className="btn btn-outline-secondary w-100 fw-bold" onClick={handleFinishReceipt}>
+                <div className="d-flex flex-column gap-2">
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-success w-100 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm"
+                      onClick={handleDownloadCashierTicketPdf}
+                      disabled={isDownloadingCashierTicket}
+                    >
+                      <BsDownload /> {isDownloadingCashierTicket ? "Downloading..." : "Download Ticket"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary w-100 fw-bold d-flex align-items-center justify-content-center gap-1"
+                      onClick={() => window.print()}
+                    >
+                      <BsPrinter /> Print Ticket
+                    </button>
+                  </div>
+                  <button type="button" className="btn btn-outline-secondary w-100 fw-bold" onClick={handleFinishReceipt}>
                     Close & Next
                   </button>
                 </div>

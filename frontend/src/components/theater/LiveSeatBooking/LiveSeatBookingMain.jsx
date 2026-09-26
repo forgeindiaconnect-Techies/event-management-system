@@ -22,7 +22,7 @@ export default function LiveSeatBookingMain({
   const [zoomLevel, setZoomLevel] = useState(1);
 
   return (
-    <div className="d-flex flex-column h-100 overflow-hidden">
+    <div className="d-flex flex-column w-100 live-seat-booking-container pb-4">
       {/* ROW 1: PAGE HEADING TOP */}
       <div className="mb-3 pb-2 flex-shrink-0">
         <h4 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">

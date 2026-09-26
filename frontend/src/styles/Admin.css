@@ -4753,3 +4753,136 @@ a:hover > .admin-dashboard-action-card .admin-dashboard-card-arrow {
     flex-basis: 100%;
   }
 }
+
+/* =========================================================
+   Theater Portal Owner Dashboard Mobile Responsive Sidebar
+========================================================= */
+.theater-owner-main {
+  margin-left: 250px;
+  transition: margin-left 0.28s ease;
+}
+
+@media (max-width: 767.98px) {
+  .theater-owner-sidebar {
+    transform: translateX(-100%);
+    width: 280px !important;
+  }
+
+  .theater-owner-sidebar.theater-owner-sidebar-open {
+    transform: translateX(0);
+  }
+
+  .theater-owner-main {
+    margin-left: 0 !important;
+    padding: 10px !important;
+  }
+
+  .theater-owner-main .card {
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .theater-owner-main .sa-page-cards.four {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .theater-owner-main .sa-metric {
+    min-height: 120px !important;
+    padding: 14px !important;
+  }
+
+  .theater-owner-main .sa-metric h2 {
+    font-size: 20px !important;
+  }
+
+  .theater-owner-main .sa-metric p {
+    font-size: 13px !important;
+  }
+
+  /* Ensure all dropdown boxes and selects compress to stay inside screen width */
+  select,
+  .form-select {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Live Seat Booking Mobile View: allow page to scroll comfortably */
+  .live-seat-booking-container {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .live-seat-map-box {
+    min-height: 440px !important;
+    max-height: 70vh !important;
+  }
+}
+
+/* Gate Usher Terminal High-End Styling */
+.usher-glass-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.usher-glass-card:hover {
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.09);
+}
+
+.usher-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.usher-scanner-box {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  transition: all 0.25s ease;
+}
+
+.usher-scanner-box.is-active {
+  border-color: #4f46e5;
+  background: #fdfefe;
+  box-shadow: 0 0 24px rgba(79, 70, 229, 0.15);
+}
+
+.usher-feed-item {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.usher-feed-item:hover {
+  background-color: #f8fafc;
+}
+
+@media (max-width: 767.98px) {
+  .usher-terminal-main {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-top: 65px !important;
+  }
+  .usher-metric-card {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+}
+
+@keyframes usher-pulse-glow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+.usher-pulse-dot {
+  animation: usher-pulse-glow 2s infinite ease-in-out;
+}
+

@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -11,7 +12,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   fetchPublicShowtimes,
@@ -36,16 +37,17 @@ export default function MovieShowtimesScreen() {
   const [allMovieShowtimes, setAllMovieShowtimes] = useState<ShowtimeItem[]>([]);
   const [occupancyMap, setOccupancyMap] = useState<Record<string | number, number>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedFormat, setSelectedFormat] = useState<string>('All');
 
-  useEffect(() => {
-    loadData();
-  }, [movieId]);
-
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = useCallback(async (isPull = false) => {
+    if (isPull) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       let activeMovie = movie;
       if (!activeMovie && movieId) {
@@ -113,8 +115,19 @@ export default function MovieShowtimesScreen() {
       console.log('Error loading showtimes:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [movieId, movie]);
+
+  useEffect(() => {
+    loadData(false);
+  }, [loadData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData(false);
+    }, [loadData])
+  );
 
   // Distinct dates in the database that actually have upcoming shows
   const availableShowDates = useMemo(() => {
@@ -269,6 +282,10 @@ export default function MovieShowtimesScreen() {
             {movie?.certificate || 'UA'} • {movie?.language || 'Tamil'} • {availableFormats.filter(f => f !== 'All').join(', ') || '2D, 3D'}
           </Text>
         </View>
+
+        <TouchableOpacity onPress={() => loadData(true)} style={{ padding: 8 }} activeOpacity={0.7}>
+          <Ionicons name="refresh" size={20} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
       {/* Dynamic Date Carousel - strictly Today onwards */}
@@ -358,25 +375,47 @@ export default function MovieShowtimesScreen() {
           </Text>
         </View>
       ) : theatersWithShows.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="calendar-outline" size={56} color={colors.textMuted} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Shows on This Date</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-            There are no scheduled showtimes on {selectedDate}.
-          </Text>
-          {availableShowDates.length > 0 && (
-            <TouchableOpacity
-              style={[styles.jumpDateBtn, { backgroundColor: colors.primary }]}
-              onPress={() => setSelectedDate(availableShowDates[0])}
-            >
-              <Text style={styles.jumpDateBtnText}>
-                View Shows on {availableShowDates[0]}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <ScrollView
+          contentContainerStyle={[styles.theatersList, { flex: 1 }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadData(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={56} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Shows on This Date</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
+              There are no scheduled showtimes on {selectedDate}.
+            </Text>
+            {availableShowDates.length > 0 && (
+              <TouchableOpacity
+                style={[styles.jumpDateBtn, { backgroundColor: colors.primary }]}
+                onPress={() => setSelectedDate(availableShowDates[0])}
+              >
+                <Text style={styles.jumpDateBtnText}>
+                  View Shows on {availableShowDates[0]}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.theatersList}>
+        <ScrollView
+          contentContainerStyle={styles.theatersList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadData(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+        >
           {theatersWithShows.map((item, idx) => (
             <View
               key={idx}

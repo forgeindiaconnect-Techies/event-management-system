@@ -309,10 +309,8 @@ export async function fetchClassifiedMovies(): Promise<ClassifiedMovies> {
 
     if (hasShowtimes) {
       nowShowing.push(m);
-    } else if (m.releaseDate && m.releaseDate > todayStr) {
-      upcoming.push(m);
     } else {
-      passed.push(m);
+      upcoming.push(m);
     }
   });
 

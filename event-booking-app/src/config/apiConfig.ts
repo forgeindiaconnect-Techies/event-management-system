@@ -98,8 +98,14 @@ export async function smartFetch(path: string, options?: RequestInit): Promise<R
   const timeoutId = setTimeout(() => controller.abort(), 7000);
 
   try {
+    const headers = {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      ...(options?.headers || {}),
+    };
     const res = await fetch(url, {
       ...options,
+      headers,
       signal: controller.signal,
     });
     clearTimeout(timeoutId);

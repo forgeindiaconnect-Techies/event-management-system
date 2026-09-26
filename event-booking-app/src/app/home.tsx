@@ -6,6 +6,7 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
+  RefreshControl,
   StatusBar,
   StyleSheet,
   Text,
@@ -203,6 +204,7 @@ export default function LandingScreen() {
   const [movieSubTab, setMovieSubTab] = useState<"now_showing" | "upcoming">("now_showing");
   const [loading, setLoading] = useState(true);
   const [moviesLoading, setMoviesLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<string>("Locating...");
 
   const dynamicBanners = useMemo(() => {
@@ -364,6 +366,51 @@ export default function LandingScreen() {
     }
   };
 
+  const loadHomeData = useCallback(async (isPullToRefresh = false) => {
+    if (isPullToRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      setMoviesLoading(true);
+    }
+
+    try {
+      const [eventsRes, moviesData] = await Promise.allSettled([
+        smartFetch("/events/public/status/PUBLISHED").then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        }),
+        fetchClassifiedMovies(),
+      ]);
+
+      if (eventsRes.status === "fulfilled") {
+        const data = eventsRes.value;
+        if (Array.isArray(data)) setEvents(data);
+        else if (data && data.events) setEvents(data.events);
+        setIsServerConnected(true);
+      } else {
+        console.log("Failed to fetch events from database:", eventsRes.reason);
+      }
+
+      if (moviesData.status === "fulfilled") {
+        const { nowShowing, upcoming } = moviesData.value;
+        setNowShowingMovies(nowShowing);
+        setUpcomingMovies(upcoming);
+        setMovies([...nowShowing, ...upcoming]);
+        setIsServerConnected(true);
+      } else {
+        console.log("Failed to fetch classified movies:", moviesData.reason);
+      }
+    } catch (err) {
+      console.log("Failed to load home data:", err);
+      setIsServerConnected(false);
+    } finally {
+      setLoading(false);
+      setMoviesLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       getStorageItem("user_name")
@@ -383,7 +430,9 @@ export default function LandingScreen() {
           if (phone) setUserPhone(phone);
         })
         .catch((err) => console.log("Failed to load user phone", err));
-    }, [])
+
+      loadHomeData();
+    }, [loadHomeData])
   );
 
   useEffect(() => {
@@ -412,43 +461,6 @@ export default function LandingScreen() {
         setUserLocation("Location unavailable");
       }
     })();
-
-    loadHomeData();
-  }, []);
-
-  const loadHomeData = useCallback(() => {
-    setLoading(true);
-    setMoviesLoading(true);
-
-    // 2. Fetch Events from real database
-    smartFetch("/events/public/status/PUBLISHED")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if (Array.isArray(data)) setEvents(data);
-        else if (data && data.events) setEvents(data.events);
-        setIsServerConnected(true);
-      })
-      .catch((err) => {
-        console.log("Failed to fetch events from database:", err);
-        setIsServerConnected(false);
-      })
-      .finally(() => setLoading(false));
-
-    // 3. Fetch & Classify Movies (matching web app logic)
-    fetchClassifiedMovies()
-      .then(({ nowShowing, upcoming }) => {
-        setNowShowingMovies(nowShowing);
-        setUpcomingMovies(upcoming);
-        setMovies([...nowShowing, ...upcoming]);
-        setIsServerConnected(true);
-      })
-      .catch((err) => {
-        console.log("Failed to fetch classified movies:", err);
-      })
-      .finally(() => setMoviesLoading(false));
   }, []);
 
   const parsedEvents = useMemo(
@@ -943,6 +955,14 @@ export default function LandingScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadHomeData(true)}
+            colors={["#E11D48", "#2563EB"]}
+            tintColor="#E11D48"
+          />
+        }
       >
         {/* ======================================================== */}
         {/* TAB 1: FOR YOU (BLENDED FEED)                           */}
@@ -2848,6 +2868,31 @@ export default function LandingScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                style={{
+                  padding: 12,
+                  borderRadius: 8,
+                  backgroundColor: isDarkMode ? "#1f2937" : "#f1f5f9",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: "center",
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+                onPress={() => {
+                  loadHomeData(false);
+                  setServerModalVisible(false);
+                  Alert.alert("Data Refreshed", "Latest movies, showtimes & events synced from database!");
+                }}
+              >
+                <Ionicons name="refresh" size={16} color={colors.primary} />
+                <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>
+                  Sync & Refresh Data Now
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={{ padding: 8, alignItems: "center" }}

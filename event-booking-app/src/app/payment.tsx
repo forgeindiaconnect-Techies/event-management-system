@@ -15,10 +15,10 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-
-const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 export default function PaymentScreen() {
+  const BASE_URL = getApiBaseUrl();
   const { eventId, registrationId } = useLocalSearchParams<{ eventId: string, registrationId: string }>();
   const { isDarkMode, colors } = useTheme();
 

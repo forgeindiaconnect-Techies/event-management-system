@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { setStorageItem, deleteStorageItem } from '../utils/storage';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -35,19 +35,19 @@ export default function LoginScreen() {
       return;
     }
 
-    await SecureStore.setItemAsync('user_name', name.trim());
-    await SecureStore.setItemAsync('user_phone', phoneNumber.trim());
+    await setStorageItem('user_name', name.trim());
+    await setStorageItem('user_phone', phoneNumber.trim());
 
-    if (email.trim()) await SecureStore.setItemAsync('user_email', email.trim());
-    else await SecureStore.deleteItemAsync('user_email');
+    if (email.trim()) await setStorageItem('user_email', email.trim());
+    else await deleteStorageItem('user_email');
     
     router.replace('/home');
   };
 
   const handleSkip = async () => {
-    await SecureStore.deleteItemAsync('user_name');
-    await SecureStore.deleteItemAsync('user_phone');
-    await SecureStore.deleteItemAsync('user_email');
+    await deleteStorageItem('user_name');
+    await deleteStorageItem('user_phone');
+    await deleteStorageItem('user_email');
     router.replace('/home');
   };
 

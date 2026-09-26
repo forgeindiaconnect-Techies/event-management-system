@@ -16,8 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWishlist } from '../context/WishlistContext';
 import { useTheme } from '../context/ThemeContext';
-
-const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
+import { smartFetch } from '../config/apiConfig';
 
 const SECTIONS = ['About', 'Gallery', 'Organizer', 'More'];
 
@@ -63,7 +62,7 @@ export default function EventDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`${BASE_URL}/events/public/${id}`)
+    smartFetch(`/events/public/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { getStorageItem } from '../utils/storage';
 import { 
   StyleSheet, 
   Text, 
@@ -31,7 +31,7 @@ export default function OnboardingScreen() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    SecureStore.getItemAsync('user_name').then(name => {
+    getStorageItem('user_name').then(name => {
       if (name) {
         router.replace('/home');
       } else {

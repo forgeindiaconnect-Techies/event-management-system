@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useWishlist } from '../context/WishlistContext';
 import { useTheme } from '../context/ThemeContext';
+import { smartFetch } from '../config/apiConfig';
 
 export default function WishlistScreen() {
   const { likedEvents, toggleLike } = useWishlist();
@@ -25,7 +26,7 @@ export default function WishlistScreen() {
 
   useEffect(() => {
     // Fetch real events from API
-    fetch('https://event-management-system-y9fa.onrender.com/api/events/public/status/PUBLISHED')
+    smartFetch('/events/public/status/PUBLISHED')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setEvents(data);
@@ -119,15 +120,15 @@ export default function WishlistScreen() {
           <Ionicons name="home-outline" size={24} color={colors.text} />
           <Text style={[styles.navText, { color: colors.text }]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/explore')}>
-          <Ionicons name="compass-outline" size={24} color={colors.text} />
-          <Text style={[styles.navText, { color: colors.text }]}>Explore</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/search')}>
+          <Ionicons name="search-outline" size={24} color={colors.text} />
+          <Text style={[styles.navText, { color: colors.text }]}>Search</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
           <Ionicons name="heart" size={24} color={colors.primary} />
           <Text style={[styles.navText, { color: colors.primary }]}>Wishlist</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/my-tickets')}>
           <Ionicons name="ticket-outline" size={24} color={colors.text} />
           <Text style={[styles.navText, { color: colors.text }]}>My Tickets</Text>
         </TouchableOpacity>

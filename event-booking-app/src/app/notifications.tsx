@@ -13,11 +13,10 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import * as SecureStore from 'expo-secure-store';
-
-const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 export default function NotificationsScreen() {
+  const BASE_URL = getApiBaseUrl();
   const { isDarkMode, colors } = useTheme();
   const [activeTab, setActiveTab] = useState<'ANNOUNCEMENTS' | 'NOTIFICATIONS'>('NOTIFICATIONS');
   const [loading, setLoading] = useState(true);

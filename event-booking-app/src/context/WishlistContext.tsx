@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getStorageItem, setStorageItem } from '../utils/storage';
 
 type WishlistContextType = {
   likedEvents: Set<string>;
@@ -18,7 +18,7 @@ export const WishlistProvider = ({ children }: { children: React.ReactNode }) =>
     // Load persisted wishlist on mount
     const loadWishlist = async () => {
       try {
-        const stored = await SecureStore.getItemAsync('wishlist');
+        const stored = await getStorageItem('wishlist');
         if (stored) {
           setLikedEvents(new Set(JSON.parse(stored)));
         }
@@ -40,7 +40,7 @@ export const WishlistProvider = ({ children }: { children: React.ReactNode }) =>
     setLikedEvents(newSet);
     
     try {
-      await SecureStore.setItemAsync('wishlist', JSON.stringify(Array.from(newSet)));
+      await setStorageItem('wishlist', JSON.stringify(Array.from(newSet)));
     } catch (error) {
       console.error('Failed to save wishlist:', error);
     }

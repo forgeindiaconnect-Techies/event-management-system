@@ -16,12 +16,13 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
-import * as SecureStore from 'expo-secure-store';
+import * as Print from 'expo-print';
+import { getStorageItem, setStorageItem } from '../utils/storage';
 import { useTheme } from '../context/ThemeContext';
-
-const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 export default function TicketScreen() {
+  const BASE_URL = getApiBaseUrl();
   const { registrationId } = useLocalSearchParams<{ registrationId: string }>();
   const { isDarkMode, colors } = useTheme();
 
@@ -56,13 +57,13 @@ export default function TicketScreen() {
           console.log('Error fetching specific ticket details', ticketErr);
         }
 
-        // Save to SecureStore
+        // Save to storage
         try {
-          const savedTicketsStr = await SecureStore.getItemAsync('my_tickets');
+          const savedTicketsStr = await getStorageItem('my_tickets');
           let savedTickets = savedTicketsStr ? JSON.parse(savedTicketsStr) : [];
           if (!savedTickets.includes(registrationId)) {
             savedTickets.push(registrationId);
-            await SecureStore.setItemAsync('my_tickets', JSON.stringify(savedTickets));
+            await setStorageItem('my_tickets', JSON.stringify(savedTickets));
           }
         } catch (storeErr) {
           console.log('Error saving ticket to local storage', storeErr);
@@ -84,22 +85,69 @@ export default function TicketScreen() {
 
   const downloadTicket = async () => {
     try {
-      if (viewShotRef.current) {
-        const uri = await viewShotRef.current.capture();
-        const isAvailable = await Sharing.isAvailableAsync();
-        
-        if (isAvailable) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/png',
-            dialogTitle: 'Save your ticket',
-          });
-        } else {
-          Alert.alert('Error', 'Sharing/Saving is not available on this device');
-        }
+      const evt = registration?.event || {};
+      const part = registration?.participant || {};
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+        registration?.ticketCode || registration?.registrationId || 'TICKET'
+      )}`;
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Event Ticket - ${evt.eventName || 'Event'}</title>
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+              body { background: #f8fafc; padding: 32px 16px; color: #0f172a; }
+              .card { max-width: 540px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+              .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; padding: 24px; }
+              .badge { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+              .title { font-size: 24px; font-weight: 800; margin: 8px 0 4px; }
+              .body { padding: 24px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+              .box { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+              .label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+              .val { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+              .qr-box { text-align: center; padding: 16px 0; border-top: 1px dashed #cbd5e1; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="header">
+                <span class="badge">Official Event Ticket</span>
+                <h1 class="title">${evt.eventName || 'Event'}</h1>
+                <p>${evt.venue || 'Online / Venue'} • ${formatDate(evt.startDateTime)}</p>
+              </div>
+              <div class="body">
+                <div class="grid">
+                  <div class="box"><div class="label">Attendee</div><div class="val">${part.name || 'Guest'}</div></div>
+                  <div class="box"><div class="label">Class</div><div class="val">${registration.ticketClass?.name || 'General'}</div></div>
+                  <div class="box"><div class="label">Booking Ref</div><div class="val">${registration.registrationId}</div></div>
+                  <div class="box"><div class="label">Status</div><div class="val" style="color: #16a34a;">${registration.paymentStatus || 'CONFIRMED'}</div></div>
+                </div>
+                <div class="qr-box">
+                  <img src="${qrUrl}" width="150" height="150" alt="QR" style="border: 1px solid #e2e8f0; padding: 4px; border-radius: 8px;" />
+                  <p style="font-size: 12px; color: #64748b; margin-top: 8px;">Ticket Code: <strong>${registration.ticketCode || registration.registrationId}</strong></p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html });
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          UTI: '.pdf',
+          mimeType: 'application/pdf',
+          dialogTitle: 'Save your ticket PDF',
+        });
       }
     } catch (err) {
-      console.log('Capture error', err);
-      Alert.alert('Error', 'Failed to capture and save the ticket.');
+      console.log('PDF capture error', err);
+      Alert.alert('Error', 'Failed to generate PDF ticket.');
     }
   };
 
@@ -258,13 +306,13 @@ export default function TicketScreen() {
           style={[styles.downloadBtn, { backgroundColor: colors.primary }]} 
           onPress={downloadTicket}
         >
-          <Ionicons name="download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.downloadBtnText}>Save Ticket</Text>
+          <Ionicons name="document-text" size={20} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.downloadBtnText}>Download Ticket in PDF</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={[styles.outlineBtn, { borderColor: colors.primary }]} 
-          onPress={() => router.replace('/explore')}
+          onPress={() => router.replace('/search')}
         >
           <Text style={[styles.outlineBtnText, { color: colors.primary }]}>View More Events</Text>
         </TouchableOpacity>

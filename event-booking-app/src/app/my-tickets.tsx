@@ -13,61 +13,61 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
+import { getStorageItem } from '../utils/storage';
 import { useTheme } from '../context/ThemeContext';
-
-const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
+import { getLocalMovieTickets, BookedMovieTicket } from '../services/movieApi';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 export default function MyTicketsScreen() {
+  const BASE_URL = getApiBaseUrl();
   const { isDarkMode, colors } = useTheme();
+  const [activeTab, setActiveTab] = useState<'events' | 'movies'>('events');
   const [loading, setLoading] = useState(true);
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [eventTickets, setEventTickets] = useState<any[]>([]);
+  const [movieTickets, setMovieTickets] = useState<BookedMovieTicket[]>([]);
 
   useFocusEffect(
     useCallback(() => {
-      loadMyTickets();
+      loadAllTickets();
     }, [])
   );
 
-  const loadMyTickets = async () => {
+  const loadAllTickets = async () => {
     setLoading(true);
     try {
-      const savedTicketsStr = await SecureStore.getItemAsync('my_tickets');
-      if (!savedTicketsStr) {
-        setTickets([]);
-        setLoading(false);
-        return;
-      }
-
-      const registrationIds = JSON.parse(savedTicketsStr);
-      if (!Array.isArray(registrationIds) || registrationIds.length === 0) {
-        setTickets([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch details for all registration IDs
-      const fetchedTickets = [];
-      for (const id of registrationIds) {
-        try {
-          const res = await fetch(`${BASE_URL}/registrations/${id}`);
-          if (res.ok) {
-            const data = await res.json();
-            fetchedTickets.push({ registrationId: id, data });
+      // 1. Load Event Tickets
+      const savedTicketsStr = await getStorageItem('my_tickets');
+      if (savedTicketsStr) {
+        const registrationIds = JSON.parse(savedTicketsStr);
+        if (Array.isArray(registrationIds) && registrationIds.length > 0) {
+          const fetchedTickets = [];
+          for (const id of registrationIds) {
+            try {
+              const res = await fetch(`${BASE_URL}/registrations/${id}`);
+              if (res.ok) {
+                const data = await res.json();
+                fetchedTickets.push({ registrationId: id, data });
+              }
+            } catch (err) {
+              console.log(`Failed to fetch reg ${id}`, err);
+            }
           }
-        } catch (err) {
-          console.log(`Failed to fetch reg ${id}`, err);
+          fetchedTickets.sort((a, b) => {
+            const dateA = new Date(a.data?.event?.startDateTime || 0).getTime();
+            const dateB = new Date(b.data?.event?.startDateTime || 0).getTime();
+            return dateB - dateA;
+          });
+          setEventTickets(fetchedTickets);
+        } else {
+          setEventTickets([]);
         }
+      } else {
+        setEventTickets([]);
       }
 
-      // Sort by start date
-      fetchedTickets.sort((a, b) => {
-        const dateA = new Date(a.data?.event?.startDateTime || 0).getTime();
-        const dateB = new Date(b.data?.event?.startDateTime || 0).getTime();
-        return dateB - dateA;
-      });
-
-      setTickets(fetchedTickets);
+      // 2. Load Movie Tickets
+      const mTickets = await getLocalMovieTickets();
+      setMovieTickets(mTickets);
     } catch (error) {
       console.log('Error loading tickets from local storage:', error);
     } finally {
@@ -78,89 +78,256 @@ export default function MyTicketsScreen() {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'TBA';
     return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-      
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+
+      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/home'); } }} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/home');
+            }
+          }}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>My Tickets</Text>
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Segmented Control: Events vs Movies */}
+      <View style={[styles.segmentBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[
+            styles.segmentBtn,
+            activeTab === 'events' && {
+              backgroundColor: colors.primary,
+            },
+          ]}
+          onPress={() => setActiveTab('events')}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={16}
+            color={activeTab === 'events' ? '#FFF' : colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.segmentText,
+              { color: activeTab === 'events' ? '#FFF' : colors.textMuted },
+            ]}
+          >
+            Events ({eventTickets.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[
+            styles.segmentBtn,
+            activeTab === 'movies' && {
+              backgroundColor: colors.primary,
+            },
+          ]}
+          onPress={() => setActiveTab('movies')}
+        >
+          <Ionicons
+            name="film-outline"
+            size={16}
+            color={activeTab === 'movies' ? '#FFF' : colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.segmentText,
+              { color: activeTab === 'movies' ? '#FFF' : colors.textMuted },
+            ]}
+          >
+            Movies ({movieTickets.length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textMuted }]}>Loading your tickets...</Text>
-        </View>
-      ) : tickets.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Ionicons name="ticket-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Tickets Found</Text>
-          <Text style={[styles.emptySub, { color: colors.textMuted }]}>
-            When you register for events, your tickets will appear here.
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+            Loading your tickets...
           </Text>
-          <TouchableOpacity style={[styles.exploreBtn, { backgroundColor: colors.primary }]} onPress={() => router.push('/explore')}>
-            <Text style={styles.exploreBtnText}>Explore Events</Text>
-          </TouchableOpacity>
         </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.listContainer}>
-          {tickets.map((ticketObj, index) => {
-            const event = ticketObj.data?.event;
-            const bannerUrl = event?.bannerUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1000&auto=format&fit=crop';
-            
-            return (
-              <TouchableOpacity 
-                key={`${ticketObj.registrationId}-${index}`} 
-                style={[styles.ticketCard, { backgroundColor: colors.card }]}
-                onPress={() => router.push({ pathname: '/ticket', params: { registrationId: ticketObj.registrationId } })}
-              >
-                <ImageBackground 
-                  source={{ uri: bannerUrl }} 
-                  style={styles.cardImage}
-                  imageStyle={{ borderTopLeftRadius: 16, borderBottomLeftRadius: 16 }}
-                />
-                
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
-                    {event?.eventName || 'Untitled Event'}
-                  </Text>
-                  
-                  <View style={styles.detailRow}>
-                    <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                    <Text style={[styles.detailText, { color: colors.textMuted }]}>
-                      {formatDate(event?.startDateTime)}
+      ) : activeTab === 'events' ? (
+        /* Event Tickets List */
+        eventTickets.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Ionicons name="ticket-outline" size={64} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Event Tickets</Text>
+            <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+              When you register for events, your tickets will appear here.
+            </Text>
+            <TouchableOpacity
+              style={[styles.exploreBtn, { backgroundColor: colors.primary }]}
+              onPress={() => router.push('/search')}
+            >
+              <Text style={styles.exploreBtnText}>Search Events</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.listContainer}>
+            {eventTickets.map((ticketObj, index) => {
+              const event = ticketObj.data?.event;
+              const bannerUrl =
+                event?.bannerUrl ||
+                'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1000&auto=format&fit=crop';
+
+              return (
+                <TouchableOpacity
+                  key={`${ticketObj.registrationId}-${index}`}
+                  style={[styles.ticketCard, { backgroundColor: colors.card }]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/ticket',
+                      params: { registrationId: ticketObj.registrationId },
+                    })
+                  }
+                >
+                  <ImageBackground
+                    source={{ uri: bannerUrl }}
+                    style={styles.cardImage}
+                    imageStyle={{ borderTopLeftRadius: 16, borderBottomLeftRadius: 16 }}
+                  />
+
+                  <View style={styles.cardInfo}>
+                    <Text
+                      style={[styles.eventTitle, { color: colors.text }]}
+                      numberOfLines={2}
+                    >
+                      {event?.eventName || 'Untitled Event'}
                     </Text>
-                  </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                    <Text style={[styles.detailText, { color: colors.textMuted }]} numberOfLines={1}>
-                      {event?.venue || (event?.eventMode === 'VIRTUAL' ? 'Online' : 'TBA')}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.badgeRow}>
-                    <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
-                      <Text style={[styles.badgeText, { color: colors.primary }]}>
-                        {ticketObj.data?.registrationStatus || 'CONFIRMED'}
+
+                    <View style={styles.detailRow}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.detailText, { color: colors.textMuted }]}>
+                        {formatDate(event?.startDateTime)}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+
+                    <View style={styles.detailRow}>
+                      <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                      <Text
+                        style={[styles.detailText, { color: colors.textMuted }]}
+                        numberOfLines={1}
+                      >
+                        {event?.venue || (event?.eventMode === 'VIRTUAL' ? 'Online' : 'TBA')}
+                      </Text>
+                    </View>
+
+                    <View style={styles.badgeRow}>
+                      <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
+                        <Text style={[styles.badgeText, { color: colors.primary }]}>
+                          {ticketObj.data?.registrationStatus || 'CONFIRMED'}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )
+      ) : (
+        /* Movie Tickets List */
+        movieTickets.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Ionicons name="film-outline" size={64} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Movie Tickets</Text>
+            <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+              When you book movie tickets, they will be stored and available here.
+            </Text>
+            <TouchableOpacity
+              style={[styles.exploreBtn, { backgroundColor: colors.primary }]}
+              onPress={() => router.replace('/home')}
+            >
+              <Text style={styles.exploreBtnText}>Browse Movies</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.listContainer}>
+            {movieTickets.map((mTicket, index) => {
+              const poster =
+                mTicket.posterUrl ||
+                'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80';
+
+              return (
+                <TouchableOpacity
+                  key={`${mTicket.ticketId}-${index}`}
+                  style={[styles.ticketCard, { backgroundColor: colors.card }]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/movie-ticket' as any,
+                      params: { ticketId: mTicket.ticketId },
+                    })
+                  }
+                >
+                  <ImageBackground
+                    source={{ uri: poster }}
+                    style={styles.cardImage}
+                    imageStyle={{ borderTopLeftRadius: 16, borderBottomLeftRadius: 16 }}
+                  />
+
+                  <View style={styles.cardInfo}>
+                    <Text
+                      style={[styles.eventTitle, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
+                      {mTicket.movieTitle}
+                    </Text>
+
+                    <Text style={[styles.movieTheaterSub, { color: colors.primary }]}>
+                      {mTicket.theaterName} ({mTicket.screenName})
+                    </Text>
+
+                    <View style={styles.detailRow}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.detailText, { color: colors.textMuted }]}>
+                        {mTicket.date} • {mTicket.time}
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailRow}>
+                      <Ionicons name="apps-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.detailText, { color: colors.textMuted }]}>
+                        Seats: {mTicket.seats.join(', ')}
+                      </Text>
+                    </View>
+
+                    <View style={styles.badgeRow}>
+                      <View style={[styles.badge, { backgroundColor: '#10B98120' }]}>
+                        <Text style={[styles.badgeText, { color: '#10B981' }]}>
+                          CONFIRMED • ₹{mTicket.amount}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )
       )}
     </SafeAreaView>
   );
@@ -176,52 +343,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    paddingVertical: 14,
   },
   backBtn: {
-    padding: 8,
-    marginLeft: -8,
+    padding: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
   },
+  segmentBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 12,
+    borderBottomWidth: 1,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    backgroundColor: 'rgba(156, 163, 175, 0.1)',
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
+    padding: 32,
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: 14,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginTop: 24,
+    marginTop: 20,
     marginBottom: 8,
   },
   emptySub: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
+    lineHeight: 20,
+    marginBottom: 24,
   },
   exploreBtn: {
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 30,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 24,
   },
   exploreBtnText: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   listContainer: {
     padding: 16,
@@ -233,9 +415,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    overflow: 'hidden',
   },
   cardImage: {
     width: 100,
@@ -243,37 +426,42 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     flex: 1,
-    padding: 16,
+    padding: 14,
     justifyContent: 'center',
   },
   eventTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  movieTheaterSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
     gap: 6,
   },
   detailText: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
   },
   badgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
 });

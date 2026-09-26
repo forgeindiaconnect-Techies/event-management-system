@@ -15,11 +15,11 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import * as SecureStore from 'expo-secure-store';
-
-const BASE_URL = 'https://event-management-system-y9fa.onrender.com/api';
+import { setStorageItem } from '../utils/storage';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 export default function RegisterScreen() {
+  const BASE_URL = getApiBaseUrl();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isDarkMode, colors } = useTheme();
 
@@ -135,9 +135,9 @@ export default function RegisterScreen() {
 
       if (response.ok) {
         try {
-          await SecureStore.setItemAsync('user_name', `${firstName} ${lastName}`.trim());
-          if (email) await SecureStore.setItemAsync('user_email', email);
-          if (phoneNumber) await SecureStore.setItemAsync('user_phone', phoneNumber);
+          await setStorageItem('user_name', `${firstName} ${lastName}`.trim());
+          if (email) await setStorageItem('user_email', email);
+          if (phoneNumber) await setStorageItem('user_phone', phoneNumber);
         } catch (e) {
           console.log('Failed to save user details');
         }

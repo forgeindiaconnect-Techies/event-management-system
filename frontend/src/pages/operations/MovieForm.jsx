@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axiosConfig";
-import { BsArrowLeft } from "react-icons/bs";
+import { BsArrowLeft, BsStarFill } from "react-icons/bs";
 import CreatableSelect from "react-select/creatable";
 import Select from "react-select";
 
@@ -22,6 +22,9 @@ export default function MovieForm() {
     durationMinutes: "",
     certification: "U",
     releaseDate: "",
+    rating: "",
+    totalVotes: "",
+    likes: "",
     castAndCrewIds: []
   });
 
@@ -46,6 +49,11 @@ export default function MovieForm() {
       api.get(`/movies/${id}`)
         .then(res => {
           const movie = res.data;
+          let localMeta = {};
+          try {
+            localMeta = JSON.parse(localStorage.getItem(`movie_rating_meta_${id}`) || "{}");
+          } catch (e) {}
+
           setFormData({
             title: movie.title || "",
             posterUrl: movie.posterUrl || "",
@@ -56,8 +64,9 @@ export default function MovieForm() {
             durationMinutes: movie.durationMinutes || "",
             certification: movie.certification || "U",
             releaseDate: movie.releaseDate || "",
-            certification: movie.certification || "U",
-            releaseDate: movie.releaseDate || "",
+            rating: movie.rating !== undefined && movie.rating !== null ? String(movie.rating) : (localMeta.rating !== undefined && localMeta.rating !== null ? String(localMeta.rating) : ""),
+            totalVotes: movie.totalVotes || localMeta.totalVotes || "",
+            likes: movie.likes || localMeta.likes || "",
             castAndCrewIds: movie.castAndCrew ? movie.castAndCrew.map(p => p.id) : []
           });
         })
@@ -101,16 +110,34 @@ export default function MovieForm() {
     e.preventDefault();
     try {
       // Map castAndCrewIds to the object structure expected by the backend (@ManyToMany Set<Person>)
+      const parsedRating = formData.rating !== "" && !isNaN(Number(formData.rating)) ? parseFloat(formData.rating) : null;
       const payload = {
         ...formData,
+        rating: parsedRating,
+        totalVotes: formData.totalVotes.trim() || null,
+        likes: formData.likes.trim() || null,
         castAndCrew: formData.castAndCrewIds.map(personId => ({ id: personId }))
       };
 
+      let savedMovie = null;
       if (id) {
-        await api.put(`/movies/${id}`, payload);
+        const res = await api.put(`/movies/${id}`, payload);
+        savedMovie = res.data;
       } else {
-        await api.post("/movies", payload);
+        const res = await api.post("/movies", payload);
+        savedMovie = res.data;
       }
+
+      // Persist rating, vote, & likes meta in localStorage so changes reflect everywhere immediately
+      const effectiveSavedId = id || savedMovie?.id;
+      if (effectiveSavedId) {
+        localStorage.setItem(`movie_rating_meta_${effectiveSavedId}`, JSON.stringify({
+          rating: parsedRating,
+          totalVotes: payload.totalVotes,
+          likes: payload.likes,
+        }));
+      }
+
       navigate("/content-operations/movies");
     } catch (err) {
       console.error("Error saving movie", err);
@@ -234,6 +261,129 @@ export default function MovieForm() {
         <div>
           <label style={{ display: "block", marginBottom: "8px", color: "#475569", fontWeight: "600", fontSize: "0.9rem" }}>Release Date</label>
           <input type="date" name="releaseDate" value={formData.releaseDate} onChange={handleInputChange} style={{ width: "100%", padding: "10px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} />
+        </div>
+
+        {/* AUDIENCE RATING & REVIEWS CONFIGURATION */}
+        <div style={{ gridColumn: "1 / -1", backgroundColor: "#f8fafc", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ backgroundColor: "#fef3c7", color: "#d97706", padding: "8px", borderRadius: "8px", display: "flex", alignItems: "center" }}>
+                <BsStarFill size={18} />
+              </span>
+              <div>
+                <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: "700", color: "#1e293b" }}>Audience Rating & Review Metrics</h4>
+                <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Update the official movie rating and total votes displayed on the public movie details page</span>
+              </div>
+            </div>
+            <div>
+              {formData.rating ? (
+                <span style={{ backgroundColor: "#fef3c7", color: "#b45309", padding: "5px 14px", borderRadius: "999px", fontSize: "0.85rem", fontWeight: "700", border: "1px solid #fde68a" }}>
+                  ★ {formData.rating}/10 {formData.totalVotes ? `(${formData.totalVotes} Votes)` : ""}
+                </span>
+              ) : formData.likes ? (
+                <span style={{ backgroundColor: "#ecfdf5", color: "#047857", padding: "5px 14px", borderRadius: "999px", fontSize: "0.85rem", fontWeight: "700", border: "1px solid #a7f3d0" }}>
+                  👍 {formData.likes} Likes (Unrated)
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+            <div>
+              <label style={{ display: "block", marginBottom: "6px", color: "#475569", fontWeight: "600", fontSize: "0.85rem" }}>
+                Base Rating (out of 10)
+              </label>
+              <div style={{ position: "relative" }}>
+                <input 
+                  type="number" 
+                  name="rating" 
+                  step="0.1" 
+                  min="1" 
+                  max="10" 
+                  placeholder="e.g. 9.2 (blank if unrated)" 
+                  value={formData.rating} 
+                  onChange={handleInputChange} 
+                  style={{ width: "100%", padding: "10px 15px", paddingRight: "50px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} 
+                />
+                <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "0.85rem", pointerEvents: "none" }}>
+                  / 10
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+                {[9.5, 9.2, 8.8, 8.5].map((preset) => (
+                  <button 
+                    key={preset} 
+                    type="button" 
+                    onClick={() => setFormData(prev => ({ ...prev, rating: String(preset) }))}
+                    style={{ fontSize: "0.75rem", padding: "3px 7px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff", cursor: "pointer", color: "#334155", fontWeight: "500" }}
+                  >
+                    ★ {preset}
+                  </button>
+                ))}
+                {formData.rating && (
+                  <button 
+                    type="button" 
+                    onClick={() => setFormData(prev => ({ ...prev, rating: "" }))}
+                    style={{ fontSize: "0.75rem", padding: "3px 7px", borderRadius: "4px", border: "1px solid #fecaca", backgroundColor: "#fee2e2", cursor: "pointer", color: "#b91c1c", fontWeight: "500" }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "6px", color: "#475569", fontWeight: "600", fontSize: "0.85rem" }}>
+                Total Votes Text
+              </label>
+              <input 
+                type="text" 
+                name="totalVotes" 
+                placeholder="e.g. 34.8K or 25,000" 
+                value={formData.totalVotes} 
+                onChange={handleInputChange} 
+                style={{ width: "100%", padding: "10px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} 
+              />
+              <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+                {["34.8K", "25K", "15K", "5.2K"].map((preset) => (
+                  <button 
+                    key={preset} 
+                    type="button" 
+                    onClick={() => setFormData(prev => ({ ...prev, totalVotes: preset }))}
+                    style={{ fontSize: "0.75rem", padding: "3px 7px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff", cursor: "pointer", color: "#334155", fontWeight: "500" }}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "6px", color: "#475569", fontWeight: "600", fontSize: "0.85rem" }}>
+                Audience Likes (Fallback)
+              </label>
+              <input 
+                type="text" 
+                name="likes" 
+                placeholder="e.g. 24.5K (shown if unrated)" 
+                value={formData.likes} 
+                onChange={handleInputChange} 
+                style={{ width: "100%", padding: "10px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", outline: "none", fontSize: "0.95rem" }} 
+              />
+              <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+                {["45.2K", "24.5K", "18.6K", "9.2K"].map((preset) => (
+                  <button 
+                    key={preset} 
+                    type="button" 
+                    onClick={() => setFormData(prev => ({ ...prev, likes: preset }))}
+                    style={{ fontSize: "0.75rem", padding: "3px 7px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff", cursor: "pointer", color: "#334155", fontWeight: "500" }}
+                  >
+                    👍 {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>

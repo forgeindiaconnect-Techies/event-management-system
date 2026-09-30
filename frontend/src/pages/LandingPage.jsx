@@ -29,7 +29,10 @@ import {
   BsInstagram,
   BsTwitterX,
   BsLinkedin,
+  BsGooglePlay,
+  BsApple,
 } from "react-icons/bs";
+import { QRCodeCanvas } from "qrcode.react";
 
 function formatStatNumber(num) {
   const n = Number(num) || 0;
@@ -787,33 +790,78 @@ function LandingPage() {
           </div>
 
           <div className="row g-4 text-center text-md-start">
-            <div className="col-md-4">
+            <div className="col-lg-3 col-md-6">
               <h5 className="fw-bold mb-3 text-white">Event Management System</h5>
               <p className="small text-white-50 mb-4" style={{ lineHeight: "1.8" }}>
                 The ultimate all-in-one platform for theaters, event organizers, and seamless ticket booking experiences.
               </p>
-              <div className="d-flex gap-3">
+              <div className="d-flex gap-3 justify-content-center justify-content-md-start">
                 <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsFacebook size={20} /></a>
                 <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsInstagram size={20} /></a>
                 <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsTwitterX size={20} /></a>
                 <a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}><BsLinkedin size={20} /></a>
               </div>
             </div>
-            <div className="col-md-4">
+            <div className="col-lg-3 col-md-6">
               <h5 className="fw-bold mb-3 text-white">Information & Conditions</h5>
               <ul className="list-unstyled small mb-0" style={{ lineHeight: "2" }}>
                 <li><a href="/terms" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Terms of Service</a></li>
                 <li><a href="/privacy" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Privacy Policy</a></li>
                 <li><a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Refund & Cancellation Policy</a></li>
+                <li><a href="#" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Help Center & Support</a></li>
               </ul>
             </div>
-            <div className="col-md-4">
+            <div className="col-lg-2 col-md-6">
               <h5 className="fw-bold mb-3 text-white">Quick Links</h5>
               <ul className="list-unstyled small mb-0" style={{ lineHeight: "2" }}>
                 <li><a href="/create-portal" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>List your events</a></li>
                 <li><a href="/create-portal" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>List your showtimes</a></li>
                 <li><a href="/find-events" className="text-white-50 text-decoration-none" style={{ transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "#fff"} onMouseOut={(e) => e.target.style.color = ""}>Book the shows</a></li>
               </ul>
+            </div>
+            <div className="col-lg-4 col-md-6 text-center text-lg-start">
+              <h5 className="fw-bold mb-2 text-white">Download Our App</h5>
+              <p className="small text-white-50 mb-3" style={{ lineHeight: "1.6" }}>
+                Scan the QR code to instantly download our event booking app on your mobile device.
+              </p>
+              <div className="d-flex align-items-center gap-3 justify-content-center justify-content-lg-start flex-wrap">
+                <div
+                  className="p-2 rounded-3 bg-white d-inline-flex flex-column align-items-center justify-content-center shadow"
+                  style={{ border: "2px solid rgba(255,255,255,0.25)" }}
+                >
+                  <QRCodeCanvas
+                    value={typeof window !== "undefined" ? `${window.location.origin}/app-download` : "https://forgeindiaconnect.com/download-app"}
+                    size={84}
+                    level="M"
+                    includeMargin={false}
+                  />
+                  <span className="text-dark fw-bold mt-1 text-center" style={{ fontSize: "8.5px", letterSpacing: "0.5px" }}>
+                    SCAN TO INSTALL
+                  </span>
+                </div>
+                <div className="d-flex flex-column gap-2 text-start">
+                  <div
+                    className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2"
+                    style={{ backgroundColor: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer" }}
+                  >
+                    <BsGooglePlay size={18} className="text-success" />
+                    <div>
+                      <div className="text-white-50" style={{ fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>GET IT ON</div>
+                      <div className="fw-bold text-white" style={{ fontSize: "11px", lineHeight: "1.1" }}>Google Play</div>
+                    </div>
+                  </div>
+                  <div
+                    className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2"
+                    style={{ backgroundColor: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer" }}
+                  >
+                    <BsApple size={18} className="text-white" />
+                    <div>
+                      <div className="text-white-50" style={{ fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>DOWNLOAD ON</div>
+                      <div className="fw-bold text-white" style={{ fontSize: "11px", lineHeight: "1.1" }}>App Store</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <hr className="border-secondary opacity-50 my-4" />

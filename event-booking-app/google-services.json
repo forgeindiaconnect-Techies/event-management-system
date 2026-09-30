@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "753212983637",
+    "project_id": "event-management-system-96a62",
+    "storage_bucket": "event-management-system-96a62.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753212983637:android:ebb72d0be37a8ac490c7dc",
+        "android_client_info": {
+          "package_name": "com.naveen7878.eventbookingapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQQTKKn7eumnc1Rv0Q1MiQr1ntuSSORmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

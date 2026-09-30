@@ -1,9 +1,14 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { WishlistProvider } from '../context/WishlistContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { MovieBookingProvider } from '../context/MovieBookingContext';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
 
 export default function Layout() {
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
   return (
     <ThemeProvider>
       <WishlistProvider>

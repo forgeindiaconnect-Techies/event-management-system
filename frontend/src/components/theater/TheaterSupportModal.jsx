@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../api/axiosConfig";
 import {
   BsHeadset,
@@ -118,13 +119,13 @@ export default function TheaterSupportModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.6)",
-        zIndex: 10000,
+        backgroundColor: "rgba(15, 23, 42, 0.65)",
+        zIndex: 20000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -593,6 +594,7 @@ export default function TheaterSupportModal({ isOpen, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

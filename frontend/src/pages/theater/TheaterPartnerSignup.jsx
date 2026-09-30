@@ -36,7 +36,7 @@ export default function TheaterPartnerSignup() {
     setMessage("");
 
     try {
-      // Create Theater Account
+      // 1. Create Theater Account
       const res = await api.post("/theater/create", {
         name: formData.cinemaName,
         city: formData.city,
@@ -49,10 +49,35 @@ export default function TheaterPartnerSignup() {
         address: formData.city + ", India",
       });
 
-      setMessage("SUCCESS: Theater Partner Portal created successfully!");
+      // 2. Clear old previous session & set new theater owner session
+      localStorage.clear();
+      try {
+        const loginRes = await api.post("/auth/login", {
+          email: formData.ownerEmail,
+          password: formData.password,
+        });
+        localStorage.setItem("token", loginRes.data.token || "");
+        localStorage.setItem("role", loginRes.data.role || "THEATER_OWNER");
+        localStorage.setItem("dutyRole", loginRes.data.dutyRole || "");
+        localStorage.setItem("email", loginRes.data.email || formData.ownerEmail);
+        localStorage.setItem("userId", loginRes.data.userId || "");
+        localStorage.setItem("portalId", loginRes.data.portalId || res.data?.portalId || "");
+        localStorage.setItem("portalCode", loginRes.data.portalCode || res.data?.portalCode || "");
+        localStorage.setItem("portalName", loginRes.data.portalName || formData.cinemaName);
+        localStorage.setItem("firstName", formData.ownerName || formData.cinemaName);
+      } catch (loginErr) {
+        localStorage.setItem("email", formData.ownerEmail);
+        localStorage.setItem("role", "THEATER_OWNER");
+        localStorage.setItem("portalId", res.data?.portalId || "");
+        localStorage.setItem("portalCode", res.data?.portalCode || "");
+        localStorage.setItem("portalName", res.data?.portalName || formData.cinemaName);
+        localStorage.setItem("firstName", formData.ownerName || formData.cinemaName);
+      }
+
+      setMessage("SUCCESS: Theater Partner Portal created successfully! Launching your dashboard...");
       setTimeout(() => {
         navigate("/theater/dashboard");
-      }, 1200);
+      }, 1000);
     } catch (err) {
       console.error(err);
       setMessage("Failed to create theater portal. Please check your details.");

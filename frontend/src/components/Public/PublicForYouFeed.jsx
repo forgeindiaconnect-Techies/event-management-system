@@ -8,6 +8,7 @@ import {
   BsGeoAlt,
   BsFire,
   BsStarFill,
+  BsHandThumbsUpFill,
   BsArrowRight,
   BsTicketPerforated,
   BsLightningChargeFill,
@@ -85,13 +86,14 @@ export default function PublicForYouFeed({ events = [], searchQuery = "" }) {
       if (!st || !st.movieTitle) return;
       const key = st.movieTitle.trim();
 
+      const matchingMovie = allMovies.find(
+        (m) => (st.movieId && m.id === st.movieId) ||
+               (m.title && m.title.trim().toLowerCase() === key.toLowerCase())
+      );
+
       let genre = st.genre || st.movieGenre || "";
-      if (!genre) {
-        const matchingMovie = allMovies.find(
-          (m) => (st.movieId && m.id === st.movieId) ||
-                 (m.title && m.title.trim().toLowerCase() === key.toLowerCase())
-        );
-        if (matchingMovie?.genre) genre = matchingMovie.genre;
+      if (!genre && matchingMovie?.genre) {
+        genre = matchingMovie.genre;
       }
       if (!genre) {
         const t = key.toLowerCase();
@@ -117,6 +119,36 @@ export default function PublicForYouFeed({ events = [], searchQuery = "" }) {
       }
       if (!existing.movieId && st.movieId) existing.movieId = st.movieId;
       if (!existing.genre && genre) existing.genre = genre;
+
+      // Load rating, totalVotes, and likes from Content Dashboard / Backend
+      const effId = st.movieId || matchingMovie?.id;
+      let localMeta = {};
+      if (effId) {
+        try {
+          localMeta = JSON.parse(localStorage.getItem(`movie_rating_meta_${effId}`) || "{}");
+        } catch (e) {}
+      }
+
+      const rating = matchingMovie?.rating !== undefined && matchingMovie?.rating !== null
+        ? matchingMovie.rating
+        : (localMeta.rating !== undefined && localMeta.rating !== null ? Number(localMeta.rating) : null);
+
+      const totalVotes = matchingMovie?.totalVotes || localMeta.totalVotes || "";
+      const configuredLikes = matchingMovie?.likes || localMeta.likes || null;
+
+      // Deterministic realistic fallback likes if rating is not listed and likes not configured
+      const fallbackLikes = (() => {
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) {
+          hash = (hash * 31 + key.charCodeAt(i)) % 1000;
+        }
+        const val = 12 + (hash % 38) + ((hash % 10) / 10);
+        return `${val.toFixed(1)}K`;
+      })();
+
+      existing.rating = rating;
+      existing.totalVotes = totalVotes;
+      existing.likes = configuredLikes || fallbackLikes;
 
       existing.showtimes.push(st);
 
@@ -284,9 +316,20 @@ export default function PublicForYouFeed({ events = [], searchQuery = "" }) {
                       className="position-absolute bottom-0 start-0 w-100 p-2.5"
                       style={{ background: "linear-gradient(to top, rgba(15,23,42,0.92) 0%, transparent 100%)" }}
                     >
-                      <span className="badge bg-dark bg-opacity-80 text-warning fw-bold d-inline-flex align-items-center gap-1 border border-secondary border-opacity-50">
-                        <BsStarFill size={11} /> 8.6/10
-                      </span>
+                      {movie.rating ? (
+                        <span className="badge bg-dark bg-opacity-80 text-warning fw-bold d-inline-flex align-items-center gap-1 border border-secondary border-opacity-50">
+                          <BsStarFill size={11} color="#f59e0b" /> {movie.rating}/10
+                          {movie.totalVotes && (
+                            <span className="text-white-50 ms-1 fw-normal" style={{ fontSize: "10px" }}>
+                              ({movie.totalVotes})
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="badge bg-dark bg-opacity-80 text-light fw-bold d-inline-flex align-items-center gap-1 border border-secondary border-opacity-50">
+                          <BsHandThumbsUpFill size={11} className="text-success" /> {movie.likes} Likes
+                        </span>
+                      )}
                     </div>
                   </div>
 

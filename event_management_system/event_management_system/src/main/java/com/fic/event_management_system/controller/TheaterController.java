@@ -730,19 +730,20 @@ public class TheaterController {
     }
 
     @GetMapping("/sales-history")
-    public ResponseEntity<List<Map<String, Object>>> getSalesHistory() {
+    public ResponseEntity<List<Map<String, Object>>> getSalesHistory(
+            @RequestParam(required = false) Long theaterId,
+            @RequestParam(required = false) Long portalId,
+            @RequestParam(required = false) String theaterName
+    ) {
         List<MovieBookedTicket> tickets = movieBookedTicketRepository.findAllByOrderByCreatedAtDesc();
         List<Map<String, Object>> response = new java.util.ArrayList<>();
         for (MovieBookedTicket t : tickets) {
-            Map<String, Object> map = new java.util.HashMap<>();
-            map.put("id", t.getId());
-            map.put("ticketId", t.getTicketId());
-            map.put("movieTitle", t.getMovieTitle());
-            map.put("screenName", t.getScreenName());
-
             String showDate = t.getDate();
             String showTime = t.getTime();
-            String theaterName = t.getTheaterName();
+            String resolvedTheaterName = t.getTheaterName();
+            Long resolvedTheaterId = null;
+            Long resolvedPortalId = null;
+
             if (t.getShowtimeId() != null) {
                 try {
                     Optional<Showtime> stOpt = showtimeRepository.findById(t.getShowtimeId());
@@ -754,16 +755,54 @@ public class TheaterController {
                         if ((showTime == null || showTime.isEmpty()) && st.getStartTime() != null) {
                             showTime = st.getStartTime().toString();
                         }
-                        if ((theaterName == null || theaterName.isEmpty()) && st.getTheater() != null && st.getTheater().getName() != null) {
-                            theaterName = st.getTheater().getName();
+                        if (st.getTheater() != null) {
+                            resolvedTheaterId = st.getTheater().getId();
+                            if (resolvedTheaterName == null || resolvedTheaterName.isEmpty()) {
+                                resolvedTheaterName = st.getTheater().getName();
+                            }
+                            if (st.getTheater().getTheaterPortal() != null) {
+                                resolvedPortalId = st.getTheater().getTheaterPortal().getId();
+                            }
+                        } else if (st.getScreen() != null && st.getScreen().getTheater() != null) {
+                            resolvedTheaterId = st.getScreen().getTheater().getId();
+                            if (resolvedTheaterName == null || resolvedTheaterName.isEmpty()) {
+                                resolvedTheaterName = st.getScreen().getTheater().getName();
+                            }
+                            if (st.getScreen().getTheater().getTheaterPortal() != null) {
+                                resolvedPortalId = st.getScreen().getTheater().getTheaterPortal().getId();
+                            }
                         }
                     }
                 } catch (Exception ignored) {}
             }
 
+            // Filtering by theater / portal / theaterName
+            if (theaterId != null) {
+                if (resolvedTheaterId == null || !resolvedTheaterId.equals(theaterId)) {
+                    continue;
+                }
+            } else if (portalId != null) {
+                if (resolvedPortalId == null || !resolvedPortalId.equals(portalId)) {
+                    continue;
+                }
+            } else if (theaterName != null && !theaterName.trim().isEmpty()) {
+                String cleanTarget = theaterName.trim().toLowerCase();
+                String cleanResolved = (resolvedTheaterName != null ? resolvedTheaterName : "").trim().toLowerCase();
+                if (!cleanResolved.equals(cleanTarget) && !cleanResolved.contains(cleanTarget) && !cleanTarget.contains(cleanResolved)) {
+                    continue;
+                }
+            }
+
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", t.getId());
+            map.put("ticketId", t.getTicketId());
+            map.put("movieTitle", t.getMovieTitle());
+            map.put("screenName", t.getScreenName());
             map.put("date", showDate != null ? showDate : (t.getCreatedAt() != null ? t.getCreatedAt().toLocalDate().toString() : ""));
             map.put("time", showTime != null ? showTime : "09:30 AM");
-            map.put("theaterName", theaterName != null ? theaterName : "Gopal Multiplex");
+            map.put("theaterName", resolvedTheaterName != null ? resolvedTheaterName : "Gopal Multiplex");
+            map.put("theaterId", resolvedTheaterId);
+            map.put("portalId", resolvedPortalId);
             map.put("showtimeId", t.getShowtimeId());
             map.put("seats", t.getSeats());
             map.put("amount", t.getAmount());

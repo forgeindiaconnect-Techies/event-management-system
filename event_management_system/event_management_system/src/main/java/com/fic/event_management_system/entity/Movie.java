@@ -43,6 +43,12 @@ public class Movie {
 
     private LocalDate releaseDate;
 
+    private Double rating;
+
+    private String totalVotes;
+
+    private String likes;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -143,6 +149,30 @@ public class Movie {
 
     public void setReleaseDate(LocalDate releaseDate) {
         this.releaseDate = releaseDate;
+    }
+
+    public Double getRating() {
+        return rating;
+    }
+
+    public void setRating(Double rating) {
+        this.rating = rating;
+    }
+
+    public String getTotalVotes() {
+        return totalVotes;
+    }
+
+    public void setTotalVotes(String totalVotes) {
+        this.totalVotes = totalVotes;
+    }
+
+    public String getLikes() {
+        return likes;
+    }
+
+    public void setLikes(String likes) {
+        this.likes = likes;
     }
 
     public LocalDateTime getCreatedAt() {

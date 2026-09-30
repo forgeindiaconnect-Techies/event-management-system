@@ -1,13 +1,22 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import TheaterNavbar from "../../components/Navbar/TheaterNavbar";
 import api from "../../api/axiosConfig";
-import { formatIndianDate, formatIndianTime } from "../../utils/dateTime";
+import {
+  formatIndianDate,
+  formatIndianTime,
+  calculateSuggestedShowtime,
+  validateShowtimeOverlap,
+  getMovieDurationMinutes,
+  getTheaterTurnaroundBuffer,
+  getTheaterShowtimeBuffers,
+} from "../../utils/dateTime";
 import IndianDatePicker from "../../components/Common/IndianDatePicker";
 import Select from "react-select";
 import "../../styles/Admin.css";
 import LiveSeatBookingMain from "../../components/theater/LiveSeatBooking/LiveSeatBookingMain";
 import TheaterManagerMenuEditor from "../../components/theater/TheaterManagerMenuEditor";
+import TheaterSettingsView from "../../components/theater/TheaterSettingsView";
 import {
   BsFilm,
   BsTv,
@@ -47,6 +56,9 @@ import {
   BsPhone,
   BsLock,
   BsPersonPlus,
+  BsGear,
+  BsStars,
+  BsExclamationTriangleFill,
 } from "react-icons/bs";
 
 function getCanonicalSection(str) {
@@ -94,8 +106,18 @@ function Metric({ icon, label, value, subtitle, onClick }) {
 
 export default function TheaterManagerDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("overview"); // Default landing page: Dashboard
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(rawTab || "overview"); // Default landing page: Dashboard
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
   const [cinemaName, setCinemaName] = useState(() => localStorage.getItem("portalName") || "Cinema Partner");
   const [managerName, setManagerName] = useState("Branch Manager");
   const [selectedTheater, setSelectedTheater] = useState(null);
@@ -115,6 +137,55 @@ export default function TheaterManagerDashboard() {
   const [dynamicShowPrices, setDynamicShowPrices] = useState({ default_normal: 150, default_gold: 220, default_recliner: 350 });
   const [fbTodayRevenue, setFbTodayRevenue] = useState(0);
   const [fbTodayOrders, setFbTodayOrders] = useState(0);
+
+  // Dynamic calculation of turnaround buffer & time windows from theater settings
+  const theaterShowtimeBuffers = useMemo(() => {
+    return getTheaterShowtimeBuffers(selectedTheater?.id);
+  }, [selectedTheater]);
+
+  const turnaroundBufferMinutes = theaterShowtimeBuffers.turnaroundMins;
+  const trailerBufferMinutes = theaterShowtimeBuffers.trailerBufferMins;
+  const intervalMinutes = theaterShowtimeBuffers.intervalMins;
+
+  // Suggested next showtime calculation
+  const suggestedSlotInfo = useMemo(() => {
+    const targetScreenId = selectedScreenId || screens[0]?.id;
+    return calculateSuggestedShowtime({
+      screenId: targetScreenId,
+      showDate: newShowDate,
+      showtimes,
+      centralMovies,
+      turnaroundMinutes: turnaroundBufferMinutes,
+      trailerBufferMinutes,
+      intervalMinutes,
+      editingShowId: editingShowtimeId,
+    });
+  }, [selectedScreenId, screens, newShowDate, showtimes, centralMovies, turnaroundBufferMinutes, trailerBufferMinutes, intervalMinutes, editingShowtimeId]);
+
+  // Real-time conflict validation for proposed showtime
+  const showtimeConflict = useMemo(() => {
+    const targetScreenId = selectedScreenId || screens[0]?.id;
+    return validateShowtimeOverlap({
+      proposedStartTimeStr: newShowTimeStr,
+      newMovieId,
+      newMovieTitle,
+      screenId: targetScreenId,
+      showDate: newShowDate,
+      showtimes,
+      centralMovies,
+      turnaroundMinutes: turnaroundBufferMinutes,
+      trailerBufferMinutes,
+      intervalMinutes,
+      editingShowId: editingShowtimeId,
+    });
+  }, [newShowTimeStr, newMovieId, newMovieTitle, selectedScreenId, screens, newShowDate, showtimes, centralMovies, turnaroundBufferMinutes, trailerBufferMinutes, intervalMinutes, editingShowtimeId]);
+
+  // Auto-apply suggested time when target screen hall or show date changes
+  useEffect(() => {
+    if (!editingShowtimeId && suggestedSlotInfo?.suggestedTime) {
+      setNewShowTimeStr(suggestedSlotInfo.suggestedTime);
+    }
+  }, [selectedScreenId, newShowDate, suggestedSlotInfo?.suggestedTime, editingShowtimeId]);
 
   // PROJECTION, SOUND & FORMAT OPTIONS
   const PROJECTION_OPTIONS = [
@@ -196,7 +267,9 @@ export default function TheaterManagerDashboard() {
       try {
         const salesMap = new Map();
         try {
-          const res = await api.get("/theater/sales-history");
+          const currentTheaterId = selectedTheater?.id;
+          const qs = currentTheaterId ? `?theaterId=${currentTheaterId}` : "";
+          const res = await api.get(`/theater/sales-history${qs}`);
           if (Array.isArray(res.data)) {
             res.data.forEach((s) => salesMap.set(String(s.ticketId || s.id), s));
           }
@@ -313,33 +386,34 @@ export default function TheaterManagerDashboard() {
   // Helper: Calculate Ascending Sequential Emp ID / Username (Reusing IDs from rejected invitations)
   const getNextEmpId = (list = []) => {
     const portalNameStr = (cinemaName || localStorage.getItem("portalName") || "Grand Multiplex").trim();
-    const parts = portalNameStr.split(/\s+/).filter(Boolean);
-    let prefix = "GM";
-    if (parts.length >= 2) {
-      prefix = (parts[0][0] + parts[1][0]).toUpperCase();
-    } else if (parts[0]?.length >= 2) {
-      prefix = parts[0].substring(0, 2).toUpperCase();
-    } else if (parts[0]?.length === 1) {
-      prefix = (parts[0][0] + "M").toUpperCase();
+    const words = portalNameStr.replace(/[^a-zA-Z0-9\s]/g, " ").trim().split(/\s+/).filter(Boolean);
+    let prefix = "";
+    words.forEach((w) => { prefix += w[0].toUpperCase(); });
+    if (prefix.length < 2) {
+      prefix = portalNameStr.replace(/[^a-zA-Z0-9]/g, "").substring(0, 2).toUpperCase() || "TH";
     }
 
     // Collect all taken numbers (ignoring rejected staff)
     const takenNumbers = new Set();
     list.forEach((item) => {
       if (item.status === "Rejected" || item.status === "REJECTED") return;
-      const empStr = String(item.empId || item.username || "");
-      const numMatch = empStr.match(/\d+/);
-      if (numMatch) {
-        takenNumbers.add(parseInt(numMatch[0], 10));
+      const empStr = String(item.employeeId || item.empId || item.username || "");
+      if (empStr.toUpperCase().startsWith(prefix)) {
+        const numMatch = empStr.match(/\d+/);
+        if (numMatch) {
+          let num = parseInt(numMatch[0], 10);
+          if (num >= 1000) num -= 1000;
+          takenNumbers.add(num);
+        }
       }
     });
 
-    // Find lowest available number starting at 1001
-    let candidate = 1001;
+    // Find lowest available number starting at 1 (001, 002...)
+    let candidate = 1;
     while (takenNumbers.has(candidate)) {
       candidate++;
     }
-    return `${prefix}-${candidate}`;
+    return `${prefix}${String(candidate).padStart(3, "0")}`;
   };
 
   // STAFF INVITATION STATE (MANAGER CAN INVITE SPECIFIC DUTY ROLES)
@@ -625,6 +699,14 @@ export default function TheaterManagerDashboard() {
       return;
     }
 
+    // Overlap / cleaning gap conflict confirmation check
+    if (showtimeConflict.hasConflict) {
+      const proceed = window.confirm(
+        `⚠️ Showtime Turnaround Conflict:\n\n${showtimeConflict.message}\n\nAre you sure you want to proceed anyway?`
+      );
+      if (!proceed) return;
+    }
+
     const showtimeData = {
       id: editingShowtimeId || Date.now(),
       screenId: Number(targetScreenId),
@@ -840,10 +922,19 @@ export default function TheaterManagerDashboard() {
           if (!inv.dutyRole && inv.roleName && inv.roleName.includes(":")) {
             duty = inv.roleName.split(":")[1];
           }
+          let cleanEmpId = inv.username || null;
+          if (cleanEmpId) {
+            const m = String(cleanEmpId).match(/^([A-Za-z]+)-?(\d+)$/);
+            if (m) {
+              let num = parseInt(m[2], 10);
+              if (num >= 1000) num -= 1000;
+              cleanEmpId = `${m[1].toUpperCase()}${String(num).padStart(3, "0")}`;
+            }
+          }
           return {
             id: inv.id,
-            empId: inv.username || null,
-            username: inv.username || null,
+            empId: cleanEmpId,
+            username: cleanEmpId,
             name: inv.speakerName || inv.name || inv.email.split("@")[0],
             email: inv.email,
             dutyRole: duty,
@@ -1345,10 +1436,19 @@ export default function TheaterManagerDashboard() {
   const loadSalesHistory = async () => {
     try {
       const salesMap = new Map();
+      const currentTheaterId = selectedTheater?.id;
+      const currentPortalId = selectedTheater?.theaterPortal?.id || localStorage.getItem("portalId");
+      const currentTheaterName = selectedTheater?.name || cinemaName;
 
-      // 1. Fetch from backend live sales history
+      // 1. Fetch from backend live sales history filtered by current theater
       try {
-        const res = await api.get("/theater/sales-history");
+        const queryParams = [];
+        if (currentTheaterId) queryParams.push(`theaterId=${currentTheaterId}`);
+        if (currentPortalId) queryParams.push(`portalId=${currentPortalId}`);
+        if (currentTheaterName) queryParams.push(`theaterName=${encodeURIComponent(currentTheaterName)}`);
+        const qs = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+
+        const res = await api.get(`/theater/sales-history${qs}`);
         if (res.data && Array.isArray(res.data)) {
           res.data.forEach((s) => {
             if (s && (s.ticketId || s.id)) {
@@ -1358,16 +1458,11 @@ export default function TheaterManagerDashboard() {
         }
       } catch (e) {}
 
-      // 2. Scan and aggregate all localStorage sales keys
-      const keys = ["pos_sales_history"];
-      const pId = localStorage.getItem("portalId");
-      if (pId) keys.push(`pos_sales_history_${pId}`);
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && (k === "pos_sales_history" || k.startsWith("pos_sales_history_"))) {
-          if (!keys.includes(k)) keys.push(k);
-        }
-      }
+      // 2. Scan and aggregate localStorage sales keys ONLY for current theater
+      const keys = [];
+      if (currentTheaterId) keys.push(`pos_sales_history_${currentTheaterId}`);
+      if (currentPortalId) keys.push(`pos_sales_history_${currentPortalId}`);
+      if (localStorage.getItem("pos_sales_history")) keys.push("pos_sales_history");
 
       keys.forEach((k) => {
         try {
@@ -1376,7 +1471,20 @@ export default function TheaterManagerDashboard() {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
               parsed.forEach((s) => {
-                if (s && (s.ticketId || s.id)) {
+                if (!s || (!s.ticketId && !s.id)) return;
+                const sTid = s.theaterId;
+                const sPid = s.portalId;
+                const sTname = (s.theaterName || "").trim().toLowerCase();
+                const myTname = (currentTheaterName || "").trim().toLowerCase();
+
+                const isSameTheater = 
+                  (currentTheaterId && String(sTid) === String(currentTheaterId)) ||
+                  (currentPortalId && String(sPid) === String(currentPortalId)) ||
+                  (sTname && myTname && (sTname === myTname || sTname.includes(myTname) || myTname.includes(sTname))) ||
+                  (s.showtimeId && showtimes.some((st) => String(st.id) === String(s.showtimeId))) ||
+                  (s.screenId && screens.some((scr) => String(scr.id) === String(s.screenId)));
+
+                if (isSameTheater) {
                   salesMap.set(String(s.ticketId || s.id), s);
                 }
               });
@@ -1448,7 +1556,20 @@ export default function TheaterManagerDashboard() {
       }
     });
 
-    const activeSales = salesHistoryData.filter((s) => s.status !== "CANCELLED" && s.status !== "REFUNDED");
+    const currentTheaterId = selectedTheater?.id;
+    const currentPortalId = selectedTheater?.theaterPortal?.id || localStorage.getItem("portalId");
+    const currentTheaterName = (selectedTheater?.name || cinemaName || "").trim().toLowerCase();
+
+    const activeSales = salesHistoryData.filter((s) => {
+      if (s.status === "CANCELLED" || s.status === "REFUNDED") return false;
+      const sTid = s.theaterId;
+      const sPid = s.portalId;
+      const sTname = (s.theaterName || "").trim().toLowerCase();
+      if (currentTheaterId && sTid && String(sTid) !== String(currentTheaterId)) return false;
+      if (currentPortalId && sPid && String(sPid) !== String(currentPortalId)) return false;
+      if (sTname && currentTheaterName && sTname !== currentTheaterName && !sTname.includes(currentTheaterName) && !currentTheaterName.includes(sTname)) return false;
+      return true;
+    });
 
     activeSales.forEach((s) => {
       const title = (s.movieTitle || "").trim();
@@ -1642,6 +1763,7 @@ export default function TheaterManagerDashboard() {
     { id: "pos", label: "Food & Beverage (F&B)", icon: <BsCupStraw size={16} /> },
     { id: "analytics", label: "Box Office Sales", icon: <BsBarChart size={16} /> },
     { id: "ushers", label: "Team & Staff Roster", icon: <BsPeople size={16} /> },
+    { id: "settings", label: "Settings", icon: <BsGear size={16} /> },
   ];
 
   return (
@@ -1651,6 +1773,11 @@ export default function TheaterManagerDashboard() {
         <TheaterNavbar 
           theaterName={`${cinemaName} — Manager Console`} 
           onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
+          onOpenSettings={() => {
+            setActiveTab("settings");
+            setSearchParams({ tab: "settings" });
+            setIsMobileSidebarOpen(false);
+          }}
         />
       </div>
 
@@ -1680,7 +1807,7 @@ export default function TheaterManagerDashboard() {
           left: 0,
           width: "250px",
           height: "calc(100vh - 50px)",
-          zIndex: 1050,
+          zIndex: isMobileSidebarOpen ? 1050 : 100,
           overflowY: "auto",
           transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
           boxShadow: isMobileSidebarOpen ? "4px 0 24px rgba(0, 0, 0, 0.18)" : "none",
@@ -1709,6 +1836,7 @@ export default function TheaterManagerDashboard() {
                 key={item.id}
                 onClick={() => {
                   setActiveTab(item.id);
+                  setSearchParams({ tab: item.id });
                   setIsMobileSidebarOpen(false);
                 }}
                 className={`organizer-sidebar-item w-100 border-0 bg-transparent text-start d-flex align-items-center gap-3 px-3 py-2 mb-2 ${
@@ -2390,9 +2518,12 @@ export default function TheaterManagerDashboard() {
 
             <form onSubmit={handleAddOrUpdateShowtime} className="row g-3 mb-4 p-3 bg-light border rounded-3">
               <div className="col-md-3">
-                <label className="form-label fw-bold small text-dark">Target Screen Hall *</label>
+                <div className="d-flex align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                  <label className="form-label fw-bold small text-dark mb-0">Target Screen Hall *</label>
+                </div>
                 <select
                   className="form-select fw-bold border-primary"
+                  style={{ height: "38px" }}
                   value={selectedScreenId || (screens[0]?.id || "")}
                   onChange={(e) => handleScreenChange(Number(e.target.value))}
                   required
@@ -2406,7 +2537,9 @@ export default function TheaterManagerDashboard() {
               </div>
 
               <div className="col-md-3">
-                <label className="form-label fw-bold small text-dark">Movie Title *</label>
+                <div className="d-flex align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                  <label className="form-label fw-bold small text-dark mb-0">Movie Title *</label>
+                </div>
                 <Select
                   options={centralMovies.map(m => ({ value: m.id, label: m.title, movie: m }))}
                   value={newMovieTitle ? { label: newMovieTitle, value: newMovieId || newMovieTitle } : null}
@@ -2425,7 +2558,9 @@ export default function TheaterManagerDashboard() {
                   styles={{
                     control: (base) => ({
                       ...base,
-                      padding: "2px",
+                      minHeight: "38px",
+                      height: "38px",
+                      padding: "0 2px",
                       border: "1px solid #cbd5e1",
                       borderRadius: "8px",
                       boxShadow: "none",
@@ -2437,23 +2572,93 @@ export default function TheaterManagerDashboard() {
               </div>
 
               <div className="col-md-3">
-                <label className="form-label fw-bold small text-dark">Show Date *</label>
+                <div className="d-flex align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                  <label className="form-label fw-bold small text-dark mb-0">Show Date *</label>
+                </div>
                 <IndianDatePicker
                   value={newShowDate}
                   onChange={(val) => setNewShowDate(val)}
+                  style={{ height: "38px" }}
                   required
                 />
               </div>
 
               <div className="col-md-3">
-                <label className="form-label fw-bold small text-dark">Exact Showtime *</label>
+                <div className="d-flex justify-content-between align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                  <label className="form-label fw-bold small text-dark mb-0">Exact Showtime *</label>
+                  {suggestedSlotInfo?.suggestedTime && (
+                    <button
+                      type="button"
+                      className="btn btn-link btn-sm p-0 text-decoration-none fw-bold"
+                      style={{ fontSize: "11px", color: "#4f46e5", lineHeight: "1" }}
+                      onClick={() => setNewShowTimeStr(suggestedSlotInfo.suggestedTime)}
+                      title="Click to apply auto-calculated slot (movie duration + cleaning gap)"
+                    >
+                      <BsStars className="me-1" />
+                      {suggestedSlotInfo.suggestedTime ? formatIndianTime(suggestedSlotInfo.suggestedTime) : "Auto"}
+                    </button>
+                  )}
+                </div>
                 <input
                   type="time"
-                  className="form-control fw-bold"
+                  className={`form-control fw-bold ${showtimeConflict.hasConflict ? "border-danger text-danger bg-danger-subtle" : "border-primary"}`}
+                  style={{ height: "38px" }}
                   value={newShowTimeStr}
                   onChange={(e) => setNewShowTimeStr(e.target.value)}
                   required
                 />
+              </div>
+
+              {/* AUTO-SUGGESTION INTELLIGENCE & CONFLICT BANNER */}
+              <div className="col-12 mt-2">
+                {showtimeConflict.hasConflict ? (
+                  <div
+                    className="p-2 px-3 rounded-3 border border-danger d-flex flex-wrap align-items-center justify-content-between gap-2"
+                    style={{ backgroundColor: "#fef2f2", color: "#991b1b" }}
+                  >
+                    <div className="d-flex align-items-center gap-2">
+                      <BsExclamationTriangleFill className="text-danger flex-shrink-0" size={17} />
+                      <span className="small fw-semibold">
+                        <strong>Cleaning Gap Conflict:</strong> {showtimeConflict.message}
+                      </span>
+                    </div>
+                    {showtimeConflict.earliestAllowedStart && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger fw-bold ms-auto"
+                        style={{ fontSize: "12px", borderRadius: "6px" }}
+                        onClick={() => setNewShowTimeStr(showtimeConflict.earliestAllowedStart)}
+                      >
+                        Auto-Fix to {formatIndianTime(showtimeConflict.earliestAllowedStart)}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="p-2 px-3 rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2"
+                    style={{ backgroundColor: "#f8fafc", borderColor: "#cbd5e1", color: "#334155" }}
+                  >
+                    <div className="d-flex align-items-center gap-2">
+                      <BsStars className="text-primary flex-shrink-0" size={16} />
+                      <span className="small">
+                        {suggestedSlotInfo.isFirstShow ? (
+                          <span>
+                            <strong>First Show of the Day:</strong> No earlier shows scheduled on this screen. Standard opening slot is <strong>{formatIndianTime(suggestedSlotInfo.suggestedTime)}</strong>.
+                          </span>
+                        ) : (
+                          <span>
+                            <strong>Auto-Suggested Slot:</strong> Previous show <em>"{suggestedSlotInfo.prevMovieTitle}"</em> ends at <strong>{formatIndianTime(suggestedSlotInfo.prevEndTimeStr)}</strong> ({suggestedSlotInfo.prevMovieDuration}m film + {suggestedSlotInfo.trailerBufferMinutes}m ads + {suggestedSlotInfo.intervalMinutes}m interval) + <strong>{suggestedSlotInfo.turnaroundMinutes}m cleaning</strong> → Suggested next start: <strong>{formatIndianTime(suggestedSlotInfo.suggestedTime)}</strong>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {newMovieTitle && (
+                      <span className="badge bg-white text-secondary border px-2 py-1 small fw-medium">
+                        Show Slot: ~{getMovieDurationMinutes(newMovieId, newMovieTitle, centralMovies) + trailerBufferMinutes + intervalMinutes} mins ({getMovieDurationMinutes(newMovieId, newMovieTitle, centralMovies)}m film + {trailerBufferMinutes}m ads + {intervalMinutes}m interval) + {turnaroundBufferMinutes}m cleaning
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* DYNAMIC TICKET PRICE INPUTS */}
@@ -3119,7 +3324,7 @@ export default function TheaterManagerDashboard() {
                   <tbody>
                     {staffList.map((u) => (
                       <tr key={u.id}>
-                        <td className="fw-bold text-primary">{u.empId || u.username || getNextEmpId([{ id: u.id }])}</td>
+                        <td className="fw-bold text-primary">{u.employeeId || u.empId || u.username || getNextEmpId([{ id: u.id }])}</td>
                         <td className="fw-bold text-dark">{u.name}</td>
                         <td>{u.email}</td>
                         <td>
@@ -3153,6 +3358,18 @@ export default function TheaterManagerDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {/* CINEMA & THEATER SETTINGS TAB */}
+        {activeTab === "settings" && (
+          <TheaterSettingsView
+            portalId={selectedTheater?.id || localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2"}
+            theaterName={cinemaName}
+            isManager={true}
+            onProfileUpdated={(newName) => {
+              if (newName) setCinemaName(newName);
+            }}
+          />
         )}
       </main>
     </div>

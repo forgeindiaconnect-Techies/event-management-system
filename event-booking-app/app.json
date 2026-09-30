@@ -19,6 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.naveen7878.eventbookingapp",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true
     },
     "web": {
@@ -27,6 +28,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#208AEF"
+        }
+      ],
       [
         "expo-splash-screen",
         {

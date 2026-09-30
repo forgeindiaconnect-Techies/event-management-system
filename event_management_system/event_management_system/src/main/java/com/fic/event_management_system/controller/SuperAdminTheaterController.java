@@ -29,9 +29,47 @@ public class SuperAdminTheaterController {
         return superAdminTheaterService.getTheaterPortals();
     }
 
+    @org.springframework.web.bind.annotation.DeleteMapping("/portals/{id}")
+    public org.springframework.http.ResponseEntity<?> deleteTheaterPortal(
+            @org.springframework.web.bind.annotation.PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String reason,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean permanent,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) java.util.Map<String, Object> body) {
+        String finalReason = reason;
+        Boolean finalPermanent = permanent;
+        if (body != null) {
+            if (body.get("reason") != null) finalReason = String.valueOf(body.get("reason"));
+            if (body.get("permanent") != null) {
+                finalPermanent = Boolean.parseBoolean(String.valueOf(body.get("permanent")));
+            }
+        }
+        if (finalReason == null || finalReason.isBlank()) {
+            finalReason = "SuperAdmin Portal Cleanup";
+        }
+        boolean isPermanent = finalPermanent != null && finalPermanent;
+        superAdminTheaterService.deleteTheaterPortal(id, finalReason, isPermanent);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", isPermanent ? "Theater portal permanently deleted successfully" : "Theater portal marked as Inactive / Closed",
+                "theaterId", id,
+                "permanent", isPermanent,
+                "reason", finalReason
+        ));
+    }
+
     @GetMapping("/users")
     public List<TheaterPortalUserResponse> getTheaterUsers() {
         return superAdminTheaterService.getTheaterUsers();
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/users/{id}")
+    public org.springframework.http.ResponseEntity<?> deleteTheaterUser(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        superAdminTheaterService.deleteTheaterUser(id);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", "Employee removed successfully from portal",
+                "userId", id
+        ));
     }
 
     @GetMapping("/payouts")

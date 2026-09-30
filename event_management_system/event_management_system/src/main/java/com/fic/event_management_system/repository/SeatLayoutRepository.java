@@ -9,4 +9,5 @@ import java.util.List;
 public interface SeatLayoutRepository extends JpaRepository<SeatLayout, Long> {
     List<SeatLayout> findByScreenId(Long screenId);
     void deleteByScreenId(Long screenId);
+    List<SeatLayout> findByTheaterPortalId(Long theaterPortalId);
 }

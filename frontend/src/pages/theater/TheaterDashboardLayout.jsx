@@ -3,11 +3,21 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import TheaterNavbar from "../../components/Navbar/TheaterNavbar";
 import Select from "react-select";
 import api from "../../api/axiosConfig";
-import { formatIndianDate, formatIndianTime } from "../../utils/dateTime";
+import {
+  formatIndianDate,
+  formatIndianTime,
+  calculateSuggestedShowtime,
+  validateShowtimeOverlap,
+  getMovieDurationMinutes,
+  getTheaterTurnaroundBuffer,
+  getTheaterShowtimeBuffers,
+} from "../../utils/dateTime";
 import IndianDatePicker from "../../components/Common/IndianDatePicker";
 import "../../styles/Admin.css";
 import LiveSeatBookingMain from "../../components/theater/LiveSeatBooking/LiveSeatBookingMain";
 import TheaterManagerMenuEditor from "../../components/theater/TheaterManagerMenuEditor";
+import TheaterSettingsView from "../../components/theater/TheaterSettingsView";
+import TheaterFinancesPayoutsView from "../../components/theater/TheaterFinancesPayoutsView";
 import {
   BsFilm,
   BsTv,
@@ -47,6 +57,9 @@ import {
   BsShieldCheck,
   BsXLg,
   BsVolumeUp,
+  BsGear,
+  BsStars,
+  BsExclamationTriangleFill,
 } from "react-icons/bs";
 
 export function getCanonicalSection(str) {
@@ -229,6 +242,55 @@ export default function TheaterDashboardLayout() {
     default_recliner: 350,
   });
 
+  // Dynamic calculation of turnaround buffer & time windows from theater settings
+  const theaterShowtimeBuffers = useMemo(() => {
+    return getTheaterShowtimeBuffers(selectedTheater?.id);
+  }, [selectedTheater]);
+
+  const turnaroundBufferMinutes = theaterShowtimeBuffers.turnaroundMins;
+  const trailerBufferMinutes = theaterShowtimeBuffers.trailerBufferMins;
+  const intervalMinutes = theaterShowtimeBuffers.intervalMins;
+
+  // Suggested next showtime calculation
+  const suggestedSlotInfo = useMemo(() => {
+    const targetScreenId = selectedShowScreenId || screens[0]?.id;
+    return calculateSuggestedShowtime({
+      screenId: targetScreenId,
+      showDate: newShowDate,
+      showtimes,
+      centralMovies,
+      turnaroundMinutes: turnaroundBufferMinutes,
+      trailerBufferMinutes,
+      intervalMinutes,
+      editingShowId: editingShowtimeId,
+    });
+  }, [selectedShowScreenId, screens, newShowDate, showtimes, centralMovies, turnaroundBufferMinutes, trailerBufferMinutes, intervalMinutes, editingShowtimeId]);
+
+  // Real-time conflict validation for proposed showtime
+  const showtimeConflict = useMemo(() => {
+    const targetScreenId = selectedShowScreenId || screens[0]?.id;
+    return validateShowtimeOverlap({
+      proposedStartTimeStr: newShowTimeStr,
+      newMovieId,
+      newMovieTitle,
+      screenId: targetScreenId,
+      showDate: newShowDate,
+      showtimes,
+      centralMovies,
+      turnaroundMinutes: turnaroundBufferMinutes,
+      trailerBufferMinutes,
+      intervalMinutes,
+      editingShowId: editingShowtimeId,
+    });
+  }, [newShowTimeStr, newMovieId, newMovieTitle, selectedShowScreenId, screens, newShowDate, showtimes, centralMovies, turnaroundBufferMinutes, trailerBufferMinutes, intervalMinutes, editingShowtimeId]);
+
+  // Auto-apply suggested time when target screen hall or show date changes
+  useEffect(() => {
+    if (!editingShowtimeId && suggestedSlotInfo?.suggestedTime) {
+      setNewShowTimeStr(suggestedSlotInfo.suggestedTime);
+    }
+  }, [selectedShowScreenId, newShowDate, suggestedSlotInfo?.suggestedTime, editingShowtimeId]);
+
   // LIVE SEAT OCCUPANCY BOOKED SEATS MAP (REAL-TIME SYNC)
   const [ownerBookedSeatsMap, setOwnerBookedSeatsMap] = useState({});
 
@@ -265,7 +327,9 @@ export default function TheaterDashboardLayout() {
       try {
         const salesMap = new Map();
         try {
-          const res = await api.get("/theater/sales-history");
+          const currentTheaterId = selectedTheater?.id;
+          const qs = currentTheaterId ? `?theaterId=${currentTheaterId}` : "";
+          const res = await api.get(`/theater/sales-history${qs}`);
           if (Array.isArray(res.data)) {
             res.data.forEach((s) => salesMap.set(String(s.ticketId || s.id), s));
           }
@@ -434,33 +498,34 @@ export default function TheaterDashboardLayout() {
   // Helper: Calculate Ascending Sequential Emp ID / Username
   const getNextEmpId = (list = []) => {
     const portalNameStr = (cinemaName || localStorage.getItem("portalName") || "Grand Multiplex").trim();
-    const parts = portalNameStr.split(/\s+/).filter(Boolean);
-    let prefix = "GM";
-    if (parts.length >= 2) {
-      prefix = (parts[0][0] + parts[1][0]).toUpperCase();
-    } else if (parts[0]?.length >= 2) {
-      prefix = parts[0].substring(0, 2).toUpperCase();
-    } else if (parts[0]?.length === 1) {
-      prefix = (parts[0][0] + "M").toUpperCase();
+    const words = portalNameStr.replace(/[^a-zA-Z0-9\s]/g, " ").trim().split(/\s+/).filter(Boolean);
+    let prefix = "";
+    words.forEach((w) => { prefix += w[0].toUpperCase(); });
+    if (prefix.length < 2) {
+      prefix = portalNameStr.replace(/[^a-zA-Z0-9]/g, "").substring(0, 2).toUpperCase() || "TH";
     }
 
-    // Find the absolute highest number used so far
-    let maxNumber = 1000;
+    // Collect all taken numbers
+    const takenNumbers = new Set();
     list.forEach((item) => {
       if (item.status === "Rejected" || item.status === "REJECTED") return;
-      const empStr = String(item.empId || item.username || "");
-      const numMatch = empStr.match(/\d+/);
-      if (numMatch) {
-        const num = parseInt(numMatch[0], 10);
-        if (num > maxNumber) {
-          maxNumber = num;
+      const empStr = String(item.employeeId || item.empId || item.username || "");
+      if (empStr.toUpperCase().startsWith(prefix)) {
+        const numMatch = empStr.match(/\d+/);
+        if (numMatch) {
+          let num = parseInt(numMatch[0], 10);
+          if (num >= 1000) num -= 1000;
+          takenNumbers.add(num);
         }
       }
     });
 
-    // Continue from the last number instead of filling gaps
-    const candidate = maxNumber + 1;
-    return `${prefix}-${candidate}`;
+    // Find lowest available number starting at 1 (001, 002...)
+    let candidate = 1;
+    while (takenNumbers.has(candidate)) {
+      candidate++;
+    }
+    return `${prefix}${String(candidate).padStart(3, "0")}`;
   };
 
   // Staff Form
@@ -516,7 +581,12 @@ export default function TheaterDashboardLayout() {
   };
 
   useEffect(() => {
+    fetchCentralMovies();
+  }, []);
+
+  useEffect(() => {
     fetchInvitations();
+    fetchCentralMovies();
     if (activeTab === "showtimes") {
       fetchAllShowtimes();
     }
@@ -540,10 +610,19 @@ export default function TheaterDashboardLayout() {
               roleDisplay = inv.roleName.includes(":") ? inv.roleName.split(":")[1] : "Theater Staff";
             }
           }
+          let cleanEmpId = inv.username || null;
+          if (cleanEmpId) {
+            const m = String(cleanEmpId).match(/^([A-Za-z]+)-?(\d+)$/);
+            if (m) {
+              let num = parseInt(m[2], 10);
+              if (num >= 1000) num -= 1000;
+              cleanEmpId = `${m[1].toUpperCase()}${String(num).padStart(3, "0")}`;
+            }
+          }
           return {
             id: inv.id,
-            empId: inv.username || null,
-            username: inv.username || null,
+            empId: cleanEmpId,
+            username: cleanEmpId,
             name: inv.speakerName || inv.name || inv.email.split("@")[0],
             email: inv.email,
             role: roleDisplay,
@@ -1047,6 +1126,14 @@ export default function TheaterDashboardLayout() {
       }
     }
 
+    // Overlap / cleaning gap conflict confirmation check
+    if (showtimeConflict.hasConflict) {
+      const proceed = window.confirm(
+        `⚠️ Showtime Turnaround Conflict:\n\n${showtimeConflict.message}\n\nAre you sure you want to proceed anyway?`
+      );
+      if (!proceed) return;
+    }
+
     // Convert dynamicShowPrices to explicit priceNormal, priceExecutive, priceRecliner + classPrices map
     let norm = dynamicShowPrices.default_normal || 150;
     let exec = dynamicShowPrices.default_gold || dynamicShowPrices.default_exec || 220;
@@ -1531,10 +1618,19 @@ export default function TheaterDashboardLayout() {
   const loadSalesHistory = async () => {
     try {
       const salesMap = new Map();
+      const currentTheaterId = selectedTheater?.id;
+      const currentPortalId = selectedTheater?.theaterPortal?.id || localStorage.getItem("portalId");
+      const currentTheaterName = selectedTheater?.name || cinemaName;
 
-      // 1. Fetch from backend live sales history
+      // 1. Fetch from backend live sales history filtered by current theater
       try {
-        const res = await api.get("/theater/sales-history");
+        const queryParams = [];
+        if (currentTheaterId) queryParams.push(`theaterId=${currentTheaterId}`);
+        if (currentPortalId) queryParams.push(`portalId=${currentPortalId}`);
+        if (currentTheaterName) queryParams.push(`theaterName=${encodeURIComponent(currentTheaterName)}`);
+        const qs = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+
+        const res = await api.get(`/theater/sales-history${qs}`);
         if (res.data && Array.isArray(res.data)) {
           res.data.forEach((s) => {
             if (s && (s.ticketId || s.id)) {
@@ -1544,16 +1640,11 @@ export default function TheaterDashboardLayout() {
         }
       } catch (e) { }
 
-      // 2. Scan and aggregate all localStorage sales keys
-      const keys = ["pos_sales_history"];
-      const pId = selectedTheater?.id || localStorage.getItem("portalId");
-      if (pId) keys.push(`pos_sales_history_${pId}`);
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && (k === "pos_sales_history" || k.startsWith("pos_sales_history_"))) {
-          if (!keys.includes(k)) keys.push(k);
-        }
-      }
+      // 2. Scan and aggregate localStorage sales keys ONLY for current theater
+      const keys = [];
+      if (currentTheaterId) keys.push(`pos_sales_history_${currentTheaterId}`);
+      if (currentPortalId) keys.push(`pos_sales_history_${currentPortalId}`);
+      if (localStorage.getItem("pos_sales_history")) keys.push("pos_sales_history");
 
       keys.forEach((k) => {
         try {
@@ -1562,7 +1653,20 @@ export default function TheaterDashboardLayout() {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
               parsed.forEach((s) => {
-                if (s && (s.ticketId || s.id)) {
+                if (!s || (!s.ticketId && !s.id)) return;
+                const sTid = s.theaterId;
+                const sPid = s.portalId;
+                const sTname = (s.theaterName || "").trim().toLowerCase();
+                const myTname = (currentTheaterName || "").trim().toLowerCase();
+
+                const isSameTheater = 
+                  (currentTheaterId && String(sTid) === String(currentTheaterId)) ||
+                  (currentPortalId && String(sPid) === String(currentPortalId)) ||
+                  (sTname && myTname && (sTname === myTname || sTname.includes(myTname) || myTname.includes(sTname))) ||
+                  (s.showtimeId && showtimes.some((st) => String(st.id) === String(s.showtimeId))) ||
+                  (s.screenId && screens.some((scr) => String(scr.id) === String(s.screenId)));
+
+                if (isSameTheater) {
                   salesMap.set(String(s.ticketId || s.id), s);
                 }
               });
@@ -1634,7 +1738,20 @@ export default function TheaterDashboardLayout() {
       }
     });
 
-    const activeSales = salesHistoryData.filter((s) => s.status !== "CANCELLED" && s.status !== "REFUNDED");
+    const currentTheaterId = selectedTheater?.id;
+    const currentPortalId = selectedTheater?.theaterPortal?.id || localStorage.getItem("portalId");
+    const currentTheaterName = (selectedTheater?.name || cinemaName || "").trim().toLowerCase();
+
+    const activeSales = salesHistoryData.filter((s) => {
+      if (s.status === "CANCELLED" || s.status === "REFUNDED") return false;
+      const sTid = s.theaterId;
+      const sPid = s.portalId;
+      const sTname = (s.theaterName || "").trim().toLowerCase();
+      if (currentTheaterId && sTid && String(sTid) !== String(currentTheaterId)) return false;
+      if (currentPortalId && sPid && String(sPid) !== String(currentPortalId)) return false;
+      if (sTname && currentTheaterName && sTname !== currentTheaterName && !sTname.includes(currentTheaterName) && !currentTheaterName.includes(sTname)) return false;
+      return true;
+    });
 
     activeSales.forEach((s) => {
       const title = (s.movieTitle || "").trim();
@@ -1839,7 +1956,9 @@ export default function TheaterDashboardLayout() {
     { id: "live-occupancy", label: "Live Seat booking", icon: <BsGrid3X3 size={16} /> },
     { id: "concessions", label: "Food & Beverage (F&B)", icon: <BsCupStraw size={16} /> },
     { id: "analytics", label: "Box Office Sales", icon: <BsBarChart size={16} /> },
+    { id: "finances", label: "Finances & Payouts", icon: <BsCashCoin size={16} /> },
     { id: "staff", label: "Team & Staff", icon: <BsPeople size={16} /> },
+    { id: "settings", label: "Settings", icon: <BsGear size={16} /> },
   ];
 
   let globalRowOffset = 0;
@@ -1926,6 +2045,11 @@ export default function TheaterDashboardLayout() {
         <TheaterNavbar 
           theaterName={cinemaName} 
           onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
+          onOpenSettings={() => {
+            setActiveTab("settings");
+            setSearchParams({ tab: "settings" });
+            setIsMobileSidebarOpen(false);
+          }}
         />
       </div>
 
@@ -1955,7 +2079,7 @@ export default function TheaterDashboardLayout() {
           left: 0,
           width: "250px",
           height: "calc(100vh - 50px)",
-          zIndex: 1050,
+          zIndex: isMobileSidebarOpen ? 1050 : 100,
           overflowY: "auto",
           transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
           boxShadow: isMobileSidebarOpen ? "4px 0 24px rgba(0, 0, 0, 0.18)" : "none",
@@ -2073,7 +2197,7 @@ export default function TheaterDashboardLayout() {
                 label="Real Box Office Revenue" 
                 value={`₹${Number(realBoxOfficeRevenue || 0).toLocaleString("en-IN")}`} 
                 subtitle={realTicketsSold > 0 ? `${realTicketsSold} tickets sold (Live POS)` : "Real-time ticket sales (₹0)"}
-                onClick={() => setActiveTab("analytics")}
+                onClick={() => setActiveTab("finances")}
               />
             </div>
 
@@ -2684,9 +2808,12 @@ export default function TheaterDashboardLayout() {
 
               <form className="row g-3 mb-4 p-3 bg-light border rounded-3" onSubmit={handleAddOrUpdateShowtime}>
                 <div className="col-md-3">
-                  <label className="form-label fw-bold text-dark small">Target Screen Hall *</label>
+                  <div className="d-flex align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                    <label className="form-label fw-bold text-dark small mb-0">Target Screen Hall *</label>
+                  </div>
                   <select
                     className="form-select fw-bold border-primary"
+                    style={{ height: "38px" }}
                     value={selectedShowScreenId || (screens[0]?.id || "")}
                     onChange={(e) => {
                       const sId = Number(e.target.value);
@@ -2703,7 +2830,9 @@ export default function TheaterDashboardLayout() {
                 </div>
 
                 <div className="col-md-3">
-                  <label className="form-label fw-bold text-dark small">Movie Title *</label>
+                  <div className="d-flex align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                    <label className="form-label fw-bold text-dark small mb-0">Movie Title *</label>
+                  </div>
                   <Select
                     options={centralMovies.map(m => ({ value: m.id, label: m.title, movie: m }))}
                     value={newMovieTitle ? { label: newMovieTitle, value: newMovieId || newMovieTitle } : null}
@@ -2722,7 +2851,9 @@ export default function TheaterDashboardLayout() {
                     styles={{
                       control: (base) => ({
                         ...base,
-                        padding: "2px",
+                        minHeight: "38px",
+                        height: "38px",
+                        padding: "0 2px",
                         border: "1px solid #cbd5e1",
                         borderRadius: "8px",
                         boxShadow: "none",
@@ -2734,23 +2865,93 @@ export default function TheaterDashboardLayout() {
                 </div>
 
                 <div className="col-md-3">
-                  <label className="form-label fw-bold text-dark small">Show Date *</label>
+                  <div className="d-flex align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                    <label className="form-label fw-bold text-dark small mb-0">Show Date *</label>
+                  </div>
                   <IndianDatePicker
                     value={newShowDate}
                     onChange={(val) => setNewShowDate(val)}
+                    style={{ height: "38px" }}
                     required
                   />
                 </div>
 
                 <div className="col-md-3">
-                  <label className="form-label fw-bold text-dark small">Exact Showtime *</label>
+                  <div className="d-flex justify-content-between align-items-center" style={{ minHeight: "22px", marginBottom: "8px" }}>
+                    <label className="form-label fw-bold text-dark small mb-0">Exact Showtime *</label>
+                    {suggestedSlotInfo?.suggestedTime && (
+                      <button
+                        type="button"
+                        className="btn btn-link btn-sm p-0 text-decoration-none fw-bold"
+                        style={{ fontSize: "11px", color: "#4f46e5", lineHeight: "1" }}
+                        onClick={() => setNewShowTimeStr(suggestedSlotInfo.suggestedTime)}
+                        title="Click to apply auto-calculated slot (movie duration + cleaning gap)"
+                      >
+                        <BsStars className="me-1" />
+                        {suggestedSlotInfo.suggestedTime ? formatIndianTime(suggestedSlotInfo.suggestedTime) : "Auto"}
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="time"
-                    className="form-control fw-bold"
+                    className={`form-control fw-bold ${showtimeConflict.hasConflict ? "border-danger text-danger bg-danger-subtle" : "border-primary"}`}
+                    style={{ height: "38px" }}
                     value={newShowTimeStr}
                     onChange={(e) => setNewShowTimeStr(e.target.value)}
                     required
                   />
+                </div>
+
+                {/* AUTO-SUGGESTION INTELLIGENCE & CONFLICT BANNER */}
+                <div className="col-12 mt-2">
+                  {showtimeConflict.hasConflict ? (
+                    <div
+                      className="p-2 px-3 rounded-3 border border-danger d-flex flex-wrap align-items-center justify-content-between gap-2"
+                      style={{ backgroundColor: "#fef2f2", color: "#991b1b" }}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <BsExclamationTriangleFill className="text-danger flex-shrink-0" size={17} />
+                        <span className="small fw-semibold">
+                          <strong>Cleaning Gap Conflict:</strong> {showtimeConflict.message}
+                        </span>
+                      </div>
+                      {showtimeConflict.earliestAllowedStart && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger fw-bold ms-auto"
+                          style={{ fontSize: "12px", borderRadius: "6px" }}
+                          onClick={() => setNewShowTimeStr(showtimeConflict.earliestAllowedStart)}
+                        >
+                          Auto-Fix to {formatIndianTime(showtimeConflict.earliestAllowedStart)}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="p-2 px-3 rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2"
+                      style={{ backgroundColor: "#f8fafc", borderColor: "#cbd5e1", color: "#334155" }}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <BsStars className="text-primary flex-shrink-0" size={16} />
+                        <span className="small">
+                          {suggestedSlotInfo.isFirstShow ? (
+                            <span>
+                              <strong>First Show of the Day:</strong> No earlier shows scheduled on this screen. Standard opening slot is <strong>{formatIndianTime(suggestedSlotInfo.suggestedTime)}</strong>.
+                            </span>
+                          ) : (
+                            <span>
+                              <strong>Auto-Suggested Slot:</strong> Previous show <em>"{suggestedSlotInfo.prevMovieTitle}"</em> ends at <strong>{formatIndianTime(suggestedSlotInfo.prevEndTimeStr)}</strong> ({suggestedSlotInfo.prevMovieDuration}m film + {suggestedSlotInfo.trailerBufferMinutes}m ads + {suggestedSlotInfo.intervalMinutes}m interval) + <strong>{suggestedSlotInfo.turnaroundMinutes}m cleaning</strong> → Suggested next start: <strong>{formatIndianTime(suggestedSlotInfo.suggestedTime)}</strong>
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      {newMovieTitle && (
+                        <span className="badge bg-white text-secondary border px-2 py-1 small fw-medium">
+                          Show Slot: ~{getMovieDurationMinutes(newMovieId, newMovieTitle, centralMovies) + trailerBufferMinutes + intervalMinutes} mins ({getMovieDurationMinutes(newMovieId, newMovieTitle, centralMovies)}m film + {trailerBufferMinutes}m ads + {intervalMinutes}m interval) + {turnaroundBufferMinutes}m cleaning
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* DYNAMIC TICKET PRICE INPUTS - ALWAYS RENDERED CLEARLY */}
@@ -3402,7 +3603,7 @@ export default function TheaterDashboardLayout() {
                   <tbody>
                     {staffList.map((m) => (
                       <tr key={m.id}>
-                        <td className="fw-bold text-primary">{m.empId || m.username || getNextEmpId([{ id: m.id }])}</td>
+                        <td className="fw-bold text-primary">{m.employeeId || m.empId || m.username || getNextEmpId([{ id: m.id }])}</td>
                         <td className="fw-bold text-dark">{m.name}</td>
                         <td>{m.email}</td>
                         <td>
@@ -3460,6 +3661,28 @@ export default function TheaterDashboardLayout() {
             </div>
             <TheaterManagerMenuEditor theaterId={selectedTheater?.id || localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2"} />
           </div>
+        )}
+
+        {/* FINANCES & PAYOUTS TAB */}
+        {activeTab === "finances" && (
+          <TheaterFinancesPayoutsView
+            portalId={selectedTheater?.id || localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2"}
+            theaterName={cinemaName}
+            realBoxOfficeRevenue={realBoxOfficeRevenue}
+            realTicketsSold={realTicketsSold}
+          />
+        )}
+
+        {/* CINEMA & THEATER SETTINGS TAB */}
+        {activeTab === "settings" && (
+          <TheaterSettingsView
+            portalId={selectedTheater?.id || localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2"}
+            theaterName={cinemaName}
+            isManager={false}
+            onProfileUpdated={(newName) => {
+              if (newName) setCinemaName(newName);
+            }}
+          />
         )}
       </main>
     </div>

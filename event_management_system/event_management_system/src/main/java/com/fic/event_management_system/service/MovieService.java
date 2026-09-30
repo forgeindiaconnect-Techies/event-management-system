@@ -55,6 +55,9 @@ public class MovieService {
             movie.setDurationMinutes(movieDetails.getDurationMinutes());
             movie.setCertification(movieDetails.getCertification());
             movie.setReleaseDate(movieDetails.getReleaseDate());
+            movie.setRating(movieDetails.getRating());
+            movie.setTotalVotes(movieDetails.getTotalVotes());
+            movie.setLikes(movieDetails.getLikes());
             return movieRepository.save(movie);
         }).orElseThrow(() -> new RuntimeException("Movie not found with id " + id));
     }

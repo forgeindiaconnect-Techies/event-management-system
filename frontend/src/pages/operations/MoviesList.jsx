@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
-import { BsFilm, BsPlusLg, BsSearch, BsClockHistory, BsTranslate, BsPencil, BsTrash } from "react-icons/bs";
+import { BsFilm, BsPlusLg, BsSearch, BsClockHistory, BsTranslate, BsPencil, BsTrash, BsStarFill } from "react-icons/bs";
 
 export default function MoviesList() {
   const navigate = useNavigate();
@@ -84,9 +84,30 @@ export default function MoviesList() {
               <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column" }}>
                 <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", margin: "0 0 8px 0" }}>{movie.title}</h3>
                 
-                <div style={{ display: "flex", gap: "15px", marginBottom: "15px", color: "#64748b", fontSize: "0.85rem", fontWeight: "500" }}>
+                <div style={{ display: "flex", gap: "15px", marginBottom: "15px", color: "#64748b", fontSize: "0.85rem", fontWeight: "500", flexWrap: "wrap", alignItems: "center" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><BsClockHistory /> {movie.durationMinutes}m</span>
                   <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><BsTranslate /> {movie.language}</span>
+                  {(() => {
+                    const localMeta = JSON.parse(localStorage.getItem(`movie_rating_meta_${movie.id}`) || "{}");
+                    const rating = movie.rating ?? localMeta.rating;
+                    const votes = movie.totalVotes || localMeta.totalVotes;
+                    const likes = movie.likes || localMeta.likes;
+                    if (rating) {
+                      return (
+                        <span style={{ display: "flex", alignItems: "center", gap: "3px", color: "#b45309", backgroundColor: "#fef3c7", padding: "2px 8px", borderRadius: "999px", fontWeight: "700", fontSize: "0.8rem" }}>
+                          <BsStarFill size={11} color="#f59e0b" /> {rating}/10 {votes ? `(${votes})` : ""}
+                        </span>
+                      );
+                    }
+                    if (likes) {
+                      return (
+                        <span style={{ display: "flex", alignItems: "center", gap: "3px", color: "#047857", backgroundColor: "#ecfdf5", padding: "2px 8px", borderRadius: "999px", fontWeight: "700", fontSize: "0.8rem" }}>
+                          👍 {likes} Likes
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 
                 <p style={{ color: "#475569", fontSize: "0.9rem", flex: 1, margin: "0 0 20px 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: "1.5" }}>

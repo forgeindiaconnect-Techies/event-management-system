@@ -23,5 +23,7 @@ public interface SuperAdminTheaterService {
     PlatformRevenueConfigDTO unlockCommission(UnlockCommissionRequest request);
     PlatformRevenueConfigDTO lockCommission(LockCommissionRequest request);
     PlatformRevenueConfigDTO updateRevenueSettings(PlatformRevenueConfigDTO request);
+    void deleteTheaterPortal(Long theaterId, String reason, boolean permanent);
+    void deleteTheaterUser(Long userId);
 }
 

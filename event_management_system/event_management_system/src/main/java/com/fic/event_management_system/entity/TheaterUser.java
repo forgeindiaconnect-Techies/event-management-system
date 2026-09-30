@@ -30,6 +30,9 @@ public class TheaterUser {
 
     private String dutyRole; // e.g., "Box Office Cashier", "F&B Concession Staff", "Gate Entry Usher", "Branch Manager"
 
+    @Column(name = "employee_id", length = 50)
+    private String employeeId;
+
     private Boolean active = true;
 
     private LocalDateTime createdAt;
@@ -45,11 +48,21 @@ public class TheaterUser {
     @PrePersist
     public void onCreate() {
         createdAt = LocalDateTime.now();
+        syncEmpIdAndUsername();
     }
 
     @PreUpdate
     public void onUpdate() {
         updatedAt = LocalDateTime.now();
+        syncEmpIdAndUsername();
+    }
+
+    private void syncEmpIdAndUsername() {
+        if (employeeId != null && !employeeId.isBlank()) {
+            this.username = employeeId;
+        } else if (username != null && !username.isBlank()) {
+            this.employeeId = username;
+        }
     }
 
     public Long getId() {
@@ -90,6 +103,9 @@ public class TheaterUser {
 
     public void setUsername(String username) {
         this.username = username;
+        if (username != null && !username.isBlank()) {
+            this.employeeId = username;
+        }
     }
 
     public String getPassword() {
@@ -154,5 +170,16 @@ public class TheaterUser {
 
     public void setDutyRole(String dutyRole) {
         this.dutyRole = dutyRole;
+    }
+
+    public String getEmployeeId() {
+        return employeeId;
+    }
+
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
+        if (employeeId != null && !employeeId.isBlank()) {
+            this.username = employeeId;
+        }
     }
 }

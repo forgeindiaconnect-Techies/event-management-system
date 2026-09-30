@@ -11,6 +11,7 @@ import {
   BsGeoAlt,
   BsCalendarEvent,
   BsStarFill,
+  BsHandThumbsUpFill,
   BsPlayFill,
   BsTicketPerforated,
   BsShieldCheck,
@@ -52,7 +53,8 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
     newParams.set("view", view);
     
     const nextMovie = movie !== undefined ? movie : selectedMovie;
-    if (nextMovie && nextMovie.movieId) newParams.set("movieId", nextMovie.movieId);
+    const effectiveId = nextMovie?.movieId || nextMovie?.id;
+    if (effectiveId) newParams.set("movieId", effectiveId);
     if (nextMovie && nextMovie.title) newParams.set("movieTitle", nextMovie.title);
 
     if (view === "DISCOVERY") {
@@ -318,11 +320,56 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
         existing.language = language;
       }
 
-      if (!existing.poster && st.posterUrl) {
-        existing.poster = st.posterUrl;
+      const matchedAllMovie = allMovies.find(am => 
+        (st.movieId && am.id === st.movieId) ||
+        (am.title && am.title.toLowerCase().trim() === key.toLowerCase().trim())
+      );
+
+      if (!existing.poster && (st.posterUrl || matchedAllMovie?.posterUrl)) {
+        existing.poster = st.posterUrl || matchedAllMovie?.posterUrl;
       }
-      if (!existing.movieId && st.movieId) {
-        existing.movieId = st.movieId;
+      if (!existing.movieId && (st.movieId || matchedAllMovie?.id)) {
+        existing.movieId = st.movieId || matchedAllMovie?.id;
+      }
+      if (!existing.genre && (st.genre || matchedAllMovie?.genre)) {
+        existing.genre = st.genre || matchedAllMovie?.genre;
+      }
+      if (!existing.durationMinutes && (st.durationMinutes || matchedAllMovie?.durationMinutes)) {
+        existing.durationMinutes = st.durationMinutes || matchedAllMovie?.durationMinutes;
+      }
+      if (!existing.certification && (st.certification || matchedAllMovie?.certification)) {
+        existing.certification = st.certification || matchedAllMovie?.certification;
+      }
+      if (!existing.synopsis && (st.synopsis || matchedAllMovie?.synopsis)) {
+        existing.synopsis = st.synopsis || matchedAllMovie?.synopsis;
+      }
+
+      // Load rating, totalVotes, and likes from Content Dashboard / Backend
+      const effId = st.movieId || matchedAllMovie?.id;
+      let localMeta = {};
+      if (effId) {
+        try {
+          localMeta = JSON.parse(localStorage.getItem(`movie_rating_meta_${effId}`) || "{}");
+        } catch (e) {}
+      }
+      if (existing.rating === undefined || existing.rating === null) {
+        existing.rating = matchedAllMovie?.rating !== undefined && matchedAllMovie?.rating !== null
+          ? matchedAllMovie.rating
+          : (localMeta.rating !== undefined && localMeta.rating !== null ? Number(localMeta.rating) : null);
+      }
+      if (!existing.totalVotes) {
+        existing.totalVotes = matchedAllMovie?.totalVotes || localMeta.totalVotes || "";
+      }
+      if (!existing.likes) {
+        const fallbackLikes = (() => {
+          let hash = 0;
+          for (let i = 0; i < key.length; i++) {
+            hash = (hash * 31 + key.charCodeAt(i)) % 1000;
+          }
+          const val = 12 + (hash % 38) + ((hash % 10) / 10);
+          return `${val.toFixed(1)}K`;
+        })();
+        existing.likes = matchedAllMovie?.likes || localMeta.likes || fallbackLikes;
       }
 
       existing.showtimes.push(st);
@@ -424,6 +471,12 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
             title: tName,
             movieId: foundInAll.id,
             poster: foundInAll.posterUrl || DEFAULT_POSTER,
+            posterUrl: foundInAll.posterUrl || DEFAULT_POSTER,
+            genre: foundInAll.genre,
+            durationMinutes: foundInAll.durationMinutes,
+            duration: foundInAll.durationMinutes ? `${Math.floor(foundInAll.durationMinutes / 60)}h ${foundInAll.durationMinutes % 60}m` : "2h 15m",
+            certification: foundInAll.certification || "UA",
+            synopsis: foundInAll.synopsis || "",
             language: foundInAll.movieLanguage || foundInAll.language || "Tamil",
             showtimes: [],
             portalsList: [],
@@ -901,17 +954,25 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
                       }}
                     />
 
-                    {/* Bottom Gradient overlay with Rating */}
+                    {/* Bottom Gradient overlay with Rating or Likes */}
                     <div
                       className="position-absolute bottom-0 start-0 end-0 px-2 py-2 d-flex align-items-end justify-content-between"
                       style={{
                         background: "linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, transparent)",
                       }}
                     >
-                      <div className="d-flex align-items-center gap-1 text-white fw-medium" style={{ fontSize: "12px" }}>
-                        <BsStarFill className="text-danger" size={12} /> 8.7/10 
-                        <span className="text-white-50 ms-1" style={{ fontSize: "10px" }}>(25K Votes)</span>
-                      </div>
+                      {movie.rating ? (
+                        <div className="d-flex align-items-center gap-1 text-white fw-medium" style={{ fontSize: "12px" }}>
+                          <BsStarFill className="text-warning" size={12} /> {movie.rating}/10 
+                          {movie.totalVotes && (
+                            <span className="text-white-50 ms-1" style={{ fontSize: "10px" }}>({movie.totalVotes})</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="d-flex align-items-center gap-1 text-white fw-medium" style={{ fontSize: "12px" }}>
+                          <BsHandThumbsUpFill className="text-success" size={12} /> {movie.likes} Likes
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -929,7 +990,7 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
 
                       {/* Genre */}
                       <div className="text-muted text-truncate mb-3" style={{ fontSize: "12px" }}>
-                        Action/Thriller/Drama
+                        {movie.genre || "Action / Drama"}
                       </div>
                     </div>
 
@@ -1000,6 +1061,14 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
                     onClick={() => {
                       navigateToView("DETAILS", {
                         ...movie,
+                        movieId: movie.id,
+                        poster: movie.posterUrl || movie.poster || DEFAULT_POSTER,
+                        posterUrl: movie.posterUrl || movie.poster || DEFAULT_POSTER,
+                        genre: movie.genre || "Action / Drama",
+                        durationMinutes: movie.durationMinutes,
+                        duration: movie.durationMinutes ? `${Math.floor(movie.durationMinutes / 60)}h ${movie.durationMinutes % 60}m` : "2h 15m",
+                        certification: movie.certification || "UA",
+                        synopsis: movie.synopsis || "",
                         isUpcoming: true,
                         screensList: [],
                         formatsList: [],
@@ -1040,6 +1109,14 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
                         onClick={() => {
                           navigateToView("DETAILS", {
                             ...movie,
+                            movieId: movie.id,
+                            poster: movie.posterUrl || movie.poster || DEFAULT_POSTER,
+                            posterUrl: movie.posterUrl || movie.poster || DEFAULT_POSTER,
+                            genre: movie.genre || "Action / Drama",
+                            durationMinutes: movie.durationMinutes,
+                            duration: movie.durationMinutes ? `${Math.floor(movie.durationMinutes / 60)}h ${movie.durationMinutes % 60}m` : "2h 15m",
+                            certification: movie.certification || "UA",
+                            synopsis: movie.synopsis || "",
                             isUpcoming: true,
                             screensList: [],
                             formatsList: [],
@@ -1054,7 +1131,7 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
 
                       {/* Genre */}
                       <div className="text-muted text-truncate mb-3" style={{ fontSize: "12px" }}>
-                        Action/Thriller/Drama
+                        {movie.genre || "Action / Drama"}
                       </div>
                     </div>
 
@@ -1066,6 +1143,14 @@ export default function PublicMovieDiscovery({ onSelectMovieForBooking, globalSe
                       onClick={() => {
                         navigateToView("DETAILS", {
                           ...movie,
+                          movieId: movie.id,
+                          poster: movie.posterUrl || movie.poster || DEFAULT_POSTER,
+                          posterUrl: movie.posterUrl || movie.poster || DEFAULT_POSTER,
+                          genre: movie.genre || "Action / Drama",
+                          durationMinutes: movie.durationMinutes,
+                          duration: movie.durationMinutes ? `${Math.floor(movie.durationMinutes / 60)}h ${movie.durationMinutes % 60}m` : "2h 15m",
+                          certification: movie.certification || "UA",
+                          synopsis: movie.synopsis || "",
                           isUpcoming: true,
                           screensList: [],
                           formatsList: [],

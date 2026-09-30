@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,15 +26,58 @@ public class SuperAdminTheaterServiceImpl implements SuperAdminTheaterService {
     @Autowired private ScreenRepository screenRepository;
     @Autowired private TheaterEmailLogRepository theaterEmailLogRepository;
     @Autowired private PlatformRevenueConfigRepository platformRevenueConfigRepository;
+    @Autowired private TheaterPortalRepository theaterPortalRepository;
+    @Autowired private MenuItemRepository menuItemRepository;
+    @Autowired private FoodOrderRepository foodOrderRepository;
+    @Autowired private TheaterNotificationRepository theaterNotificationRepository;
+    @Autowired private SeatLayoutRepository seatLayoutRepository;
+    @Autowired private ShowtimeSeatBookingRepository showtimeSeatBookingRepository;
+    @Autowired private TheaterInvitationRepository theaterInvitationRepository;
+    @Autowired private DeletedTheaterPortalRepository deletedTheaterPortalRepository;
     @Autowired private com.fic.event_management_system.service.TheaterNotificationService theaterNotificationService;
     @Autowired private com.fic.event_management_system.service.TheaterEmailService theaterEmailService;
+
+    @jakarta.annotation.PostConstruct
+    public void initDeletedPortals() {
+        try {
+            if (deletedTheaterPortalRepository.count() == 0) {
+                // Seed record for the duplicate Naveen Cinemas portal (Portal #1) that was purged
+                DeletedTheaterPortal dp = new DeletedTheaterPortal(
+                        1L, "Naveen Cinemas (Duplicate)", "naveen.mj2.45@gmail.com",
+                        "Duplicate Portal - Purged from Platform", "PERMANENT_PURGE", 3, 0L
+                );
+                deletedTheaterPortalRepository.save(dp);
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            // Startup sync: Ensure username == employee_id across all TheaterUsers
+            List<TheaterUser> users = theaterUserRepository.findAll();
+            for (TheaterUser u : users) {
+                boolean changed = false;
+                if (u.getEmployeeId() != null && !u.getEmployeeId().isBlank()) {
+                    if (!u.getEmployeeId().equals(u.getUsername())) {
+                        u.setUsername(u.getEmployeeId());
+                        changed = true;
+                    }
+                } else if (u.getUsername() != null && !u.getUsername().isBlank() && !u.getUsername().contains("-")) {
+                    u.setEmployeeId(u.getUsername());
+                    changed = true;
+                }
+                if (changed) {
+                    theaterUserRepository.save(u);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
 
     @Override
     public SuperAdminTheaterDashboardResponse getDashboardOverview() {
         SuperAdminTheaterDashboardResponse response = new SuperAdminTheaterDashboardResponse();
         
         List<Theater> theaters = theaterRepository.findAll();
-        response.setTotalTheaters(theaters.size());
+        long deletedCount = deletedTheaterPortalRepository.count();
+        response.setTotalTheaters(theaters.size() + deletedCount);
         response.setActiveTheaters(theaters.stream().filter(t -> Boolean.TRUE.equals(t.getActive())).count());
         
         List<MovieBookedTicket> tickets = movieBookedTicketRepository.findAll();
@@ -143,6 +187,24 @@ public class SuperAdminTheaterServiceImpl implements SuperAdminTheaterService {
             res.setStatus(Boolean.TRUE.equals(t.getActive()) ? "Active" : "Inactive");
             responses.add(res);
         }
+
+        // Include deleted / purged theater portals so SuperAdmin can audit them
+        try {
+            List<DeletedTheaterPortal> deletedList = deletedTheaterPortalRepository.findAllByOrderByDeletedAtDesc();
+            for (DeletedTheaterPortal dp : deletedList) {
+                TheaterDirectoryResponse res = new TheaterDirectoryResponse();
+                res.setId(dp.getOriginalTheaterId() != null ? dp.getOriginalTheaterId() : dp.getId());
+                res.setName(dp.getName());
+                res.setOwner(dp.getOwnerEmail() != null ? dp.getOwnerEmail() : "N/A");
+                res.setScreens(dp.getScreensCount() != null ? dp.getScreensCount() : 0);
+                res.setEmployees(0);
+                res.setTickets(dp.getTicketsCount() != null ? dp.getTicketsCount() : 0L);
+                res.setRevenue(0.0);
+                res.setStatus("Deleted");
+                responses.add(res);
+            }
+        } catch (Exception ignored) {}
+
         return responses;
     }
 
@@ -150,18 +212,105 @@ public class SuperAdminTheaterServiceImpl implements SuperAdminTheaterService {
     public List<TheaterPortalUserResponse> getTheaterUsers() {
         List<TheaterUser> users = theaterUserRepository.findAll();
         List<TheaterPortalUserResponse> responses = new ArrayList<>();
-        for (TheaterUser u : users) {
-            TheaterPortalUserResponse res = new TheaterPortalUserResponse();
-            res.setId(u.getId());
-            res.setEmpId("EMP-" + String.format("%04d", u.getId()));
-            res.setName(u.getFirstName() + " " + u.getLastName());
-            res.setEmail(u.getEmail());
-            res.setPortalId(u.getTheaterPortal() != null ? u.getTheaterPortal().getPortalCode() : "N/A");
-            res.setTheater(u.getTheaterPortal() != null ? u.getTheaterPortal().getPortalName() : "N/A");
-            res.setStatus(Boolean.TRUE.equals(u.getActive()) ? "Active" : "Inactive");
-            responses.add(res);
+
+        // Group users by theaterPortal ID
+        Map<Long, List<TheaterUser>> usersByPortal = users.stream()
+                .collect(Collectors.groupingBy(
+                        u -> u.getTheaterPortal() != null ? u.getTheaterPortal().getId() : -1L,
+                        java.util.LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        for (Map.Entry<Long, List<TheaterUser>> entry : usersByPortal.entrySet()) {
+            List<TheaterUser> portalUsers = entry.getValue();
+            // Sort employees by ID ascending so sequence numbers are stable and consistent
+            portalUsers.sort(java.util.Comparator.comparing(TheaterUser::getId));
+
+            String portalName = "EMP";
+            if (!portalUsers.isEmpty() && portalUsers.get(0).getTheaterPortal() != null) {
+                portalName = portalUsers.get(0).getTheaterPortal().getPortalName();
+            }
+            String prefix = generatePortalPrefix(portalName);
+
+            int seq = 1;
+            for (TheaterUser u : portalUsers) {
+                TheaterPortalUserResponse res = new TheaterPortalUserResponse();
+                res.setId(u.getId());
+
+                String empId = prefix + String.format("%03d", seq++);
+                res.setEmpId(empId);
+
+                // Persist both employee ID and username so they are ALWAYS identical
+                boolean changed = false;
+                if (u.getEmployeeId() == null || !u.getEmployeeId().equals(empId)) {
+                    u.setEmployeeId(empId);
+                    changed = true;
+                }
+                if (u.getUsername() == null || !u.getUsername().equals(empId)) {
+                    u.setUsername(empId);
+                    changed = true;
+                }
+                if (changed) {
+                    try {
+                        theaterUserRepository.save(u);
+                    } catch (Exception ignored) {}
+                }
+
+                // Also keep any associated theater_invitations record username synced to this exact employee ID
+                if (u.getEmail() != null && u.getTheaterPortal() != null) {
+                    try {
+                        theaterInvitationRepository.findByTheaterPortalId(u.getTheaterPortal().getId())
+                                .stream()
+                                .filter(inv -> inv.getEmail() != null && inv.getEmail().equalsIgnoreCase(u.getEmail()))
+                                .forEach(inv -> {
+                                    if (inv.getUsername() == null || !inv.getUsername().equals(empId)) {
+                                        inv.setUsername(empId);
+                                        theaterInvitationRepository.save(inv);
+                                    }
+                                });
+                    } catch (Exception ignored) {}
+                }
+
+                // Clean name formatting without trailing "null"
+                String firstName = u.getFirstName() != null ? u.getFirstName().trim() : "";
+                String lastName = (u.getLastName() != null && !u.getLastName().equalsIgnoreCase("null") && !u.getLastName().isBlank())
+                        ? u.getLastName().trim() : "";
+                String fullName = (firstName + " " + lastName).trim();
+                if (fullName.isBlank()) fullName = u.getEmail();
+
+                res.setName(fullName);
+                res.setEmail(u.getEmail());
+                res.setPortalId(u.getTheaterPortal() != null ? u.getTheaterPortal().getPortalCode() : "N/A");
+                res.setTheater(u.getTheaterPortal() != null ? u.getTheaterPortal().getPortalName() : "N/A");
+                res.setStatus(Boolean.TRUE.equals(u.getActive()) ? "Active" : "Inactive");
+                responses.add(res);
+            }
         }
         return responses;
+    }
+
+    private String generatePortalPrefix(String portalName) {
+        if (portalName == null || portalName.isBlank()) return "EMP";
+        String clean = portalName.replaceAll("[^a-zA-Z0-9\\s]", " ").trim();
+        String[] words = clean.split("\\s+");
+        if (words.length == 0 || words[0].isBlank()) return "EMP";
+
+        if (words.length == 1) {
+            String w = words[0].toUpperCase();
+            return w.length() >= 3 ? w.substring(0, 3) : w;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (!w.isBlank()) {
+                sb.append(Character.toUpperCase(w.charAt(0)));
+            }
+        }
+        String prefix = sb.toString();
+        if (prefix.length() < 2) {
+            prefix = words[0].substring(0, Math.min(words[0].length(), 3)).toUpperCase();
+        }
+        return prefix;
     }
 
     @Override
@@ -401,5 +550,153 @@ public class SuperAdminTheaterServiceImpl implements SuperAdminTheaterService {
             dto.setActiveStrategy("Active Monetization (" + dto.getCommissionPercentage() + "% Commission Cut, " + dto.getConvenienceFeePercentage() + "% Convenience Fee)");
         }
         return dto;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteTheaterPortal(Long theaterId, String reason, boolean permanent) {
+        Theater theater = theaterRepository.findById(theaterId).orElse(null);
+        if (theater == null) {
+            // Check if passed ID was a theaterPortal id
+            Optional<TheaterPortal> tpOpt = theaterPortalRepository.findById(theaterId);
+            if (tpOpt.isPresent()) {
+                List<Theater> ths = theaterRepository.findByTheaterPortalId(tpOpt.get().getId());
+                if (!ths.isEmpty()) {
+                    theater = ths.get(0);
+                }
+            }
+        }
+
+        if (theater == null) {
+            throw new RuntimeException("Theater portal record not found with ID: " + theaterId);
+        }
+
+        String safeReason = (reason != null && !reason.isBlank()) ? reason.trim() : "SuperAdmin Portal Cleanup";
+
+        if (!permanent) {
+            // Soft delete / Deactivate / Close theater portal
+            theater.setActive(false);
+            theaterRepository.save(theater);
+            return;
+        }
+
+        // Permanent deletion (Purge duplicate or unwanted test/closed portal)
+        Long tId = theater.getId();
+        TheaterPortal portal = theater.getTheaterPortal();
+
+        // Record audit entry for deleted portal
+        try {
+            List<Screen> scList = screenRepository.findByTheaterId(tId);
+            DeletedTheaterPortal dtp = new DeletedTheaterPortal(
+                    theater.getId(),
+                    theater.getName(),
+                    theater.getOwnerEmail(),
+                    safeReason,
+                    permanent ? "PERMANENT_PURGE" : "DEACTIVATED",
+                    scList != null ? scList.size() : 0,
+                    0L
+            );
+            deletedTheaterPortalRepository.save(dtp);
+        } catch (Exception ignored) {}
+
+        // 1. Delete showtimes and associated ticket bookings / seat locks
+        List<Showtime> showtimes = showtimeRepository.findByTheaterId(tId);
+        if (!showtimes.isEmpty()) {
+            List<Long> showtimeIds = showtimes.stream().map(Showtime::getId).collect(Collectors.toList());
+            
+            // Delete ShowtimeSeatBooking records
+            try {
+                showtimeSeatBookingRepository.deleteByShowtimeIdIn(showtimeIds);
+            } catch (Exception ignored) {}
+
+            // Delete MovieBookedTicket records
+            List<MovieBookedTicket> bookedTickets = movieBookedTicketRepository.findAll().stream()
+                    .filter(tk -> tk.getShowtimeId() != null && showtimeIds.contains(tk.getShowtimeId()))
+                    .collect(Collectors.toList());
+            if (!bookedTickets.isEmpty()) {
+                movieBookedTicketRepository.deleteAll(bookedTickets);
+            }
+            showtimeRepository.deleteAll(showtimes);
+        }
+
+        // 2. Delete Screens and their child SeatLayouts
+        List<Screen> screens = screenRepository.findByTheaterId(tId);
+        if (!screens.isEmpty()) {
+            for (Screen screen : screens) {
+                try {
+                    List<SeatLayout> layouts = seatLayoutRepository.findByScreenId(screen.getId());
+                    if (layouts != null && !layouts.isEmpty()) {
+                        seatLayoutRepository.deleteAll(layouts);
+                    }
+                } catch (Exception ignored) {}
+            }
+            screenRepository.deleteAll(screens);
+        }
+
+        // Clean up any seat layouts tied to this portal directly
+        if (portal != null) {
+            try {
+                List<SeatLayout> portalLayouts = seatLayoutRepository.findByTheaterPortalId(portal.getId());
+                if (portalLayouts != null && !portalLayouts.isEmpty()) {
+                    seatLayoutRepository.deleteAll(portalLayouts);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 3. Delete food orders first (this removes order_items via cascade)
+        List<FoodOrder> foodOrders = foodOrderRepository.findByTheaterId(tId);
+        if (!foodOrders.isEmpty()) {
+            foodOrderRepository.deleteAll(foodOrders);
+        }
+
+        // 4. Delete menu items (this removes menu_item_options via cascade)
+        List<MenuItem> menuItems = menuItemRepository.findByTheaterId(tId);
+        if (!menuItems.isEmpty()) {
+            menuItemRepository.deleteAll(menuItems);
+        }
+
+        // 5. Unlink and remove Theater & TheaterPortal
+        theater.setTheaterPortal(null);
+        theaterRepository.delete(theater);
+
+        if (portal != null) {
+            List<Theater> remainingTheaters = theaterRepository.findByTheaterPortalId(portal.getId());
+            if (remainingTheaters.isEmpty()) {
+                // Delete invitations for this portal
+                try {
+                    List<TheaterInvitation> invites = theaterInvitationRepository.findByTheaterPortalId(portal.getId());
+                    if (invites != null && !invites.isEmpty()) {
+                        theaterInvitationRepository.deleteAll(invites);
+                    }
+                } catch (Exception ignored) {}
+
+                // Delete notifications for this portal
+                List<TheaterNotification> notifications = theaterNotificationRepository.findAll().stream()
+                        .filter(n -> n.getTheaterPortal() != null && n.getTheaterPortal().getId().equals(portal.getId()))
+                        .collect(Collectors.toList());
+                if (!notifications.isEmpty()) {
+                    theaterNotificationRepository.deleteAll(notifications);
+                }
+
+                // Delete portal users/staff
+                List<TheaterUser> users = theaterUserRepository.findAll().stream()
+                        .filter(u -> u.getTheaterPortal() != null && u.getTheaterPortal().getId().equals(portal.getId()))
+                        .collect(Collectors.toList());
+                if (!users.isEmpty()) {
+                    theaterUserRepository.deleteAll(users);
+                }
+
+                theaterPortalRepository.delete(portal);
+            }
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteTheaterUser(Long userId) {
+        TheaterUser user = theaterUserRepository.findById(userId).orElseThrow(
+                () -> new RuntimeException("Portal employee record not found with ID: " + userId)
+        );
+        theaterUserRepository.delete(user);
     }
 }

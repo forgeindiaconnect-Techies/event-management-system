@@ -293,8 +293,8 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
     <div className="public-movie-showtimes pb-5" style={{ backgroundColor: "#f8fafc", color: "#0f172a", minHeight: "100vh" }}>
       {/* 1. TOP HEADER & MOVIE INFO BAR */}
       <div
-        className="sticky-top bg-white border-bottom shadow-sm py-3 px-4 position-relative"
-        style={{ zIndex: 110 }}
+        className="bg-white border-bottom shadow-sm py-3 px-4 position-relative"
+        style={{ zIndex: 10 }}
       >
         {/* Absolute Back Button pushed to the left edge */}
         <button
@@ -367,7 +367,7 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
       </div>
 
       {/* 2. MODERN DATE SELECTOR & FILTERS BAR */}
-      <div className="bg-white sticky-top shadow-sm border-bottom" style={{ zIndex: 109, top: "82px", padding: "12px 0" }}>
+      <div className="bg-white shadow-sm border-bottom" style={{ padding: "12px 0" }}>
         <div className="container d-flex flex-column flex-xl-row align-items-center justify-content-between gap-3 p-0">
           
           {/* Left Side: Modern Date Pills */}
@@ -488,7 +488,7 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
       <div className="container py-4">
 
         {/* THEATER LISTINGS (EXACT BOOKMYSHOW DESIGN) */}
-        <div className="d-flex flex-column gap-3.5 mt-2">
+        <div className="d-flex flex-column gap-3 mt-2" style={{ gap: "16px" }}>
           {theaterGroups.length === 0 ? (
             <div className="text-center py-5 bg-white rounded-4 border shadow-sm my-4">
               <BsClock size={40} className="text-muted opacity-50 mb-3" />
@@ -508,8 +508,8 @@ export default function PublicMovieShowtimes({ movie, onBack, onSelectShowtime }
             theaterGroups.map((th, idx) => (
               <div
                 key={idx}
-                className="bg-white p-3.5 rounded-3 border shadow-xs"
-                style={{ backgroundColor: "#ffffff" }}
+                className="bg-white rounded-3 border shadow-xs mb-3"
+                style={{ backgroundColor: "#ffffff", padding: "18px" }}
               >
                 {/* 1. TOP ROW: CINEMA LOGO + NAME + INFO + SUBTITLE */}
                 <div className="d-flex align-items-center gap-3 mb-2">

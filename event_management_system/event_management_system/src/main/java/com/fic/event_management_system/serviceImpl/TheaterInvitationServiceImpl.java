@@ -182,6 +182,9 @@ public class TheaterInvitationServiceImpl implements TheaterInvitationService {
         if (user.getUsername() == null || user.getUsername().isBlank()) {
             user.setUsername(invitation.getUsername() != null ? invitation.getUsername() : generateTheaterUsername(invitation.getTheaterPortal(), user.getFirstName()));
         }
+        if (user.getEmployeeId() == null || user.getEmployeeId().isBlank()) {
+            user.setEmployeeId(invitation.getUsername() != null ? invitation.getUsername() : user.getUsername());
+        }
 
         TheaterUser savedUser = theaterUserRepository.save(user);
 
@@ -236,11 +239,57 @@ public class TheaterInvitationServiceImpl implements TheaterInvitationService {
     public List<TheaterInvitation> getInvitationsByPortal(Long portalId) {
         List<TheaterInvitation> list = theaterInvitationRepository.findByTheaterPortalId(portalId);
         LocalDateTime now = LocalDateTime.now();
+
+        TheaterPortal portal = portalId != null ? theaterPortalRepository.findById(portalId).orElse(null) : null;
+        String portalName = (portal != null && portal.getPortalName() != null && !portal.getPortalName().isBlank())
+                ? portal.getPortalName().trim() : "EMP";
+        String cleaned = portalName.replaceAll("[^a-zA-Z0-9\\s]", " ").trim();
+        String[] words = cleaned.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (!w.isBlank()) sb.append(Character.toUpperCase(w.charAt(0)));
+        }
+        String prefixStr;
+        if (sb.length() >= 2) {
+            prefixStr = sb.toString();
+        } else if (cleaned.length() >= 2) {
+            prefixStr = cleaned.substring(0, 2).toUpperCase();
+        } else {
+            prefixStr = "TH";
+        }
+
         for (TheaterInvitation inv : list) {
             if (inv.getStatus() == InvitationStatus.PENDING && inv.getExpiryDate() != null && inv.getExpiryDate().isBefore(now)) {
                 inv.setStatus(InvitationStatus.EXPIRED);
                 inv.setUsername(null);
                 theaterInvitationRepository.save(inv);
+                continue;
+            }
+
+            // Normalize old format: e.g. GM-1003 -> GM003
+            if (inv.getUsername() != null) {
+                String oldUname = inv.getUsername().trim();
+                if (oldUname.contains("-") || oldUname.matches(".*\\d{4}$")) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(oldUname);
+                    if (m.find()) {
+                        int num = Integer.parseInt(m.group());
+                        if (num >= 1000) num -= 1000;
+                        String normalized = String.format("%s%03d", prefixStr, num);
+                        inv.setUsername(normalized);
+                        try {
+                            theaterInvitationRepository.save(inv);
+                        } catch (Exception ignored) {}
+
+                        // Also synchronize to the TheaterUser if already registered / active
+                        try {
+                            theaterUserRepository.findByEmail(inv.getEmail()).ifPresent(tu -> {
+                                tu.setUsername(normalized);
+                                tu.setEmployeeId(normalized);
+                                theaterUserRepository.save(tu);
+                            });
+                        } catch (Exception ignored) {}
+                    }
+                }
             }
         }
         return list;
@@ -260,18 +309,22 @@ public class TheaterInvitationServiceImpl implements TheaterInvitationService {
                 ? portal.getPortalName().trim()
                 : "Cinema Partner";
 
-        String[] parts = portalName.split("\\s+");
-        StringBuilder prefix = new StringBuilder();
-        if (parts.length >= 2) {
-            prefix.append(Character.toUpperCase(parts[0].charAt(0)));
-            prefix.append(Character.toUpperCase(parts[1].charAt(0)));
-        } else if (parts[0].length() >= 2) {
-            prefix.append(Character.toUpperCase(parts[0].charAt(0)));
-            prefix.append(Character.toUpperCase(parts[0].charAt(1)));
-        } else {
-            prefix.append("NC");
+        String cleaned = portalName.replaceAll("[^a-zA-Z0-9\\s]", " ").trim();
+        String[] words = cleaned.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (!w.isBlank()) {
+                sb.append(Character.toUpperCase(w.charAt(0)));
+            }
         }
-        String prefixStr = prefix.toString();
+        String prefixStr;
+        if (sb.length() >= 2) {
+            prefixStr = sb.toString();
+        } else if (cleaned.length() >= 2) {
+            prefixStr = cleaned.substring(0, 2).toUpperCase();
+        } else {
+            prefixStr = "TH";
+        }
 
         Long pId = portal != null ? portal.getId() : 1L;
         List<TheaterInvitation> invitations = theaterInvitationRepository.findByTheaterPortalId(pId);
@@ -283,11 +336,13 @@ public class TheaterInvitationServiceImpl implements TheaterInvitationService {
         // Only reserve numbers for PENDING and ACCEPTED invitations (REJECTED and EXPIRED are released)
         for (TheaterInvitation inv : invitations) {
             if (inv.getStatus() == InvitationStatus.PENDING || inv.getStatus() == InvitationStatus.ACCEPTED) {
-                if (inv.getUsername() != null) {
+                if (inv.getUsername() != null && inv.getUsername().toUpperCase().startsWith(prefixStr)) {
                     java.util.regex.Matcher m = pattern.matcher(inv.getUsername());
                     if (m.find()) {
                         try {
-                            takenNumbers.add(Integer.parseInt(m.group()));
+                            int num = Integer.parseInt(m.group());
+                            if (num >= 1000) num -= 1000;
+                            takenNumbers.add(num);
                         } catch (Exception ignored) {}
                     }
                 }
@@ -295,23 +350,26 @@ public class TheaterInvitationServiceImpl implements TheaterInvitationService {
         }
 
         for (TheaterUser u : users) {
-            if (u.getUsername() != null) {
-                java.util.regex.Matcher m = pattern.matcher(u.getUsername());
+            String val = u.getEmployeeId() != null && !u.getEmployeeId().isBlank() ? u.getEmployeeId() : u.getUsername();
+            if (val != null && val.toUpperCase().startsWith(prefixStr)) {
+                java.util.regex.Matcher m = pattern.matcher(val);
                 if (m.find()) {
                     try {
-                        takenNumbers.add(Integer.parseInt(m.group()));
+                        int num = Integer.parseInt(m.group());
+                        if (num >= 1000) num -= 1000;
+                        takenNumbers.add(num);
                     } catch (Exception ignored) {}
                 }
             }
         }
 
-        // Find lowest available integer starting at 1001 (reusing any rejected gaps)
-        int candidateNum = 1001;
-        while (takenNumbers.contains(candidateNum) || theaterUserRepository.findByUsername(prefixStr + "-" + candidateNum).isPresent()) {
+        // Find lowest available integer starting at 1 (e.g. 1 -> 001, 2 -> 002)
+        int candidateNum = 1;
+        while (takenNumbers.contains(candidateNum) || theaterUserRepository.findByUsername(String.format("%s%03d", prefixStr, candidateNum)).isPresent()) {
             candidateNum++;
         }
 
-        return prefixStr + "-" + candidateNum;
+        return String.format("%s%03d", prefixStr, candidateNum);
     }
 
     @Override
@@ -385,6 +443,7 @@ public class TheaterInvitationServiceImpl implements TheaterInvitationService {
         user.setLastName(lastName);
         user.setPhoneNumber(phone);
         user.setUsername(customEmpId);
+        user.setEmployeeId(customEmpId);
         user.setDutyRole(dutyRole);
         user.setRole(dutyRole.equalsIgnoreCase("Branch Manager") ? "THEATER_MANAGER" : "THEATER_STAFF:" + dutyRole);
         user.setTheaterPortal(portal);

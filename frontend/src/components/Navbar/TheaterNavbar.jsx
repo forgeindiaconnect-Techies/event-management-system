@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import TheaterSupportModal from "../theater/TheaterSupportModal";
@@ -16,6 +17,7 @@ import {
   BsTrash,
   BsHeadset,
   BsList,
+  BsGear,
 } from "react-icons/bs";
 
 function formatNotifTime(dateStr) {
@@ -43,24 +45,48 @@ function TheaterNotificationBell() {
 
   const getPortalId = () => localStorage.getItem("portalId") || localStorage.getItem("userPortalId") || "2";
 
+  const getLocalAdminNotifications = () => {
+    try {
+      const pId = getPortalId();
+      const raw = localStorage.getItem(`theater_notifications_${pId}`);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  };
+
   const loadUnreadCount = async () => {
+    let count = 0;
     try {
       const pId = getPortalId();
       const res = await api.get("/theaters/notifications/unread-count", { params: { portalId: pId } });
-      setUnreadCount(Number(res.data?.unreadCount || 0));
+      count = Number(res.data?.unreadCount || 0);
     } catch {
       // Keep silent on background polling
     }
+    const localNotifs = getLocalAdminNotifications();
+    const localUnread = localNotifs.filter((n) => !n.read).length;
+    setUnreadCount(count + localUnread);
   };
 
   const loadNotifications = async () => {
     try {
       setLoading(true);
       const pId = getPortalId();
-      const res = await api.get("/theaters/notifications", { params: { portalId: pId, page: 0, size: 30 } });
-      const data = Array.isArray(res.data) ? res.data : [];
-      setNotifications(data);
-      const unread = data.filter((n) => !n.read).length;
+      let serverData = [];
+      try {
+        const res = await api.get("/theaters/notifications", { params: { portalId: pId, page: 0, size: 30 } });
+        serverData = Array.isArray(res.data) ? res.data : [];
+      } catch (err) {
+        // Fallback gracefully
+      }
+      const localNotifs = getLocalAdminNotifications();
+      const combined = [...localNotifs, ...serverData];
+      setNotifications(combined);
+      const unread = combined.filter((n) => !n.read).length;
       setUnreadCount(unread);
     } catch (e) {
       console.warn("Failed to load theater notifications:", e);
@@ -77,11 +103,18 @@ function TheaterNotificationBell() {
       loadUnreadCount();
       if (open) loadNotifications();
     };
+    const onNotif = () => {
+      loadUnreadCount();
+      if (open) loadNotifications();
+    };
+
     window.addEventListener("pos_booking_updated", onPosBooking);
+    window.addEventListener("theater_notification_received", onNotif);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("pos_booking_updated", onPosBooking);
+      window.removeEventListener("theater_notification_received", onNotif);
     };
   }, [open]);
 
@@ -106,7 +139,15 @@ function TheaterNotificationBell() {
   const markAllRead = async () => {
     try {
       const pId = getPortalId();
-      await api.patch("/theaters/notifications/read-all", null, { params: { portalId: pId } });
+      try {
+        await api.patch("/theaters/notifications/read-all", null, { params: { portalId: pId } });
+      } catch (ignored) {}
+
+      const notifKey = `theater_notifications_${pId}`;
+      const current = JSON.parse(localStorage.getItem(notifKey) || "[]");
+      const updated = current.map((n) => ({ ...n, read: true }));
+      localStorage.setItem(notifKey, JSON.stringify(updated));
+
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (e) {
@@ -117,8 +158,16 @@ function TheaterNotificationBell() {
   const handleNotificationClick = async (notif) => {
     if (!notif.read) {
       try {
-        await api.patch(`/theaters/notifications/${notif.id}/read`);
-        setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n));
+        if (notif.id && String(notif.id).startsWith("NOTIF-")) {
+          const pId = getPortalId();
+          const notifKey = `theater_notifications_${pId}`;
+          const current = JSON.parse(localStorage.getItem(notifKey) || "[]");
+          const updated = current.map((n) => (n.id === notif.id ? { ...n, read: true } : n));
+          localStorage.setItem(notifKey, JSON.stringify(updated));
+        } else {
+          await api.patch(`/theaters/notifications/${notif.id}/read`);
+        }
+        setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)));
         setUnreadCount((c) => Math.max(0, c - 1));
       } catch (e) {
         console.warn("Failed to mark notification read:", e);
@@ -133,7 +182,15 @@ function TheaterNotificationBell() {
   const removeOne = async (e, id) => {
     e.stopPropagation();
     try {
-      await api.delete(`/theaters/notifications/${id}`);
+      if (id && String(id).startsWith("NOTIF-")) {
+        const pId = getPortalId();
+        const notifKey = `theater_notifications_${pId}`;
+        const current = JSON.parse(localStorage.getItem(notifKey) || "[]");
+        const updated = current.filter((n) => n.id !== id);
+        localStorage.setItem(notifKey, JSON.stringify(updated));
+      } else {
+        await api.delete(`/theaters/notifications/${id}`);
+      }
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       loadUnreadCount();
     } catch (e) {
@@ -275,7 +332,7 @@ function TheaterNotificationBell() {
   );
 }
 
-export default function TheaterNavbar({ theaterName, onToggleSidebar }) {
+export default function TheaterNavbar({ theaterName, onToggleSidebar, onOpenSettings }) {
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -440,8 +497,33 @@ export default function TheaterNavbar({ theaterName, onToggleSidebar }) {
           </button>
         </div>
 
-        <div className="organizer-navbar-actions d-flex align-items-center gap-2 gap-md-4">
+        <div className="organizer-navbar-actions d-flex align-items-center gap-2 gap-md-3">
           <TheaterNotificationBell />
+
+          <button
+            type="button"
+            className="border-0 bg-transparent text-white d-flex align-items-center justify-content-center"
+            style={{
+              width: 36,
+              height: 36,
+              cursor: "pointer",
+              opacity: 0.92,
+              borderRadius: "8px",
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              transition: "background 0.15s ease",
+            }}
+            onClick={() => {
+              if (onOpenSettings) {
+                onOpenSettings();
+              } else {
+                const isManager = window.location.pathname.includes("manager");
+                navigate(isManager ? "/theater/manager-dashboard?tab=settings" : "/theater/dashboard?tab=settings");
+              }
+            }}
+            title="Theater Settings"
+          >
+            <BsGear size={17} />
+          </button>
           
           <button
             type="button"
@@ -477,15 +559,22 @@ export default function TheaterNavbar({ theaterName, onToggleSidebar }) {
         </div>
       </nav>
 
-      {showProfile && (
-        <div
-          className="compact-profile-backdrop"
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 999 }}
-          onClick={() => {
-            setShowProfile(false);
-            setIsEditing(false);
-          }}
-        >
+      {showProfile &&
+        createPortal(
+          <div
+            className="compact-profile-backdrop"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(2px)",
+              zIndex: 20000,
+            }}
+            onClick={() => {
+              setShowProfile(false);
+              setIsEditing(false);
+            }}
+          >
           <div
             className="compact-profile-popup bg-white shadow-lg p-4 d-flex flex-column justify-content-between overflow-auto"
             style={{ width: "420px", height: "100vh", position: "absolute", right: 0, top: 0 }}
@@ -655,7 +744,8 @@ export default function TheaterNavbar({ theaterName, onToggleSidebar }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

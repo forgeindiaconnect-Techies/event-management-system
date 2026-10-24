@@ -1,5 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { syncWebTokenWithBackend, onForegroundMessage, requestNotificationPermissionAndGetToken } from "./firebase";
 import Login from "./pages/Login";
 import ChooseAccess from "./pages/ChooseAccess";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -108,6 +109,7 @@ import PrivacyPolicy from "./pages/public/PrivacyPolicy";
 import PublicTicket from "./pages/public/PublicTicket";
 import MobileSelectEnhancer from "./components/MobileSelectEnhancer";
 import HorizontalMenuArrows from "./components/HorizontalMenuArrows";
+import NotificationPrompt from "./components/NotificationPrompt";
 import TourCenter from "./pages/Help/TourCenter";
 import ContentOperationsLayout from "./layouts/ContentOperationsLayout";
 import MoviesList from "./pages/operations/MoviesList";
@@ -128,10 +130,34 @@ const SubscriptionPayment = lazy(() => import("./pages/SubscriptionPayment"));
 
 
 function App() {
+  useEffect(() => {
+    // 1. Sync FCM Web Token if user is logged in
+    const email = localStorage.getItem("email") || localStorage.getItem("userEmail");
+    if (email) {
+      syncWebTokenWithBackend(email.trim()).catch((err) => console.log("[FCM Web] Sync skipped:", err));
+    }
+
+    // 2. Listen for foreground notifications
+    const unsubscribe = onForegroundMessage((payload) => {
+      const title = payload?.notification?.title || "Notification";
+      const body = payload?.notification?.body || "";
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body, icon: "/favicon.ico" });
+      } else {
+        alert(`${title}\n${body}`);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <HorizontalMenuArrows />
       <MobileSelectEnhancer />
+      <NotificationPrompt />
       <Suspense fallback={<RouteLoader />}>
       <Routes>
       

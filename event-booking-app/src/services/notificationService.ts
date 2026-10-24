@@ -50,3 +50,35 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     return null;
   }
 }
+
+/**
+ * Register device FCM token with the Spring Boot backend for the logged-in user
+ */
+export async function syncFcmTokenWithBackend(email: string): Promise<boolean> {
+  try {
+    if (!email) return false;
+    const token = await registerForPushNotificationsAsync();
+    if (!token) return false;
+
+    const { smartFetch } = await import('../config/apiConfig');
+    const response = await smartFetch('/users/fcm-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, fcmToken: token }),
+    });
+
+    if (response.ok) {
+      console.log('[FCM] Successfully synced token with backend for:', email);
+      return true;
+    } else {
+      console.warn('[FCM] Failed to sync token with backend status:', response.status);
+      return false;
+    }
+  } catch (err) {
+    console.error('[FCM] Error syncing token with backend:', err);
+    return false;
+  }
+}
+

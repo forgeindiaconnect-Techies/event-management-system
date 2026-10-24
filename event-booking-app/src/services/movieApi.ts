@@ -886,6 +886,15 @@ export async function bookSeatsOnServer(showtimeId: number | string, seatKeys: s
  */
 export async function recordMovieSaleOnServer(ticketData: any): Promise<boolean> {
   try {
+    if (!ticketData.fcmToken) {
+      try {
+        const { registerForPushNotificationsAsync } = await import('./notificationService');
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          ticketData.fcmToken = token;
+        }
+      } catch (ignored) {}
+    }
     const res = await smartFetch(`/theater/sales-history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

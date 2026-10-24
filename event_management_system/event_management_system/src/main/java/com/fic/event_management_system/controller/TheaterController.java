@@ -51,6 +51,12 @@ public class TheaterController {
     private com.fic.event_management_system.service.TheaterEmailService theaterEmailService;
 
     @Autowired
+    private com.fic.event_management_system.service.PushNotificationService pushNotificationService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -1046,6 +1052,23 @@ public class TheaterController {
                 } catch (Exception ex) {
                     System.err.println("Notice: Failed to dispatch theater booking confirmation email: " + ex.getMessage());
                 }
+            }
+
+            // Dispatch outside FCM push notification to customer mobile app
+            try {
+                String targetFcmToken = (String) sale.get("fcmToken");
+                if ((targetFcmToken == null || targetFcmToken.isBlank()) && customerEmail != null && !customerEmail.isBlank()) {
+                    targetFcmToken = userRepository.findByEmail(customerEmail.trim())
+                            .map(User::getFcmToken)
+                            .orElse(null);
+                }
+                if (targetFcmToken != null && !targetFcmToken.isBlank()) {
+                    String title = "Booking Confirmed! 🎟️";
+                    String body = "Your tickets for " + t.getMovieTitle() + " (" + t.getSeats() + ") are confirmed at " + t.getTheaterName() + "!";
+                    pushNotificationService.sendPushNotification(targetFcmToken, title, body);
+                }
+            } catch (Exception ex) {
+                System.err.println("Notice: Failed to dispatch FCM push notification: " + ex.getMessage());
             }
         }
         return ResponseEntity.ok(Map.of("success", true));

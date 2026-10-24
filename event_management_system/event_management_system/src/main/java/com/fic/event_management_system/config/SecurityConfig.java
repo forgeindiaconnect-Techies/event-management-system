@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/events/*/announcements").permitAll()
                         .requestMatchers("/api/registrations/public/**").permitAll()
                         .requestMatchers("/api/tickets/search/**").permitAll()
+                        .requestMatchers("/api/users/fcm-token").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
                         // Protected APIs - token required

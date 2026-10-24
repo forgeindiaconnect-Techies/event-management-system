@@ -3,4 +3,5 @@ event_management_system/event_management_system/src/main/resources/application.p
 fic-chatbot-api/.venv/
 fic-chatbot-api/__pycache__/
 *.pyc
-event-booking-app/*firebase-adminsdk*.json
+*firebase-adminsdk*.json
+*firebase-service-account*.json

@@ -36,6 +36,9 @@ public class User {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Column(name = "fcm_token", length = 500)
+    private String fcmToken;
     
     @JsonIgnore
     @ManyToOne
@@ -143,6 +146,14 @@ public class User {
 		this.updatedAt = updatedAt;
 	}
 
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
+    }
+
 	public Portal getPortal() {
 		return portal;
 	}
@@ -150,7 +161,4 @@ public class User {
 	public void setPortal(Portal portal) {
 		this.portal = portal;
 	}
-	
-	
-    
 }
